@@ -227,19 +227,15 @@ namespace FMScanner
             var baseDirFiles = new List<EntryAndIndex>();
             var misFiles = new List<EntryAndIndex>();
             var usedMisFiles = new List<EntryAndIndex>();
+            var stringsDirFiles = new List<EntryAndIndex>();
             string[] titlesStrFileLines;
 
             #region Cache FM data
 
-            {
-                var t = ReadAndCacheFMData();
-                misFiles = t.Item1;
-                usedMisFiles = t.Item2;
-                titlesStrFileLines = t.Item3;
-                baseDirFiles = t.Item4;
-            }
+            (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, titlesStrFileLines)
+                = ReadAndCacheFMData();
 
-            if (misFiles == null || usedMisFiles == null)
+            if (!baseDirFiles.Any() || !misFiles.Any() || !usedMisFiles.Any())
             {
                 if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
                 return null;
@@ -391,16 +387,18 @@ namespace FMScanner
             return fmData;
         }
 
-        private Tuple<List<EntryAndIndex>, List<EntryAndIndex>, string[], List<EntryAndIndex>>
+        private (List<EntryAndIndex> BaseDirFiles, List<EntryAndIndex> MisFiles,
+        List<EntryAndIndex> UsedMisFiles, List<EntryAndIndex> StringsDirFiles, string[] TitlesStrFileLines)
         ReadAndCacheFMData()
         {
-            var nullRet = Tuple.Create((List<EntryAndIndex>)null, (List<EntryAndIndex>)null,
-                (string[])null, (List<EntryAndIndex>)null);
-
+            string[] titlesStrFileLines = { };
             var misFiles = new List<EntryAndIndex>();
             var usedMisFiles = new List<EntryAndIndex>();
             var baseDirFiles = new List<EntryAndIndex>();
-            string[] titlesStrFileLines = { };
+            var stringsDirFiles = new List<EntryAndIndex>();
+
+            var nullRet = ((List<EntryAndIndex>)null, (List<EntryAndIndex>)null, (List<EntryAndIndex>)null,
+                (List<EntryAndIndex>)null, (string[])null);
 
             #region Add BaseDirFiles
 
@@ -422,6 +420,10 @@ namespace FMScanner
                         {
                             baseDirFiles.Add(new EntryAndIndex { Entry = e.FullName, Index = i });
                         }
+                        else if (e.FullName.StartsWithI("strings/"))
+                        {
+                            stringsDirFiles.Add(new EntryAndIndex { Entry = e.FullName, Index = i });
+                        }
                     }
                 }
                 else
@@ -429,6 +431,11 @@ namespace FMScanner
                     foreach (var f in EnumFiles("*", SearchOption.TopDirectoryOnly))
                     {
                         baseDirFiles.Add(new EntryAndIndex { Entry = GetFileName(f) });
+                    }
+
+                    foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
+                    {
+                        stringsDirFiles.Add(new EntryAndIndex { Entry = f.Substring(FmWorkingPath.Length + 1) });
                     }
                 }
             }
@@ -462,37 +469,30 @@ namespace FMScanner
 
             #region Cache list of used .mis files
 
-            string missFlag = null;
+            EntryAndIndex missFlag = null;
 
-            if (DirExists(FMDirs.Strings))
+            char ds = FmIsZip ? '/' : Path.DirectorySeparatorChar;
+
+            if (stringsDirFiles.Any())
             {
                 // I don't remember if I need to search in this exact order, so uh... not rockin' the boat.
-                missFlag = EnumFiles(FMDirs.Strings, FMFiles.MissFlag, SearchOption.TopDirectoryOnly)
-                    .FirstOrDefault();
-
-                if (missFlag == null)
-                {
-                    if (DirExists(Path.Combine(FMDirs.Strings, "english")))
-                    {
-                        missFlag = EnumFiles(Path.Combine(FMDirs.Strings, "english"), FMFiles.MissFlag,
-                            SearchOption.TopDirectoryOnly).FirstOrDefault();
-                    }
-                }
-
-                if (missFlag == null)
-                {
-                    missFlag = EnumFiles(FMDirs.Strings, FMFiles.MissFlag, SearchOption.AllDirectories)
-                        .FirstOrDefault();
-                }
+                missFlag =
+                    stringsDirFiles.FirstOrDefault(x =>
+                        x.Entry.EqualsI(FMDirs.Strings + ds + FMFiles.MissFlag))
+                    ?? stringsDirFiles.FirstOrDefault(x =>
+                        x.Entry.EqualsI(FMDirs.Strings + ds + "english" + ds + FMFiles.MissFlag))
+                    ?? stringsDirFiles.FirstOrDefault(x =>
+                        x.Entry.EndsWithI(ds + FMFiles.MissFlag));
             }
 
-            if (!string.IsNullOrEmpty(missFlag))
+            if (missFlag != null)
             {
                 string[] mfLines;
 
                 if (FmIsZip)
                 {
-                    var e = Archive.Entries.First(x => x.FullName.EqualsI(missFlag));
+                    //var e = Archive.Entries.First(x => x.FullName.EqualsI(missFlag));
+                    var e = Archive.Entries[missFlag.Index];
                     using (var es = e.Open())
                     {
                         mfLines = ReadAllLinesE(es, e.Length);
@@ -500,7 +500,7 @@ namespace FMScanner
                 }
                 else
                 {
-                    mfLines = ReadAllLinesE(missFlag);
+                    mfLines = ReadAllLinesE(Path.Combine(FmWorkingPath, missFlag.Entry));
                 }
 
                 //usedMisFiles =
@@ -534,7 +534,7 @@ namespace FMScanner
             }
 
             // Fallback we hope never happens, but... sometimes it does
-            if (usedMisFiles == null || !usedMisFiles.Any()) usedMisFiles = misFiles;
+            if (!usedMisFiles.Any()) usedMisFiles = misFiles;
 
             #endregion
 
@@ -562,14 +562,16 @@ namespace FMScanner
             {
                 var titlesFile =
                     FmIsZip
-                        ? Archive.Entries.FirstOrDefault(x => x.FullName.EqualsI(titlesFileLocation))?.FullName
-                        : Path.Combine(FmWorkingPath, titlesFileLocation);
+                        //? Archive.Entries.FirstOrDefault(x => x.FullName.EqualsI(titlesFileLocation))?.FullName
+                        ? stringsDirFiles.FirstOrDefault(x => x.Entry.EqualsI(titlesFileLocation))
+                        : new EntryAndIndex { Entry = Path.Combine(FmWorkingPath, titlesFileLocation) };
 
-                if (string.IsNullOrEmpty(titlesFile) || !FileExists(titlesFileLocation)) continue;
+                if (titlesFile == null || !FmIsZip && !File.Exists(titlesFile.Entry)) continue;
 
                 if (FmIsZip)
                 {
-                    var e = Archive.Entries.FirstOrDefault(x => x.FullName.EqualsI(titlesFile));
+                    //var e = Archive.Entries.FirstOrDefault(x => x.FullName.EqualsI(titlesFile));
+                    var e = Archive.Entries[titlesFile.Index];
                     if (e != null)
                     {
                         using (var es = e.Open())
@@ -580,7 +582,7 @@ namespace FMScanner
                 }
                 else
                 {
-                    titlesStrFileLines = ReadAllLinesE(titlesFile);
+                    titlesStrFileLines = ReadAllLinesE(titlesFile.Entry);
                 }
 
                 // The corner cases...
@@ -594,7 +596,7 @@ namespace FMScanner
 
             #endregion
 
-            return Tuple.Create(misFiles, usedMisFiles, titlesStrFileLines, baseDirFiles);
+            return (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, titlesStrFileLines);
         }
 
         // Willing to hand this one the entire object because you can tell with a simple glance which properties
@@ -605,7 +607,7 @@ namespace FMScanner
                 FmIsZip
                     ? (from e in Archive.Entries
                        let f = e.FullName.TrimEnd('/')
-                       where f.Contains('/') || !f.Contains(".")
+                       where f.Contains('/') || !f.Contains('.')
                        select f.Contains('/') ? f.Substring(0, f.IndexOf('/')) : f)
                     .Distinct().AsParallel()
                     : from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
@@ -1113,8 +1115,7 @@ namespace FMScanner
 
             var nullRet = Tuple.Create((string)null, (string[])null);
 
-            if (titlesStrFileLines == null || titlesStrFileLines.Length == 0 ||
-                !DirExistsAndIsNotEmpty(FMDirs.Strings))
+            if (titlesStrFileLines == null || titlesStrFileLines.Length == 0)
             {
                 return nullRet;
             }
