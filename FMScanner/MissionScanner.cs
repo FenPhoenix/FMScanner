@@ -338,7 +338,7 @@ namespace FMScanner
                 if (!fmData.Author.IsEmpty())
                 {
                     // Remove email addresses from the end of author names
-                    var match = Regex.Match(fmData.Author, @"\(?\S+@\S+\.\S{2,5}\)?");
+                    var match = AuthorEmailRegex.Match(fmData.Author);
                     if (match.Success)
                     {
                         fmData.Author = fmData.Author.Remove(match.Index, match.Length).Trim();
@@ -616,19 +616,13 @@ namespace FMScanner
 
             scannedFMData.HasMap =
                 FmIsZip
-                    ? Archive.Entries.Any(f =>
-                        Regex.Match(f.FullName,
-                            @"^" + FMDirs.Intrface + @"/.+/page0.*\..+$",
-                            RegexOptions.IgnoreCase).Success)
+                    ? Archive.Entries.Any(f => MapRegex.Match(f.FullName).Success)
                     : baseDirFolders.ContainsI(FMDirs.Intrface) &&
                       FastIO.FilesExistSearchAllSkipTop(Combine(FmWorkingPath, FMDirs.Intrface), "page0*.*");
 
             scannedFMData.HasAutomap =
                 FmIsZip
-                    ? Archive.Entries.Any(f =>
-                        Regex.Match(f.FullName,
-                            @"^" + FMDirs.Intrface + @"/.+/.*ra\.bin$",
-                            RegexOptions.IgnoreCase).Success)
+                    ? Archive.Entries.Any(f => AutomapRegex.Match(f.FullName).Success)
                     : baseDirFolders.ContainsI(FMDirs.Intrface) &&
                       FastIO.FilesExistSearchAllSkipTop(Combine(FmWorkingPath, FMDirs.Intrface), "*ra.bin");
 
@@ -648,7 +642,7 @@ namespace FMScanner
                 FmIsZip
                     ? Archive.Entries.Any(f =>
                         f.FullName.StartsWithI(FMDirs.Movies + '/') &&
-                        Regex.Match(f.FullName, @"\..+$", RegexOptions.IgnoreCase).Success)
+                        EndsWithExtensionRegex.Match(f.FullName).Success)
                     : baseDirFolders.ContainsI(FMDirs.Movies) &&
                       FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
 
@@ -683,7 +677,7 @@ namespace FMScanner
                         (!f.FullName.Contains('/') &&
                          ScriptFileExtensions.Any(f.FullName.EndsWithI)) ||
                         (f.FullName.StartsWithI(FMDirs.Scripts + '/') &&
-                         Regex.Match(f.FullName, @"\..+$", RegexOptions.IgnoreCase).Success))
+                         EndsWithExtensionRegex.Match(f.FullName).Success))
                     : baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Entry))) ||
                       (baseDirFolders.ContainsI(FMDirs.Scripts) &&
                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
@@ -692,7 +686,7 @@ namespace FMScanner
                 FmIsZip
                     ? Archive.Entries.Any(f =>
                         f.FullName.StartsWithI(FMDirs.Snd + '/') &&
-                        Regex.Match(f.FullName, @"\..+$", RegexOptions.IgnoreCase).Success)
+                        EndsWithExtensionRegex.Match(f.FullName).Success)
                     : baseDirFolders.ContainsI(FMDirs.Snd) &&
                       FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
 
@@ -1153,7 +1147,7 @@ namespace FMScanner
                     var startOfQuotedSection =
                         tfLinesD[line].Substring(tfLinesD[line].IndexOf(':') + 1).Trim();
 
-                    var titleStringMatch = Regex.Match(startOfQuotedSection, @"^""(?<Title>.+)""");
+                    var titleStringMatch = TitleStringQuotedRegex.Match(startOfQuotedSection);
                     if (!titleStringMatch.Success) continue;
 
                     title = titleStringMatch.Groups["Title"].Value;
@@ -1327,7 +1321,7 @@ namespace FMScanner
                         // ^              match at beginning of line
                         // \s+            one or more spaces
                         // (?<Value>.+) Value: one or more characters that are not \n (iow, read to end of line)
-                        match = Regex.Match(lineAfterKey, @"^\s+(?<Value>.+)");
+                        match = ReadmeLineScanFinalValueRegex.Match(lineAfterKey);
                         if (match.Success) break;
                     }
 
@@ -1432,7 +1426,7 @@ namespace FMScanner
             for (var i = 0; i < lines.Length; i++)
             {
                 var lineT = lines[i].Trim();
-                var match = Regex.Match(lineT, @"^skip_training\:\s*""(?<Title>.+)""", RegexOptions.IgnoreCase);
+                var match = NewGameStrTitleRegex.Match(lineT);
                 if (match.Success)
                 {
                     var title = match.Groups["Title"].Value.Trim();
@@ -1603,7 +1597,7 @@ namespace FMScanner
             index = author.IndexOf(". ", Ordinal);
             if (index > -1) author = author.Substring(0, index);
 
-            var yearMatch = Regex.Match(author, @" \d+.*$");
+            var yearMatch = CopyrightAuthorYearRegex.Match(author);
             if (yearMatch.Success) author = author.Substring(0, yearMatch.Index);
 
             if ("!@#$%^&*".Any(x => author.EndsWith(x.ToString())) &&
@@ -1644,7 +1638,7 @@ namespace FMScanner
             else // Starts with non-numbers
             {
                 // Find index of the first numeric character
-                var match = Regex.Match(version, @"[0123456789\.]+");
+                var match = VersionFirstNumberRegex.Match(version);
                 if (match.Success)
                 {
                     version = version.Substring(match.Index);

@@ -122,6 +122,35 @@ namespace FMScanner
         internal static Regex TitleContainsLowerCaseCharsRegex =
             new Regex(@"[a-z]", RegexOptions.Compiled);
 
+        internal static Regex MapRegex =
+            new Regex(@"^" + FMDirs.Intrface + @"/.+/page0.*\..+$",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        internal static Regex AutomapRegex =
+            new Regex(@"^" + FMDirs.Intrface + @"/.+/.*ra\.bin$",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        internal static Regex AuthorEmailRegex =
+            new Regex(@"\(?\S+@\S+\.\S{2,5}\)?", RegexOptions.Compiled);
+
+        internal static Regex EndsWithExtensionRegex =
+            new Regex(@"\..+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        internal static Regex TitleStringQuotedRegex =
+            new Regex(@"^""(?<Title>.+)""", RegexOptions.Compiled);
+
+        internal static Regex ReadmeLineScanFinalValueRegex =
+            new Regex(@"^\s+(?<Value>.+)", RegexOptions.Compiled);
+
+        internal static Regex NewGameStrTitleRegex =
+            new Regex(@"^skip_training\:\s*""(?<Title>.+)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        internal static Regex CopyrightAuthorYearRegex =
+            new Regex(@" \d+.*$", RegexOptions.Compiled);
+
+        internal static Regex VersionFirstNumberRegex =
+            new Regex(@"[0123456789\.]+", RegexOptions.Compiled);
+
         // Much, much faster to iterate through possible regex matches, common ones first
         internal static Regex[] NewDarkVersionRegexes { get; } =
         {
