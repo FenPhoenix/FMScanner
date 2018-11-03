@@ -1052,7 +1052,8 @@ namespace FMScanner
                                 ReadmeFiles.Add(new ReadmeFile
                                 {
                                     Lines = rtfBox.Lines,
-                                    Text = rtfBox.Text
+                                    Text = rtfBox.Text,
+                                    FileName = fileName
                                 });
                             }
                         }
