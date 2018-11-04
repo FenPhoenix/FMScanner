@@ -799,7 +799,7 @@ namespace FMScanner
 
                 // Description is supposed to be one line with \n for line breaks, but people just aren't
                 // consistent with the format :[
-                if (fmIni.Descr[0] == '\"')
+                if (!string.IsNullOrEmpty(fmIni.Descr) && fmIni.Descr[0] == '\"')
                 {
                     // Read the whole file again. To avoid this I'd have to write my own parser. If I find more
                     // than just the one file with this multiline-quoted format, maybe I will.
