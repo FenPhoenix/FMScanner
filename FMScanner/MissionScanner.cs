@@ -517,8 +517,8 @@ namespace FMScanner
                         {
                             var line = mfLines[j];
                             if (line.StartsWithI("miss_" + mfNoExt.Substring(4) + ":") &&
-                                line.IndexOf("\"", OrdinalIgnoreCase) > -1 &&
-                                !line.Substring(line.IndexOf("\"", OrdinalIgnoreCase)).StartsWithI("\"skip\""))
+                                line.IndexOf('\"') > -1 &&
+                                !line.Substring(line.IndexOf('\"')).StartsWithI("\"skip\""))
                             {
                                 usedMisFiles.Add(mf);
                             }
@@ -799,7 +799,7 @@ namespace FMScanner
 
                 // Description is supposed to be one line with \n for line breaks, but people just aren't
                 // consistent with the format :[
-                if (fmIni.Descr.StartsWithI("\""))
+                if (fmIni.Descr[0] == '\"')
                 {
                     // Read the whole file again. To avoid this I'd have to write my own parser. If I find more
                     // than just the one file with this multiline-quoted format, maybe I will.
@@ -852,7 +852,7 @@ namespace FMScanner
                     foreach (var a in authors)
                     {
                         if (!first && !authorString.EndsWith(", ")) authorString += ", ";
-                        authorString += a.Substring(a.IndexOf(":", InvariantCulture) + 1).Trim();
+                        authorString += a.Substring(a.IndexOf(':') + 1).Trim();
 
                         first = false;
                     }
@@ -1108,11 +1108,11 @@ namespace FMScanner
             string[] tfLinesD;
             {
                 var temp = new List<string>();
-                foreach (var line in titlesStrFileLines.Where(x => x.Contains(":") && x.StartsWithI("title_")))
+                foreach (var line in titlesStrFileLines.Where(x => x.Contains(':') && x.StartsWithI("title_")))
                 {
                     if (!temp.Any(x =>
-                        x.Contains(":") &&
-                        x.StartsWithI(line.Substring(0, line.IndexOf(":", Ordinal)))))
+                        x.Contains(':') &&
+                        x.StartsWithI(line.Substring(0, line.IndexOf(':')))))
                     {
                         temp.Add(line);
                     }
@@ -1153,9 +1153,7 @@ namespace FMScanner
                     line == tfLinesD.Length - 1 &&
                     !string.IsNullOrEmpty(titleNum) &&
                     !string.IsNullOrEmpty(title) &&
-                    //!usedMisFiles.ContainsI("miss" + titleNum + ".mis") &&
                     !usedMisFiles.Any(x => x.Entry.ContainsI("miss" + titleNum + ".mis")) &&
-                    //misFiles.ContainsI("miss" + titleNum + ".mis"))
                     misFiles.Any(x => x.Entry.ContainsI("miss" + titleNum + ".mis")))
                 {
                     retTitle = CleanupTitle(title);
@@ -1291,7 +1289,7 @@ namespace FMScanner
                     }
 
                     if (!keys.Any(x =>
-                        lineStartTrimmed.StartsWithI(x + " ") || lineStartTrimmed.StartsWith(x + "\t")))
+                        lineStartTrimmed.StartsWithI(x + " ") || lineStartTrimmed.StartsWith(x + '\t')))
                     {
                         continue;
                     }
@@ -1333,13 +1331,13 @@ namespace FMScanner
             ret = ret.TrimEnd();
 
             // Remove surrounding quotes
-            if (ret.StartsWith("\"") && ret.EndsWith("\""))
+            if (ret[0] == '\"' && ret.Last() == '\"')
             {
                 ret = ret.Trim('\"');
             }
 
             // Remove unpaired leading or trailing quotes
-            if ((ret.StartsWith("\"") || ret.EndsWith("\"")) && ret.Count(x => x == '\"') == 1)
+            if ((ret[0] == '\"' || ret.Last() == '\"') && ret.Count(x => x == '\"') == 1)
             {
                 ret = ret.Trim('\"');
             }
@@ -1356,7 +1354,7 @@ namespace FMScanner
                 ret = Regex.Replace(ret, @"\s+\)", ")");
 
                 // If there's stuff like "(this an incomplete sentence and" at the end, chop it right off
-                if (ret.Count(x => x == '(') == 1 && !ret.Contains(")"))
+                if (ret.Count(x => x == '(') == 1 && !ret.Contains(')'))
                 {
                     ret = ret.Substring(0, ret.LastIndexOf('(')).TrimEnd();
                 }
@@ -1480,7 +1478,7 @@ namespace FMScanner
                 string lineT = lines[i].Trim();
                 if (new[] { "By ", "By: " }.Any(x => lineT.StartsWithI(x)))
                 {
-                    string author = lineT.Substring(lineT.IndexOf(" ", InvariantCulture)).TrimStart();
+                    string author = lineT.Substring(lineT.IndexOf(' ')).TrimStart();
                     if (!string.IsNullOrEmpty(author)) return author;
                 }
                 else
@@ -1576,7 +1574,7 @@ namespace FMScanner
         {
             author = author.Trim().RemoveSurroundingParentheses();
 
-            var index = author.IndexOf(",", Ordinal);
+            var index = author.IndexOf(',');
             if (index > -1) author = author.Substring(0, index);
 
             index = author.IndexOf(". ", Ordinal);
@@ -1585,7 +1583,7 @@ namespace FMScanner
             var yearMatch = CopyrightAuthorYearRegex.Match(author);
             if (yearMatch.Success) author = author.Substring(0, yearMatch.Index);
 
-            if ("!@#$%^&*".Any(x => author.EndsWith(x.ToString())) &&
+            if ("!@#$%^&*".Any(x => author.Last() == x) &&
                 author.ElementAt(author.Length - 2) == ' ')
             {
                 author = author.Substring(0, author.Length - 2);
@@ -1606,7 +1604,7 @@ namespace FMScanner
             Debug.WriteLine(version);
 
             const string numbers = "0123456789.";
-            if (numbers.Any(x => version.StartsWith(x.ToString(), Ordinal)))
+            if (numbers.Any(x => version[0] == x))
             {
                 int indexSpace = version.IndexOf(' ');
                 int indexTab = version.IndexOf('\t');
@@ -1685,10 +1683,10 @@ namespace FMScanner
                         // absolutely disgusting, but works
                         where (Languages.ContainsI(dn) ||
                                (dn.EndsWithI(" Language") &&
-                                Languages.ContainsI(dn.Substring(0, dn.IndexOf(" ", Ordinal))))) &&
+                                Languages.ContainsI(dn.Substring(0, dn.IndexOf(' '))))) &&
                               EnumFiles(d, "*", SearchOption.AllDirectories).Any()
-                        select dn.Contains(" ")
-                            ? dn.ToLowerInvariant().Substring(0, dn.IndexOf(" ", Ordinal))
+                        select dn.Contains(' ')
+                            ? dn.ToLowerInvariant().Substring(0, dn.IndexOf(' '))
                             : dn.ToLowerInvariant());
                 }
             }
@@ -1938,7 +1936,7 @@ namespace FMScanner
             if (string.IsNullOrEmpty(version)) return null;
 
             var ndv = version.Trim('.');
-            int index = ndv.IndexOf(".", InvariantCulture);
+            int index = ndv.IndexOf('.');
             if (index > -1 && ndv.Substring(index + 1).Length < 2)
             {
                 ndv += "0";
