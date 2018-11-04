@@ -24,7 +24,7 @@ namespace FMScanner
     {
         internal const string MissFlag = "missflag.str";
         internal static readonly string[] TitlesFiles = { "titles.str", "title.str" };
-        internal const string NewGame = "newgame.str";
+        internal const string NewGameStr = "newgame.str";
 
         // Telliamed's fminfo.xml file, used in a grand total of three missions
         internal const string FMInfoXml = "fminfo.xml";
@@ -154,33 +154,24 @@ namespace FMScanner
         // Much, much faster to iterate through possible regex matches, common ones first
         internal static Regex[] NewDarkVersionRegexes { get; } =
         {
-            // language=regexp
             new Regex(@"NewDark (?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(@"(New ?Dark|""New ?Dark"").? v?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(@"(New ?Dark|""New ?Dark"").? .?(Version|Patch) .?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(@"(Dark ?Engine) (Version.?|v)?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(
                 @"((?<!(Love |Being |Penitent |Counter-|Requiem for a |Space ))Thief|(?<!Being )Thief ?2|Thief ?II|The Metal Age) v?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(
                 @"\D(?<Version>\d\.\d+) (version of |.?)New ?Dark(?! ?\d\.\d+)|Thief Gold( Patch)? (?<Version>(?!1\.33|1\.37)\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(@"Version (?<Version>\d\.\d+) of (Thief 2|Thief2|Thief II)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(@"(New ?Dark|""New ?Dark"") (is )?required (.? )v?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            // language=regexp
             new Regex(@"(?<Version>(?!1\.33|1\.37)\d\.\d+) Patch",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture)
 
@@ -202,16 +193,13 @@ namespace FMScanner
         };
 
         private const string CopyrightSecondPart =
-            // language=regexp
             @"(?<Months>( January| February| March| April| May| June| July| August| September| October| November| December))?" +
-            // language=regexp
             @"(?(Months)(, ?| ))\d*( by| to)? (?<Author>.+)";
 
         // Unicode 00A9 = copyright symbol
 
         internal static Regex AuthorMissionCopyrightRegex { get; } =
             new Regex(
-                // language=regexp
                 @"^This (level|mission|fan(-| )?mission|FM) is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
@@ -220,13 +208,11 @@ namespace FMScanner
         // means what we think it means.
         internal static Regex AuthorGeneralCopyrightIncludeAtSymbolRegex { get; } =
             new Regex(
-                // language=regexp
                 @"^(Copyright )?(\(c\)|\u00A9|@) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
         internal static Regex AuthorGeneralCopyrightRegex { get; } =
             new Regex(
-                // language=regexp
                 @"^(Copyright )?(\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
     }

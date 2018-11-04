@@ -228,11 +228,12 @@ namespace FMScanner
             var misFiles = new List<EntryAndIndex>();
             var usedMisFiles = new List<EntryAndIndex>();
             var stringsDirFiles = new List<EntryAndIndex>();
+            var intrfaceDirFiles = new List<EntryAndIndex>();
             string[] titlesStrFileLines;
 
             #region Cache FM data
 
-            (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, titlesStrFileLines)
+            (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles, titlesStrFileLines)
                 = ReadAndCacheFMData();
 
             if (!baseDirFiles.Any() || !misFiles.Any() || !usedMisFiles.Any())
@@ -319,7 +320,7 @@ namespace FMScanner
                         "Mission Name", "Mission name", "Level Name", "Level name", "Mission:", "Mission ",
                         "Campaign Title", "Campaign title", "The name of Mission:"));
 
-                SetOrAddTitle(GetTitleFromNewGameStrFile());
+                SetOrAddTitle(GetTitleFromNewGameStrFile(intrfaceDirFiles));
             }
 
             #endregion
@@ -392,7 +393,8 @@ namespace FMScanner
         }
 
         private (List<EntryAndIndex> BaseDirFiles, List<EntryAndIndex> MisFiles,
-        List<EntryAndIndex> UsedMisFiles, List<EntryAndIndex> StringsDirFiles, string[] TitlesStrFileLines)
+        List<EntryAndIndex> UsedMisFiles, List<EntryAndIndex> StringsDirFiles,
+        List<EntryAndIndex> intrfaceDirFiles, string[] TitlesStrFileLines)
         ReadAndCacheFMData()
         {
             string[] titlesStrFileLines = { };
@@ -400,21 +402,15 @@ namespace FMScanner
             var usedMisFiles = new List<EntryAndIndex>();
             var baseDirFiles = new List<EntryAndIndex>();
             var stringsDirFiles = new List<EntryAndIndex>();
+            var intrfaceDirFiles = new List<EntryAndIndex>();
 
             var nullRet = ((List<EntryAndIndex>)null, (List<EntryAndIndex>)null, (List<EntryAndIndex>)null,
-                (List<EntryAndIndex>)null, (string[])null);
+                (List<EntryAndIndex>)null, (List<EntryAndIndex>)null, (string[])null);
 
             #region Add BaseDirFiles
 
             try
             {
-                //baseDirFiles = (
-                //    FmIsZip
-                //        ? from e in Archive.Entries
-                //          where !e.FullName.Contains('/') && e.FullName.Contains(".")
-                //          select e.FullName
-                //        : from f in EnumFiles("*", SearchOption.TopDirectoryOnly)
-                //          select GetFileName(f)).ToArray();
                 if (FmIsZip)
                 {
                     for (var i = 0; i < Archive.Entries.Count; i++)
@@ -424,9 +420,13 @@ namespace FMScanner
                         {
                             baseDirFiles.Add(new EntryAndIndex { Entry = e.FullName, Index = i });
                         }
-                        else if (e.FullName.StartsWithI("strings/"))
+                        else if (e.FullName.StartsWithI(FMDirs.Strings + '/'))
                         {
                             stringsDirFiles.Add(new EntryAndIndex { Entry = e.FullName, Index = i });
+                        }
+                        else if (e.FullName.StartsWithI(FMDirs.Intrface + '/'))
+                        {
+                            intrfaceDirFiles.Add(new EntryAndIndex { Entry = e.FullName, Index = i });
                         }
                     }
                 }
@@ -441,6 +441,12 @@ namespace FMScanner
                     {
                         stringsDirFiles.Add(new EntryAndIndex { Entry = f.Substring(FmWorkingPath.Length + 1) });
                     }
+
+                    foreach (var f in EnumFiles(FMDirs.Intrface, "*", SearchOption.AllDirectories))
+                    {
+                        intrfaceDirFiles.Add(new EntryAndIndex { Entry = f.Substring(FmWorkingPath.Length + 1) });
+                    }
+
                 }
             }
             catch (Exception e)
@@ -452,11 +458,6 @@ namespace FMScanner
             #endregion
 
             #region Add MisFiles and check for none
-
-            //var misFiles = (
-            //    from f in baseDirFiles
-            //    where GetExtension(f).EqualsI(".mis")
-            //    select GetFileName(f)).ToArray();
 
             for (var i = 0; i < baseDirFiles.Count; i++)
             {
@@ -495,7 +496,6 @@ namespace FMScanner
 
                 if (FmIsZip)
                 {
-                    //var e = Archive.Entries.First(x => x.FullName.EqualsI(missFlag));
                     var e = Archive.Entries[missFlag.Index];
                     using (var es = e.Open())
                     {
@@ -507,16 +507,6 @@ namespace FMScanner
                     mfLines = ReadAllLinesE(Path.Combine(FmWorkingPath, missFlag.Entry));
                 }
 
-                //usedMisFiles =
-                //    (from mf in misFiles
-                //     let mfNoExt = mf.RemoveExtension()
-                //     where mfNoExt.StartsWithI("miss") && mfNoExt.Length > 4
-                //     from line in mfLines
-                //     where line.StartsWithI("miss_" + mfNoExt.Substring(4) + ":") &&
-                //           line.IndexOf("\"", OrdinalIgnoreCase) > -1 &&
-                //           !line.Substring(line.IndexOf("\"", OrdinalIgnoreCase)).StartsWithI("\"skip\"")
-                //     select mf)
-                //    .ToArray();
                 for (var i = 0; i < misFiles.Count; i++)
                 {
                     var mf = misFiles[i];
@@ -566,7 +556,6 @@ namespace FMScanner
             {
                 var titlesFile =
                     FmIsZip
-                        //? Archive.Entries.FirstOrDefault(x => x.FullName.EqualsI(titlesFileLocation))?.FullName
                         ? stringsDirFiles.FirstOrDefault(x => x.Entry.EqualsI(titlesFileLocation))
                         : new EntryAndIndex { Entry = Path.Combine(FmWorkingPath, titlesFileLocation) };
 
@@ -574,7 +563,6 @@ namespace FMScanner
 
                 if (FmIsZip)
                 {
-                    //var e = Archive.Entries.FirstOrDefault(x => x.FullName.EqualsI(titlesFile));
                     var e = Archive.Entries[titlesFile.Index];
                     if (e != null)
                     {
@@ -600,7 +588,7 @@ namespace FMScanner
 
             #endregion
 
-            return (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, titlesStrFileLines);
+            return (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles, titlesStrFileLines);
         }
 
         // Willing to hand this one the entire object because you can tell with a simple glance which properties
@@ -1377,38 +1365,32 @@ namespace FMScanner
             return ret;
         }
 
-        private string GetTitleFromNewGameStrFile()
+        private string GetTitleFromNewGameStrFile(List<EntryAndIndex> intrfaceDirFiles)
         {
-            string newGameStrFile = "";
+            if (!intrfaceDirFiles.Any()) return null;
+            var newGameStrFile = new EntryAndIndex();
 
-            if (DirExists(FMDirs.Intrface))
+            char dsc = FmIsZip ? '/' : Path.DirectorySeparatorChar;
+
+            if (intrfaceDirFiles.Any())
             {
-                if (DirExists(Path.Combine(FMDirs.Intrface, "english")))
-                {
-                    newGameStrFile = EnumFiles(
-                            Path.Combine(FMDirs.Intrface, "english"),
-                            FMFiles.NewGame, SearchOption.TopDirectoryOnly)
-                        .FirstOrDefault();
-                }
-
-                if (string.IsNullOrEmpty(newGameStrFile))
-                {
-                    newGameStrFile =
-                        EnumFiles(FMDirs.Intrface, FMFiles.NewGame,
-                            SearchOption.TopDirectoryOnly).FirstOrDefault()
-                        ?? EnumFiles(FMDirs.Intrface, FMFiles.NewGame,
-                            SearchOption.AllDirectories).FirstOrDefault();
-                }
+                newGameStrFile =
+                    intrfaceDirFiles.FirstOrDefault(x =>
+                        x.Entry.EqualsI(FMDirs.Intrface + dsc + "english" + dsc + FMFiles.NewGameStr))
+                    ?? intrfaceDirFiles.FirstOrDefault(x =>
+                        x.Entry.EqualsI(FMDirs.Intrface + dsc + FMFiles.NewGameStr))
+                    ?? intrfaceDirFiles.FirstOrDefault(x =>
+                        x.Entry.StartsWithI(FMDirs.Intrface + dsc) &&
+                        x.Entry.EndsWithI(dsc + FMFiles.NewGameStr));
             }
 
-            if (string.IsNullOrEmpty(newGameStrFile)) return null;
+            if (newGameStrFile == null) return null;
 
-            string[] lines = { };
+            string[] lines = null;
 
             if (FmIsZip)
             {
-                var e = Archive.Entries.FirstOrDefault(x =>
-                    x.FullName.EqualsI(newGameStrFile.ToForwardSlashed()));
+                var e = Archive.Entries[newGameStrFile.Index];
                 if (e != null)
                 {
                     using (var es = e.Open())
@@ -1419,8 +1401,10 @@ namespace FMScanner
             }
             else
             {
-                lines = ReadAllLinesE(newGameStrFile);
+                lines = ReadAllLinesE(newGameStrFile.Entry);
             }
+
+            if (lines == null) return null;
 
             for (var i = 0; i < lines.Length; i++)
             {
