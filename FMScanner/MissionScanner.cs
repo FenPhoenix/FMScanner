@@ -1436,6 +1436,7 @@ namespace FMScanner
                         !title.EqualsI("Play") && !title.EqualsI("Start") &&
                         !title.EqualsI("Begin") && !title.EqualsI("Begin...") &&
                         !title.EqualsI("skip training") &&
+                        !title.StartsWithI("Let's go") && !title.StartsWithI("Let's rock this boat") &&
                         !title.StartsWithI("Play ") && !title.StartsWithI("Continue") &&
                         !title.StartsWithI("Start ") && !title.StartsWithI("Begin "))
                     {
