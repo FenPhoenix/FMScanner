@@ -257,6 +257,8 @@ namespace FMScanner
             {
                 if (string.IsNullOrEmpty(value)) return;
 
+                value = CleanupTitle(value);
+
                 if (string.IsNullOrEmpty(fmData.Title))
                 {
                     fmData.Title = value;
@@ -318,18 +320,6 @@ namespace FMScanner
                         "Campaign Title", "Campaign title", "The name of Mission:"));
 
                 SetOrAddTitle(GetTitleFromNewGameStrFile());
-
-                if (!fmData.Title.IsEmpty())
-                {
-                    fmData.Title = CleanupTitle(fmData.Title);
-                }
-                if (fmData.AlternateTitles.Count > 0)
-                {
-                    for (var i = 0; i < fmData.AlternateTitles.Count; i++)
-                    {
-                        fmData.AlternateTitles[i] = CleanupTitle(fmData.AlternateTitles[i]);
-                    }
-                }
             }
 
             #endregion
