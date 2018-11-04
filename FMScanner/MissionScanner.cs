@@ -1968,54 +1968,6 @@ namespace FMScanner
             }
         }
 
-        #region Directory exists and files exists
-
-        private bool DirExistsAndIsNotEmpty(string dirName)
-        {
-            if (FmIsZip)
-            {
-                return Archive.Entries.Any(x =>
-                    x.FullName.StartsWithI(dirName) &&
-                    (!x.FullName.TrimEnd('/').EqualsI(dirName) ||
-                     !x.FullName.EqualsI(dirName + '/')));
-            }
-            else
-            {
-                return Directory.Exists(Path.Combine(FmWorkingPath, dirName)) &&
-                       Directory.EnumerateFileSystemEntries(
-                               Path.Combine(FmWorkingPath, dirName))
-                           .FirstOrDefault() != null;
-            }
-        }
-
-        private bool DirExists(string path)
-        {
-            if (FmIsZip)
-            {
-                return Archive.Entries.Any(x =>
-                    x.FullName.StartsWithI(path.ToForwardSlashed()));
-            }
-            else
-            {
-                return Directory.Exists(Path.Combine(FmWorkingPath, path));
-            }
-        }
-
-        private bool FileExists(string path)
-        {
-            if (FmIsZip)
-            {
-                return Archive.Entries.Any(x =>
-                    x.FullName.EqualsI(path.ToForwardSlashed()));
-            }
-            else
-            {
-                return File.Exists(Path.Combine(FmWorkingPath, path));
-            }
-        }
-
-        #endregion
-
         #region Generic dir/file functions
 
         private IEnumerable<string>
@@ -2027,82 +1979,14 @@ namespace FMScanner
         private IEnumerable<string>
         EnumFiles(string path, string searchPattern, SearchOption searchOption, bool checkDirExists = true)
         {
-            if (FmIsZip)
+            var fullDir = Path.Combine(FmWorkingPath, path);
+
+            if (!checkDirExists || Directory.Exists(fullDir))
             {
-                path = path.ToForwardSlashed();
-
-                // TODO: Regex.Escape can take care of most of this, so switch to that
-
-                #region Format searchPattern for regex
-
-                // . $ ^ { [ ( | ) * + ? \
-                const string es = @".$^{}[]()+";
-
-                var p = searchPattern.Trim('/');
-                if (p == "*")
-                {
-                    p = @".*\..*";
-                }
-                else if (!string.IsNullOrWhiteSpace(p))
-                {
-                    p = p.Replace("/", "");
-                    foreach (var c in es)
-                    {
-                        p = p.Replace(c.ToString(), @"\" + c);
-                    }
-
-                    p = p.Replace("*", @"[^/].*");
-                }
-
-                #endregion
-
-                IEnumerable<string> files;
-
-                switch (searchOption)
-                {
-                    case SearchOption.TopDirectoryOnly:
-                        files =
-                            !string.IsNullOrEmpty(path)
-                                ? from e in Archive.Entries
-                                  let f = e.FullName.TrimEnd('/')
-                                  where Regex.Match(f, @"^" + Regex.Escape(path + '/') + p + @"$",
-                                      RegexOptions.IgnoreCase).Success
-                                  select f
-                                : from e in Archive.Entries
-                                  let f = e.FullName.TrimEnd('/')
-                                  where !f.Contains('/') &&
-                                        Regex.Match(f, @"^" + p + @"$", RegexOptions.IgnoreCase).Success
-                                  select f;
-                        break;
-                    case SearchOption.AllDirectories:
-                        files =
-                            from e in Archive.Entries
-                            let f = e.FullName.TrimEnd('/')
-                            where Regex.Match(f, @"^" + Regex.Escape(string.IsNullOrEmpty(path) ? "" : path + '/') +
-                                                 (searchPattern.Equals("*") ? "" : @".*") + p + @"$",
-                                RegexOptions.IgnoreCase).Success
-                            select f;
-                        break;
-                    default:
-                        files = null;
-                        break;
-                }
-
-                return files;
+                return Directory.EnumerateFiles(fullDir, searchPattern, searchOption);
             }
-            else
-            {
-                IEnumerable<string> ret = new List<string>();
 
-                var fullDir = Path.Combine(FmWorkingPath, path);
-
-                if (!checkDirExists || Directory.Exists(fullDir))
-                {
-                    ret = Directory.EnumerateFiles(fullDir, searchPattern, searchOption);
-                }
-
-                return ret;
-            }
+            return new List<string>();
         }
 
         private string DirName(string path)
@@ -2119,7 +2003,6 @@ namespace FMScanner
         }
 
         #endregion
-
         public void Dispose()
         {
             ArchiveStream?.Dispose();
