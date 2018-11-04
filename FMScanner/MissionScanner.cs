@@ -1401,7 +1401,7 @@ namespace FMScanner
             }
             else
             {
-                lines = ReadAllLinesE(newGameStrFile.Entry);
+                lines = ReadAllLinesE(Path.Combine(FmWorkingPath, newGameStrFile.Entry));
             }
 
             if (lines == null) return null;
