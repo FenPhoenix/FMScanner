@@ -261,7 +261,7 @@ namespace FMScanner
                 {
                     fmData.Title = value;
                 }
-                else if (!fmData.Title.Contains(value) && !fmData.AlternateTitles.Contains(value))
+                else if (!fmData.Title.EqualsI(value) && !fmData.AlternateTitles.ContainsI(value))
                 {
                     fmData.AlternateTitles.Add(value);
                 }
@@ -1439,9 +1439,10 @@ namespace FMScanner
                 if (match.Success)
                 {
                     var title = match.Groups["Title"].Value.Trim();
+                    if (string.IsNullOrEmpty(title)) continue;
 
                     // Do our best to ignore things that aren't titles
-                    if (!"{}-_:;!@#$%^&*()".Any(x => title.StartsWith(x.ToString())) &&
+                    if ("{}-_:;!@#$%^&*()".All(x => title[0] != x) &&
                         !title.EqualsI("Play") && !title.EqualsI("Start") &&
                         !title.EqualsI("Begin") && !title.EqualsI("Begin...") &&
                         !title.EqualsI("skip training") &&
