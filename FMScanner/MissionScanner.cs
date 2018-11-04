@@ -1441,7 +1441,7 @@ namespace FMScanner
                     var title = match.Groups["Title"].Value.Trim();
 
                     // Do our best to ignore things that aren't titles
-                    if ("{}-_:;!@#$%^&*()".Any(x => !title.StartsWith(x.ToString())) &&
+                    if (!"{}-_:;!@#$%^&*()".Any(x => title.StartsWith(x.ToString())) &&
                         !title.EqualsI("Play") && !title.EqualsI("Start") &&
                         !title.EqualsI("Begin") && !title.EqualsI("Begin...") &&
                         !title.EqualsI("skip training") &&
