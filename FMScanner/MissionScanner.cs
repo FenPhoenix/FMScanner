@@ -976,10 +976,6 @@ namespace FMScanner
                     ? (int)readmeEntry.Length
                     : (int)new FileInfo(Path.Combine(FmWorkingPath, readmeFile.Entry)).Length;
 
-                // Attempt to filter out non-English readmes because I can't really do anything accurate with
-                // them
-                if (!readmeFile.Entry.IsEnglishReadme()) continue;
-
                 // try-finally instead of using, because we only want to initialize the readme stream if FmIsZip
                 Stream readmeStream = null;
                 try
@@ -1049,26 +1045,26 @@ namespace FMScanner
                                 {
                                     Lines = rtfBox.Lines,
                                     Text = rtfBox.Text,
-                                    FileName = fileName
+                                    FileName = fileName,
+                                    LastModifiedDate = lastModifiedDate
                                 });
                             }
                         }
                     }
                     else
                     {
-                        ReadmeFiles.Add(new ReadmeFile { FileName = fileName });
-
-                        if (fileName.ExtIsHtml())
+                        ReadmeFiles.Add(new ReadmeFile
                         {
-                            ReadmeFiles.Last().LastModifiedDate = lastModifiedDate;
-                        }
-                        else
+                            FileName = fileName,
+                            LastModifiedDate = lastModifiedDate
+                        });
+
+                        if (!fileName.ExtIsHtml())
                         {
                             ReadmeFiles.Last().Lines = FmIsZip
                                 ? ReadAllLinesE(readmeStream, readmeLength)
                                 : ReadAllLinesE(readmeFileOnDisk);
                             ReadmeFiles.Last().Text = string.Join("\r\n", ReadmeFiles.Last().Lines);
-                            ReadmeFiles.Last().LastModifiedDate = lastModifiedDate;
                         }
                     }
                 }
