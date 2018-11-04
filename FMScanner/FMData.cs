@@ -40,14 +40,6 @@ namespace FMScanner
         public static string Campaign { get; } = "campaign";
     }
 
-    public sealed class ReadmeFile
-    {
-        public string FileName { get; set; } = null;
-        public string[] Lines { get; set; } = null;
-        public string Text { get; set; } = null;
-        public DateTime LastModifiedDate { get; set; }
-    }
-
     [SuppressMessage("ReSharper", "MemberCanBeInternal")]
     [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
     public sealed class ScannedFMData
@@ -76,6 +68,5 @@ namespace FMScanner
         public bool? HasMap { get; set; }
         public bool? HasCustomSubtitles { get; set; }
         public string Description { get; set; } = null;
-        public List<ReadmeFile> ReadmeFiles { get; set; } = new List<ReadmeFile>();
     }
 }

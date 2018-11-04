@@ -19,6 +19,24 @@ using static FMScanner.Regexes;
 
 namespace FMScanner
 {
+    #region Classes
+
+    internal sealed class ReadmeFile
+    {
+        internal string FileName { get; set; }
+        internal string[] Lines { get; set; }
+        internal string Text { get; set; }
+        internal DateTime LastModifiedDate { get; set; }
+    }
+
+    internal sealed class EntryAndIndex
+    {
+        internal string Entry { get; set; } = null;
+        internal int Index { get; set; } = -1;
+    }
+
+    #endregion
+
     [SuppressMessage("ReSharper", "ArrangeStaticMemberQualifier")]
     public class MissionScanner : IDisposable
     {
@@ -43,12 +61,6 @@ namespace FMScanner
         private List<ReadmeFile> ReadmeFiles { get; set; } = new List<ReadmeFile>();
 
         #endregion
-
-        private sealed class EntryAndIndex
-        {
-            internal string Entry { get; set; } = null;
-            internal int Index { get; set; } = -1;
-        }
 
         private enum SpecialLogic
         {
