@@ -6,24 +6,24 @@ namespace FMScanner
 {
     public sealed class ScanOptions
     {
-        public bool ScanTitle { internal get; set; } = true;
+        public bool ScanTitle { get; set; } = true;
         /// <summary>
         /// For campaigns, whether to scan for the titles of the individual missions.
         /// </summary>
-        public bool ScanCampaignMissionNames { internal get; set; } = true;
-        public bool ScanAuthor { internal get; set; } = true;
-        public bool ScanVersion { internal get; set; } = true;
-        public bool ScanLanguages { internal get; set; } = true;
+        public bool ScanCampaignMissionNames { get; set; } = true;
+        public bool ScanAuthor { get; set; } = true;
+        public bool ScanVersion { get; set; } = true;
+        public bool ScanLanguages { get; set; } = true;
         /// <summary>
         /// true to scan for game type (Thief 1 or Thief 2) and whether or not NewDark is required.
         /// </summary>
-        public bool ScanGameTypeAndNewDark { internal get; set; } = true;
+        public bool ScanGameTypeAndNewDark { get; set; } = true;
         /// <summary>
         /// true to scan for the minimum required NewDark version, if the mission requires NewDark.
         /// If ScanGameTypeAndNewDark is false, this setting has no effect.
         /// </summary>
-        public bool ScanNewDarkMinimumVersion { internal get; set; } = true;
-        public bool ScanCustomResources { internal get; set; } = true;
+        public bool ScanNewDarkMinimumVersion { get; set; } = true;
+        public bool ScanCustomResources { get; set; } = true;
     }
 
     [SuppressMessage("ReSharper", "MemberCanBeInternal")]
