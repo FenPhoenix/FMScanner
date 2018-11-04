@@ -54,6 +54,7 @@ namespace FMScanner
     {
         public string ArchiveName { get; set; } = null;
         public string Title { get; set; } = null;
+        public List<string> AlternateTitles { get; set; } = new List<string>();
         public string Author { get; set; } = null;
         public string Type { get; set; } = null;
         public string[] IncludedMissions { get; set; } = null;

@@ -253,6 +253,20 @@ namespace FMScanner
 
             fmData.Type = usedMisFiles.Count > 1 ? FMTypes.Campaign : FMTypes.FanMission;
 
+            void SetOrAddTitle(string value)
+            {
+                if (string.IsNullOrEmpty(value)) return;
+
+                if (string.IsNullOrEmpty(fmData.Title))
+                {
+                    fmData.Title = value;
+                }
+                else if (!fmData.Title.Contains(value) && !fmData.AlternateTitles.Contains(value))
+                {
+                    fmData.AlternateTitles.Add(value);
+                }
+            }
+
             #region Check info files
 
             if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor || ScanOptions.ScanVersion)
@@ -261,7 +275,7 @@ namespace FMScanner
                 if (fmInfoXml != null)
                 {
                     var t = ReadFmInfoXml(fmInfoXml);
-                    fmData.Title = t.Item1;
+                    SetOrAddTitle(t.Item1);
                     fmData.Author = t.Item2;
                     fmData.Version = t.Item3;
                 }
@@ -271,7 +285,7 @@ namespace FMScanner
                 if (fmIni != null)
                 {
                     var t = ReadFmIni(fmIni);
-                    fmData.Title = t.Item1;
+                    SetOrAddTitle(t.Item1);
                     fmData.Author = t.Item2;
                     fmData.Description = t.Item3;
                     fmData.LastUpdateDate = t.Item4;
@@ -284,38 +298,37 @@ namespace FMScanner
 
             #region Title and IncludedMissions
 
-            if (ScanOptions.ScanTitle && fmData.Title.IsEmpty())
+            if (ScanOptions.ScanTitle)
             {
-                fmData.Title = GetTitleFromTitlesFile(titlesStrFileLines);
+                SetOrAddTitle(GetTitleFromTitlesFile(titlesStrFileLines));
             }
 
             if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
             {
-                var fmTitleIsEmpty = fmData.Title.IsEmpty();
-
-                var t = GetMissionNames(titlesStrFileLines, misFiles, usedMisFiles, fmTitleIsEmpty);
-                if (fmTitleIsEmpty) fmData.Title = t.Item1;
+                var t = GetMissionNames(titlesStrFileLines, misFiles, usedMisFiles);
+                SetOrAddTitle(t.Item1);
                 fmData.IncludedMissions = t.Item2;
             }
 
             if (ScanOptions.ScanTitle)
             {
-                if (fmData.Title.IsEmpty())
-                {
-                    fmData.Title =
-                        GetValueFromReadme(SpecialLogic.Title, "Title", "Mission Title", "Mission title",
-                            "Mission Name", "Mission name", "Level Name", "Level name", "Mission:", "Mission ",
-                            "Campaign Title", "Campaign title", "The name of Mission:");
-                }
+                SetOrAddTitle(
+                    GetValueFromReadme(SpecialLogic.Title, "Title", "Mission Title", "Mission title",
+                        "Mission Name", "Mission name", "Level Name", "Level name", "Mission:", "Mission ",
+                        "Campaign Title", "Campaign title", "The name of Mission:"));
 
-                if (fmData.Title.IsEmpty())
-                {
-                    fmData.Title = GetTitleFromNewGameStrFile();
-                }
+                SetOrAddTitle(GetTitleFromNewGameStrFile());
 
                 if (!fmData.Title.IsEmpty())
                 {
                     fmData.Title = CleanupTitle(fmData.Title);
+                }
+                if (fmData.AlternateTitles.Count > 0)
+                {
+                    for (var i = 0; i < fmData.AlternateTitles.Count; i++)
+                    {
+                        fmData.AlternateTitles[i] = CleanupTitle(fmData.AlternateTitles[i]);
+                    }
                 }
             }
 
@@ -327,6 +340,7 @@ namespace FMScanner
             {
                 if (fmData.Author.IsEmpty())
                 {
+                    // TODO: Do I want to check AlternateTitles for StartsWithI("By ") as well?
                     fmData.Author =
                         GetValueFromReadme(SpecialLogic.Author, fmData.Title.StartsWithI("By "),
                             "Author", "Authors", "Autor",
@@ -1098,7 +1112,7 @@ namespace FMScanner
 
         private Tuple<string, string[]>
         GetMissionNames(string[] titlesStrFileLines, List<EntryAndIndex> misFiles,
-                List<EntryAndIndex> usedMisFiles, bool fmTitleIsEmpty)
+            List<EntryAndIndex> usedMisFiles)
         {
             string retTitle = null;
             string[] retIncludedMissions = null;
@@ -1157,7 +1171,6 @@ namespace FMScanner
                 }
 
                 if (ScanOptions.ScanTitle &&
-                    fmTitleIsEmpty &&
                     retTitle.IsEmpty() &&
                     line == tfLinesD.Length - 1 &&
                     !string.IsNullOrEmpty(titleNum) &&
@@ -1176,7 +1189,7 @@ namespace FMScanner
             {
                 if (ScanOptions.ScanTitle && titles.Count == 1)
                 {
-                    if (fmTitleIsEmpty) retTitle = titles.First();
+                    retTitle = titles.First();
                 }
                 else if (ScanOptions.ScanCampaignMissionNames)
                 {
