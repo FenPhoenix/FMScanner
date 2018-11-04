@@ -303,7 +303,7 @@ namespace FMScanner
 
             if (ScanOptions.ScanTitle)
             {
-                SetOrAddTitle(GetTitleFromTitlesFile(titlesStrFileLines));
+                SetOrAddTitle(GetTitleFromTitlesStrZeroLine(titlesStrFileLines));
             }
 
             if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
@@ -704,7 +704,6 @@ namespace FMScanner
 
             if (FmIsZip)
             {
-                //var e = Archive.Entries.First(x => x.FullName.EqualsI(file));
                 var e = Archive.Entries[file.Index];
                 using (var es = e.Open())
                 {
@@ -766,7 +765,6 @@ namespace FMScanner
 
                 if (FmIsZip)
                 {
-                    //var e = Archive.Entries.First(x => x.FullName.EqualsI(file));
                     var e = Archive.Entries[file.Index];
                     fmIniLength = e.Length;
                     using (var es = e.Open())
@@ -953,7 +951,6 @@ namespace FMScanner
             var readmes =
                 (from fd in baseDirFiles
                  where new[] { ".txt", ".rtf", ".wri" }.Any(x => GetExtension(fd.Entry).EqualsI(x)) ||
-                       //where new[] { ".txt", }.Any(x => GetExtension(fd).EqualsI(x)) ||
                        fd.Entry.ExtIsHtml()
                  select fd).ToList();
 
@@ -1067,7 +1064,7 @@ namespace FMScanner
             }
         }
 
-        private static string GetTitleFromTitlesFile(string[] titlesFileLines)
+        private static string GetTitleFromTitlesStrZeroLine(string[] titlesFileLines)
         {
             if (titlesFileLines == null || !titlesFileLines.Any()) return null;
 
@@ -1765,7 +1762,6 @@ namespace FMScanner
             ZipArchiveEntry misFileZipArchiveEntry = null;
             if (FmIsZip)
             {
-                //misFileZipArchiveEntry = Archive.Entries.First(x => x.FullName.EqualsI(GetFileName(misFile)));
                 misFileZipArchiveEntry = Archive.Entries[usedMisFiles[0].Index];
             }
 
