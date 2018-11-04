@@ -5,7 +5,6 @@ using static System.IO.Path;
 
 namespace FMScanner
 {
-    // FMScanner-specific extensions, so as not to pollute other namespaces.
     internal static class Extensions
     {
         #region Queries
@@ -43,7 +42,7 @@ namespace FMScanner
 
             return index > -1;
         }
-        
+
         internal static bool Contains(this string value, string substring, StringComparison comparison)
         {
             return value.IndexOf(substring, comparison) >= 0;
@@ -116,7 +115,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool EqualsTrue(this string value)
         {
-            return value.Equals(Boolean.TrueString, StringComparison.OrdinalIgnoreCase);
+            return value.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -127,7 +126,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool ExtEqualsI(this string value, string extension)
         {
-            if (extension[0] != '.') extension = "." + extension;
+            if (extension[0] != '.') extension = '.' + extension;
 
             return !string.IsNullOrEmpty(value) &&
                    GetExtension(value).Equals(extension, StringComparison.OrdinalIgnoreCase);
