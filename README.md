@@ -26,6 +26,9 @@ Detects the following:
   - Custom motions
   - Custom scripts
   - Custom subtitles (NewDark-style only)
+  
+#### TODO:
+Implement progress reporting
 
 ## Usage
 
