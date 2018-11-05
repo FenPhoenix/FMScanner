@@ -249,8 +249,8 @@ namespace FMScanner
                 if (fmInfoXml != null)
                 {
                     var t = ReadFmInfoXml(fmInfoXml);
-                    SetOrAddTitle(t.Item1);
-                    fmData.Author = t.Item2;
+                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Item1);
+                    if (ScanOptions.ScanAuthor) fmData.Author = t.Item2;
                     fmData.Version = t.Item3;
                 }
             }
@@ -259,8 +259,8 @@ namespace FMScanner
                 if (fmIni != null)
                 {
                     var t = ReadFmIni(fmIni);
-                    SetOrAddTitle(t.Item1);
-                    fmData.Author = t.Item2;
+                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Item1);
+                    if (ScanOptions.ScanAuthor) fmData.Author = t.Item2;
                     fmData.Description = t.Item3;
                     fmData.LastUpdateDate = t.Item4;
                 }
@@ -280,8 +280,8 @@ namespace FMScanner
             if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
             {
                 var t = GetMissionNames(titlesStrFileLines, misFiles, usedMisFiles);
-                SetOrAddTitle(t.Item1);
-                fmData.IncludedMissions = t.Item2;
+                if (ScanOptions.ScanTitle) SetOrAddTitle(t.Item1);
+                if (ScanOptions.ScanCampaignMissionNames) fmData.IncludedMissions = t.Item2;
             }
 
             if (ScanOptions.ScanTitle)
@@ -336,11 +336,11 @@ namespace FMScanner
 
             #region NewDark/GameType checks
 
-            if (ScanOptions.ScanGameTypeAndNewDark)
+            if (ScanOptions.ScanNewDarkRequired || ScanOptions.ScanGameType)
             {
                 var t = GetGameTypeAndEngine(usedMisFiles);
-                fmData.NewDarkRequired = t.Item1;
-                fmData.Game = t.Item2;
+                if (ScanOptions.ScanNewDarkRequired) fmData.NewDarkRequired = t.Item1;
+                if (ScanOptions.ScanGameType) fmData.Game = t.Item2;
             }
 
             if (fmData.NewDarkRequired == true && ScanOptions.ScanNewDarkMinimumVersion)
@@ -356,9 +356,7 @@ namespace FMScanner
 
             Debug.WriteLine(@"This FM took:\r\n" + OverallTimer.Elapsed.ToString(@"hh\:mm\:ss\.fffffff"));
 
-            fmData.ArchiveName = FmIsZip
-                ? GetFileName(ArchivePath)
-                : GetFileName(FmWorkingPath);
+            fmData.ArchiveName = FmIsZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath);
 
             foreach (var r in ReadmeFiles)
             {
@@ -1818,7 +1816,9 @@ namespace FMScanner
                         }
                         else if (locations[i] == oldDarkThief2Location)
                         {
-                            return Tuple.Create((bool?)false, Games.TMA);
+                            return Tuple.Create(
+                                ScanOptions.ScanNewDarkRequired ? (bool?)false : null,
+                                ScanOptions.ScanGameType ? Games.TMA : null);
                         }
                     }
 
@@ -1830,6 +1830,8 @@ namespace FMScanner
             #endregion
 
             if (!foundAtNewDarkLocation) retNewDarkRequired = false;
+
+            if (!ScanOptions.ScanGameType) return Tuple.Create(retNewDarkRequired, (string)null);
 
             #region Check for RopeyArrow (determines game type for both OldDark and NewDark)
 
