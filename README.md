@@ -39,7 +39,8 @@ var scanOptions = new FMScanner.ScanOptions
     ScanAuthor = true,
     ScanVersion = true,
     ScanLanguages = true,
-    ScanGameTypeAndNewDark = true,
+    ScanGameType = true,
+    ScanNewDarkRequired = true,
     ScanNewDarkMinimumVersion = true,
     ScanCustomResources = true
 };
