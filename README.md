@@ -30,7 +30,7 @@ Detects the following:
 ## Usage
 
 ```csharp
-// Set these to what you want.
+// Set these to what you want. The fewer things that are scanned for, the faster the scan will be.
 // This is optional. If you call Scan() without providing a ScanOptions object, all options will default to true.
 var scanOptions = new FMScanner.ScanOptions
 {
@@ -44,7 +44,7 @@ var scanOptions = new FMScanner.ScanOptions
     ScanCustomResources = true
 };
 
-// In most cases archives will be scanned without requiring an extract to disk, but when that is not the case,
+// In most cases archives will be scanned without requiring an extract to disk, but when that's not the case,
 // they will be temporarily extracted to this directory.
 var tempPath = "C:\\MyTempDir\\FmScanTemp";
 
