@@ -107,7 +107,7 @@ namespace FMScanner
 
             foreach (var fm in missions)
             {
-                FmIsZip = fm.ExtEqualsI(".zip");
+                FmIsZip = fm.ExtEqualsI(".zip") || fm.ExtEqualsI(".7z");
 
                 ArchiveStream?.Dispose();
                 Archive?.Dispose();
