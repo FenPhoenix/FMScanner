@@ -2,7 +2,7 @@
 
 _NOTE: This code is released under the Unlicense except portions which are otherwise specified. The SimpleHelpers.FileEncoding code is released under the MIT license (because it's not mine)._
 
-A fast, thorough, accurate scanner for Thief 1 and 2 fan missions.
+A fast, thorough, accurate scanner for Thief 1 and Thief 2 fan missions.
 
 Detects the following:
 - Title (along with a list of alternate titles if more than one is detected and they don't all match)
@@ -39,7 +39,8 @@ var scanOptions = new FMScanner.ScanOptions
     ScanAuthor = true,
     ScanVersion = true,
     ScanLanguages = true,
-    ScanGameTypeAndNewDark = true,
+    ScanGameType = true,
+    ScanNewDarkRequired = true,
     ScanNewDarkMinimumVersion = true,
     ScanCustomResources = true
 };
