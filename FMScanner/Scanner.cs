@@ -952,18 +952,8 @@ namespace FMScanner
 
                     if (FmIsZip)
                     {
-                        readmeLength = readmeEntry.Length;
                         fileName = readmeEntry.Name;
                         lastModifiedDate = readmeEntry.LastWriteTime.DateTime;
-
-                        readmeStream = new MemoryStream(fileLen);
-
-                        using (var es = readmeEntry.Open())
-                        {
-                            es.CopyTo(readmeStream);
-                            readmeStream.Position = 0;
-                        }
-
                     }
                     else
                     {
@@ -971,6 +961,27 @@ namespace FMScanner
                         var fi = new FileInfo(readmeFileOnDisk);
                         fileName = fi.Name;
                         lastModifiedDate = fi.LastWriteTime;
+                    }
+
+                    ReadmeFiles.Add(new ReadmeFile
+                    {
+                        FileName = fileName,
+                        ArchiveIndex = readmeFile.Index,
+                        LastModifiedDate = lastModifiedDate
+                    });
+
+                    if (readmeFile.Name.ExtIsHtml() || !readmeFile.Name.IsEnglishReadme()) continue;
+
+                    if (FmIsZip)
+                    {
+                        readmeLength = readmeEntry.Length;
+                        readmeStream = new MemoryStream(fileLen);
+
+                        using (var es = readmeEntry.Open())
+                        {
+                            es.CopyTo(readmeStream);
+                            readmeStream.Position = 0;
+                        }
                     }
 
                     var rtfHeader = new char[6];
@@ -1004,33 +1015,17 @@ namespace FMScanner
 
                             if (success)
                             {
-                                ReadmeFiles.Add(new ReadmeFile
-                                {
-                                    FileName = fileName,
-                                    ArchiveIndex = readmeFile.Index,
-                                    LastModifiedDate = lastModifiedDate,
-                                    Lines = rtfBox.Lines,
-                                    Text = rtfBox.Text
-                                });
+                                ReadmeFiles.Last().Lines = rtfBox.Lines;
+                                ReadmeFiles.Last().Text = rtfBox.Text;
                             }
                         }
                     }
                     else
                     {
-                        ReadmeFiles.Add(new ReadmeFile
-                        {
-                            FileName = fileName,
-                            ArchiveIndex = readmeFile.Index,
-                            LastModifiedDate = lastModifiedDate
-                        });
-
-                        if (!fileName.ExtIsHtml())
-                        {
-                            ReadmeFiles.Last().Lines = FmIsZip
-                                ? ReadAllLinesE(readmeStream, readmeLength)
-                                : ReadAllLinesE(readmeFileOnDisk);
-                            ReadmeFiles.Last().Text = string.Join("\r\n", ReadmeFiles.Last().Lines);
-                        }
+                        ReadmeFiles.Last().Lines = FmIsZip
+                            ? ReadAllLinesE(readmeStream, readmeLength)
+                            : ReadAllLinesE(readmeFileOnDisk);
+                        ReadmeFiles.Last().Text = string.Join("\r\n", ReadmeFiles.Last().Lines);
                     }
                 }
                 finally
