@@ -26,3 +26,58 @@ Detects the following:
   - Custom motions
   - Custom scripts
   - Custom subtitles (NewDark-style only)
+
+## Usage
+
+```csharp
+// Set these to what you want.
+// This is optional. If you call Scan() without providing a ScanOptions object, all options will default to true.
+var scanOptions = new FMScanner.ScanOptions
+{
+    ScanTitle = true,
+    ScanCampaignMissionNames = true,
+    ScanAuthor = true,
+    ScanVersion = true,
+    ScanLanguages = true,
+    ScanGameTypeAndNewDark = true,
+    ScanNewDarkMinimumVersion = true,
+    ScanCustomResources = true
+};
+
+// In most cases archives will be scanned without requiring an extract to disk, but when that is not the case,
+// they will be temporarily extracted to this directory.
+var tempPath = "C:\\MyTempDir\\FmScanTemp";
+
+
+// --- Scan a single FM:
+
+// This can be either an archive (.zip, .7z) or a directory. The scanner detects based on extension.
+var fm = "C:\\FMs\\Rocksbourg3.zip";
+
+FMScanner.ScannedFMData fmData;
+using (var scanner = new FMScanner.Scanner())
+{
+    fmData = scanner.Scan(fm, tempPath, scanOptions);
+}
+
+// do something with fmData here
+
+
+// --- Scan multiple FMs:
+
+// The list can contain both archives (.zip, .7z) and directories. The scanner detects based on extension.
+var fms = new List<string>
+{
+    "C:\\FMs\\BrokenTriad.zip",
+    "C:\\FMs\\Racket.7z",
+    "C:\\Thief2\\FMs\\SevenSisters_The"
+};
+
+List<FMScanner.ScannedFMData> fmDataList;
+using (var scanner = new FMScanner.Scanner())
+{
+    fmDataList = scanner.Scan(fms, tempPath, scanOptions);
+}
+
+// do something with fmDataList here
+```
