@@ -24,6 +24,7 @@ namespace FMScanner
     internal sealed class ReadmeFile
     {
         internal string FileName { get; set; }
+        internal int ArchiveIndex { get; set; } = -1;
         internal string[] Lines { get; set; }
         internal string Text { get; set; }
         internal DateTime LastModifiedDate { get; set; }
@@ -31,7 +32,7 @@ namespace FMScanner
 
     internal sealed class NameAndIndex
     {
-        internal string Name { get; set; } = null;
+        internal string Name { get; set; }
         internal int Index { get; set; } = -1;
     }
 
@@ -400,6 +401,11 @@ namespace FMScanner
             fmData.ArchiveName = FmIsZip
                 ? GetFileName(ArchivePath)
                 : GetFileName(FmWorkingPath);
+
+            foreach (var r in ReadmeFiles)
+            {
+                fmData.Readmes.Add(new Readme { FileName = r.FileName, ArchiveIndex = r.ArchiveIndex });
+            }
 
             return fmData;
         }
@@ -1044,10 +1050,11 @@ namespace FMScanner
                             {
                                 ReadmeFiles.Add(new ReadmeFile
                                 {
-                                    Lines = rtfBox.Lines,
-                                    Text = rtfBox.Text,
                                     FileName = fileName,
-                                    LastModifiedDate = lastModifiedDate
+                                    ArchiveIndex = readmeFile.Index,
+                                    LastModifiedDate = lastModifiedDate,
+                                    Lines = rtfBox.Lines,
+                                    Text = rtfBox.Text
                                 });
                             }
                         }
@@ -1057,6 +1064,7 @@ namespace FMScanner
                         ReadmeFiles.Add(new ReadmeFile
                         {
                             FileName = fileName,
+                            ArchiveIndex = readmeFile.Index,
                             LastModifiedDate = lastModifiedDate
                         });
 
