@@ -45,11 +45,9 @@ namespace FMScanner
 
         #region Properties
 
-        private ScanOptions ScanOptions { get; } = new ScanOptions();
+        private ScanOptions ScanOptions { get; set; } = new ScanOptions();
 
         private bool FmIsZip { get; set; }
-
-        private string TempPath { get; set; }
 
         private string ArchivePath { get; set; }
 
@@ -71,98 +69,54 @@ namespace FMScanner
             Author
         }
 
-        #region Constructors
-
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-        public MissionScanner(string archivePath, string tempPath, ScanOptions scanOptions)
-            : this(archivePath, tempPath)
+        public ScannedFMData Scan(string mission, string tempPath)
         {
-            ScanOptions = scanOptions;
+            return Scan(new List<string> { mission }, tempPath)[0];
         }
 
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-        public MissionScanner(string archivePath, string tempPath)
+        public ScannedFMData Scan(string mission, string tempPath, ScanOptions scanOptions)
         {
-            if (string.IsNullOrEmpty(archivePath) || !File.Exists(archivePath))
-            {
-                throw new ArgumentException("path is invalid or can't be read or whatever.",
-                    nameof(archivePath));
-            }
-            if (string.IsNullOrEmpty(tempPath) || !Directory.Exists(tempPath))
-            {
-                throw new ArgumentException("path is invalid or can't be read or whatever.",
-                    nameof(tempPath));
-            }
-
-            FmIsZip = true;
-            ArchivePath = archivePath;
-            // Trim() is required, because a space at the end of a folder name causes havoc
-            FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+            return Scan(new List<string> { mission }, tempPath, scanOptions)[0];
         }
 
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-        public MissionScanner(string fmExtractedPath, ScanOptions scanOptions) : this(fmExtractedPath)
+        public List<ScannedFMData> Scan(List<string> missions, string tempPath)
         {
-            ScanOptions = scanOptions;
+            return Scan(missions, tempPath, ScanOptions);
         }
 
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-        public MissionScanner(string fmExtractedPath)
+        public List<ScannedFMData> Scan(List<string> missions, string tempPath, ScanOptions scanOptions)
         {
-            if (string.IsNullOrEmpty(fmExtractedPath) || !Directory.Exists(fmExtractedPath))
-            {
-                throw new ArgumentException("path is invalid or can't be read or whatever.",
-                    nameof(fmExtractedPath));
-            }
+            #region Checks
 
-            FmIsZip = false;
-            FmWorkingPath = fmExtractedPath;
-        }
-
-        #region Intended for ExecuteMany()
-
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-        public MissionScanner(List<string> fmsList, string tempPath)
-        {
             if (string.IsNullOrEmpty(tempPath))
             {
                 throw new ArgumentException("Argument is null or empty.", nameof(tempPath));
             }
 
-            TempPath = tempPath;
+            if (missions == null) throw new ArgumentNullException(nameof(missions));
+            if (missions.Count == 0 || (missions.Count == 1 && string.IsNullOrEmpty(missions[0])))
+            {
+                throw new ArgumentException("No mission(s) specified.", nameof(missions));
+            }
 
-            FMsList = fmsList ?? throw new ArgumentException("list is null.", nameof(fmsList));
-        }
+            ScanOptions = scanOptions ?? throw new ArgumentNullException(nameof(scanOptions));
 
-        [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-        public MissionScanner(List<string> fmsList, string tempPath, ScanOptions scanOptions)
-            : this(fmsList, tempPath)
-        {
-            ScanOptions = scanOptions ?? throw new ArgumentException("Argument is null.", nameof(scanOptions));
-        }
+            #endregion
 
-        #endregion
-
-        private List<string> FMsList { get; set; } = new List<string>();
-
-        #endregion
-
-        public List<ScannedFMData> ExecuteMany()
-        {
             var ret = new List<ScannedFMData>();
 
-            foreach (var fm in FMsList)
+            foreach (var fm in missions)
             {
                 FmIsZip = fm.ExtEqualsI(".zip");
+
+                ArchiveStream?.Dispose();
+                Archive?.Dispose();
 
                 if (FmIsZip)
                 {
                     ArchivePath = fm;
 
-                    ArchiveStream?.Dispose();
-                    Archive?.Dispose();
-
-                    FmWorkingPath = Path.Combine(TempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+                    FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
                 }
                 else
                 {
@@ -171,13 +125,13 @@ namespace FMScanner
 
                 ReadmeFiles = new List<ReadmeFile>();
 
-                ret.Add(Execute());
+                ret.Add(ScanOne());
             }
 
             return ret;
         }
 
-        public ScannedFMData Execute()
+        private ScannedFMData ScanOne()
         {
             OverallTimer.Restart();
 
@@ -232,6 +186,10 @@ namespace FMScanner
             }
             else
             {
+                if (!Directory.Exists(FmWorkingPath))
+                {
+                    throw new DirectoryNotFoundException("Directory not found: " + FmWorkingPath);
+                }
                 Debug.WriteLine(@"----------" + FmWorkingPath);
             }
 
