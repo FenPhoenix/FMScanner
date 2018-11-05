@@ -1055,9 +1055,6 @@ namespace FMScanner
                 }
             }
 
-            // I think I can stop here; if the title needs to come from a single title_[not-0] line,
-            // GetMissionNames() and associated return-value-handling code will handle it
-
             return null;
         }
 
@@ -1083,9 +1080,7 @@ namespace FMScanner
                 var temp = new List<string>();
                 foreach (var line in titlesStrFileLines.Where(x => x.Contains(':') && x.StartsWithI("title_")))
                 {
-                    if (!temp.Any(x =>
-                        x.Contains(':') &&
-                        x.StartsWithI(line.Substring(0, line.IndexOf(':')))))
+                    if (!temp.Any(x => x.Contains(':') && x.StartsWithI(line.Substring(0, line.IndexOf(':')))))
                     {
                         temp.Add(line);
                     }
@@ -1272,13 +1267,9 @@ namespace FMScanner
                     {
                         if (!lineStartTrimmed.StartsWithI(key)) continue;
 
-                        // It's supposed to be finding a space after a key; this prevents it from finding
-                        // the first space in the key itself if there is one.
-                        string lineAfterKey = lineStartTrimmed.Remove(0, key.Length);
-
-                        // ^              match at beginning of line
-                        // \s+            one or more spaces
-                        // (?<Value>.+) Value: one or more characters that are not \n (iow, read to end of line)
+                        // It's supposed to be finding a space after a key; this prevents it from finding the
+                        // first space in the key itself if there is one.
+                        var lineAfterKey = lineStartTrimmed.Remove(0, key.Length);
                         match = ReadmeLineScanFinalValueRegex.Match(lineAfterKey);
                         if (match.Success) break;
                     }
@@ -1304,16 +1295,10 @@ namespace FMScanner
             ret = ret.TrimEnd();
 
             // Remove surrounding quotes
-            if (ret[0] == '\"' && ret.Last() == '\"')
-            {
-                ret = ret.Trim('\"');
-            }
+            if (ret[0] == '\"' && ret.Last() == '\"') ret = ret.Trim('\"');
 
             // Remove unpaired leading or trailing quotes
-            if ((ret[0] == '\"' || ret.Last() == '\"') && ret.Count(x => x == '\"') == 1)
-            {
-                ret = ret.Trim('\"');
-            }
+            if ((ret[0] == '\"' || ret.Last() == '\"') && ret.Count(x => x == '\"') == 1) ret = ret.Trim('\"');
 
             ret = ret.RemoveSurroundingParentheses();
 
@@ -1903,7 +1888,6 @@ namespace FMScanner
                 var match = NewDarkVersionRegexes[i].Match(text);
                 if (match.Success)
                 {
-                    // Shortcut the regex search for speed
                     version = match.Groups["Version"].Value;
                     break;
                 }
