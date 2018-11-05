@@ -80,7 +80,7 @@
     <Compile Include="FastIO.cs" />
     <Compile Include="FMData.cs" />
     <Compile Include="Methods.cs" />
-    <Compile Include="MissionScanner.cs" />
+    <Compile Include="Scanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleHelpers\FileEncoding.cs" />
   </ItemGroup>

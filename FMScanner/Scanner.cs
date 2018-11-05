@@ -39,7 +39,7 @@ namespace FMScanner
     #endregion
 
     [SuppressMessage("ReSharper", "ArrangeStaticMemberQualifier")]
-    public class MissionScanner : IDisposable
+    public class Scanner : IDisposable
     {
         private Stopwatch OverallTimer { get; } = new Stopwatch();
 
