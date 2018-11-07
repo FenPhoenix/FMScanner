@@ -138,7 +138,7 @@ namespace FMScanner
             #region Check for and setup 7-Zip
 
             bool fmIsSevenZip = false;
-            if (FmIsZip && GetExtension(ArchivePath).EqualsI(".7z"))
+            if (FmIsZip && ArchivePath.ExtEqualsI(".7z"))
             {
                 FmIsZip = false;
                 fmIsSevenZip = true;
@@ -166,7 +166,7 @@ namespace FMScanner
             {
                 Debug.WriteLine(@"----------" + ArchivePath);
 
-                if (GetExtension(ArchivePath).EqualsI(".zip"))
+                if (ArchivePath.ExtEqualsI(".zip"))
                 {
                     ArchiveStream = new FileStream(ArchivePath, FileMode.Open, FileAccess.Read);
                     try
@@ -436,7 +436,7 @@ namespace FMScanner
             for (var i = 0; i < baseDirFiles.Count; i++)
             {
                 var f = baseDirFiles[i];
-                if (GetExtension(f.Name).EqualsI(".mis"))
+                if (f.Name.ExtEqualsI(".mis"))
                 {
                     misFiles.Add(new NameAndIndex { Name = GetFileName(f.Name), Index = f.Index });
                 }
@@ -924,8 +924,8 @@ namespace FMScanner
 
             var readmes =
                 (from fd in baseDirFiles
-                 where new[] { ".txt", ".rtf", ".wri" }.Any(x => GetExtension(fd.Name).EqualsI(x)) ||
-                       fd.Name.ExtIsHtml()
+                 where new[] { ".txt", ".rtf", ".wri" }.Any(x => fd.Name.ExtEqualsI(x)) ||
+                    fd.Name.ExtIsHtml()
                  select fd).ToList();
 
             // Maybe could combine these checks, but this works for now
@@ -1652,7 +1652,7 @@ namespace FMScanner
             // Sometimes extra languages are in zip files inside the FM archive
             var zipFiles =
                 from f in baseDirFiles
-                where new[] { ".zip", ".7z", ".rar" }.Any(x => GetExtension(f.Name).EqualsI(x))
+                where new[] { ".zip", ".7z", ".rar" }.Any(x => f.Name.ExtEqualsI(x))
                 select f.Name.RemoveExtension();
 
             foreach (var fn in zipFiles)
