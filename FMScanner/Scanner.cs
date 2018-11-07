@@ -21,7 +21,7 @@ namespace FMScanner
 {
     #region Classes
 
-    internal sealed class ReadmeFile
+    internal sealed class ReadmeInternal
     {
         internal string FileName { get; set; }
         internal int ArchiveIndex { get; set; } = -1;
@@ -57,7 +57,7 @@ namespace FMScanner
         private string FmWorkingPath { get; set; }
 
         // Guess I'll leave this one global for reasons
-        private List<ReadmeFile> ReadmeFiles { get; set; } = new List<ReadmeFile>();
+        private List<ReadmeInternal> ReadmeFiles { get; set; } = new List<ReadmeInternal>();
 
         #endregion
 
@@ -65,7 +65,7 @@ namespace FMScanner
         {
             Title,
             Version,
-            NewDark,
+            NewDarkMinimumVersion,
             Author
         }
 
@@ -123,7 +123,7 @@ namespace FMScanner
                     FmWorkingPath = fm;
                 }
 
-                ReadmeFiles = new List<ReadmeFile>();
+                ReadmeFiles = new List<ReadmeInternal>();
 
                 ret.Add(ScanOne());
             }
@@ -345,7 +345,7 @@ namespace FMScanner
 
             if (fmData.NewDarkRequired == true && ScanOptions.ScanNewDarkMinimumVersion)
             {
-                fmData.NewDarkMinRequiredVersion = GetValueFromReadme(SpecialLogic.NewDark);
+                fmData.NewDarkMinRequiredVersion = GetValueFromReadme(SpecialLogic.NewDarkMinimumVersion);
             }
 
             #endregion
@@ -963,7 +963,7 @@ namespace FMScanner
                         lastModifiedDate = fi.LastWriteTime;
                     }
 
-                    ReadmeFiles.Add(new ReadmeFile
+                    ReadmeFiles.Add(new ReadmeInternal
                     {
                         FileName = fileName,
                         ArchiveIndex = readmeFile.Index,
@@ -1151,7 +1151,7 @@ namespace FMScanner
 
             foreach (var file in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
             {
-                if (specialLogic == SpecialLogic.NewDark)
+                if (specialLogic == SpecialLogic.NewDarkMinimumVersion)
                 {
                     var ndv = GetNewDarkVersionFromText(file.Text);
                     if (!string.IsNullOrEmpty(ndv)) return ndv;
@@ -1175,7 +1175,7 @@ namespace FMScanner
                     {
                         if (specialLogic == SpecialLogic.Author)
                         {
-                            ret = GetAuthorFromTextFallback(file.Text);
+                            ret = GetAuthorFromText(file.Text);
                             if (!string.IsNullOrEmpty(ret)) return ret;
                         }
                     }
@@ -1449,7 +1449,7 @@ namespace FMScanner
             return null;
         }
 
-        private static string GetAuthorFromTextFallback(string text)
+        private static string GetAuthorFromText(string text)
         {
             string author = null;
 
