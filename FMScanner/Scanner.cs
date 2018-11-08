@@ -7,6 +7,8 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using MadMilkman.Ini;
@@ -69,22 +71,48 @@ namespace FMScanner
             Author
         }
 
-        public ScannedFMData Scan(string mission, string tempPath)
+        #region Scan one
+
+        public async Task<ScannedFMData>
+        Scan(string mission, string tempPath)
         {
-            return Scan(new List<string> { mission }, tempPath)[0];
+            return (await Scan(new List<string> { mission }, tempPath, this.ScanOptions, null,
+                CancellationToken.None))[0];
         }
 
-        public ScannedFMData Scan(string mission, string tempPath, ScanOptions scanOptions)
+        public async Task<ScannedFMData>
+        Scan(string mission, string tempPath, ScanOptions scanOptions)
         {
-            return Scan(new List<string> { mission }, tempPath, scanOptions)[0];
+            return (await Scan(new List<string> { mission }, tempPath, scanOptions, null,
+                CancellationToken.None))[0];
         }
 
-        public List<ScannedFMData> Scan(List<string> missions, string tempPath)
+        #endregion
+
+        #region Scan many
+
+        public async Task<List<ScannedFMData>>
+        Scan(List<string> missions, string tempPath)
         {
-            return Scan(missions, tempPath, ScanOptions);
+            return await Scan(missions, tempPath, this.ScanOptions, null, CancellationToken.None);
         }
 
-        public List<ScannedFMData> Scan(List<string> missions, string tempPath, ScanOptions scanOptions)
+        public async Task<List<ScannedFMData>>
+        Scan(List<string> missions, string tempPath, ScanOptions scanOptions)
+        {
+            return await Scan(missions, tempPath, scanOptions, null, CancellationToken.None);
+        }
+
+        public async Task<List<ScannedFMData>>
+        Scan(List<string> missions, string tempPath, IProgress<ProgressReport> progress,
+            CancellationToken cancellationToken)
+        {
+            return await Scan(missions, tempPath, this.ScanOptions, progress, cancellationToken);
+        }
+
+        public async Task<List<ScannedFMData>>
+        Scan(List<string> missions, string tempPath, ScanOptions scanOptions, IProgress<ProgressReport> progress,
+            CancellationToken cancellationToken)
         {
             #region Checks
 
@@ -99,14 +127,17 @@ namespace FMScanner
                 throw new ArgumentException("No mission(s) specified.", nameof(missions));
             }
 
-            ScanOptions = scanOptions ?? throw new ArgumentNullException(nameof(scanOptions));
+            this.ScanOptions = scanOptions ?? throw new ArgumentNullException(nameof(scanOptions));
 
             #endregion
 
-            var ret = new List<ScannedFMData>();
+            var scannedFMDataList = new List<ScannedFMData>();
 
-            foreach (var fm in missions)
+            for (var i = 0; i < missions.Count; i++)
             {
+                #region Init
+
+                var fm = missions[i];
                 FmIsZip = fm.ExtEqualsI(".zip") || fm.ExtEqualsI(".7z");
 
                 ArchiveStream?.Dispose();
@@ -115,7 +146,6 @@ namespace FMScanner
                 if (FmIsZip)
                 {
                     ArchivePath = fm;
-
                     FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
                 }
                 else
@@ -125,13 +155,35 @@ namespace FMScanner
 
                 ReadmeFiles = new List<ReadmeInternal>();
 
-                ret.Add(ScanOne());
+                #endregion
+
+                await Task.Run(() => scannedFMDataList.Add(ScanCurrentFM()), cancellationToken);
+
+                #region Report progress and handle cancellation
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (progress == null) continue;
+
+                var progressReport = new ProgressReport
+                {
+                    FMName = missions[i],
+                    FMNumber = i + 1,
+                    FMsTotal = missions.Count,
+                    Percent = (100 * (i + 1)) / missions.Count,
+                    Finished = i == missions.Count - 1
+                };
+                progress.Report(progressReport);
+
+                #endregion
             }
 
-            return ret;
+            return scannedFMDataList;
         }
 
-        private ScannedFMData ScanOne()
+        #endregion
+
+        private ScannedFMData ScanCurrentFM()
         {
             OverallTimer.Restart();
 

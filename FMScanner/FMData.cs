@@ -46,14 +46,21 @@ namespace FMScanner
         public bool ScanCustomResources { get; set; } = true;
     }
 
-    [SuppressMessage("ReSharper", "MemberCanBeInternal")]
+    public sealed class ProgressReport
+    {
+        public string FMName;
+        public int FMNumber;
+        public int FMsTotal;
+        public int Percent;
+        public bool Finished;
+    }
+
     public static class Games
     {
         public static string TDP { get; } = "tdp";
         public static string TMA { get; } = "tma";
     }
 
-    [SuppressMessage("ReSharper", "MemberCanBeInternal")]
     public static class FMTypes
     {
         public static string FanMission { get; } = "fanmission";
