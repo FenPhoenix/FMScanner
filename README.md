@@ -33,7 +33,8 @@ Detects the following:
 private async void FMScannerUsageExample()
 {
     // Set these to what you want. The fewer things that are scanned for, the faster the scan will be.
-    // This is optional. If you call Scan() without providing a ScanOptions object, all options will default to true.
+    // This is optional. If you call Scan() without providing a ScanOptions object, all options will default
+    // to true.
     var scanOptions = new FMScanner.ScanOptions
     {
         ScanTitle = true,
