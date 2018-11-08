@@ -73,18 +73,20 @@ namespace FMScanner
 
         #region Scan one
 
-        public async Task<ScannedFMData>
+        public ScannedFMData
         Scan(string mission, string tempPath)
         {
-            return (await Scan(new List<string> { mission }, tempPath, this.ScanOptions, null,
-                CancellationToken.None))[0];
+            return ScanMany(new List<string> { mission }, tempPath, this.ScanOptions, null,
+                    CancellationToken.None, synchronous: true)
+                .Result[0];
         }
 
-        public async Task<ScannedFMData>
+        public ScannedFMData
         Scan(string mission, string tempPath, ScanOptions scanOptions)
         {
-            return (await Scan(new List<string> { mission }, tempPath, scanOptions, null,
-                CancellationToken.None))[0];
+            return ScanMany(new List<string> { mission }, tempPath, scanOptions, null,
+                    CancellationToken.None, synchronous: true)
+                .Result[0];
         }
 
         #endregion
@@ -94,25 +96,33 @@ namespace FMScanner
         public async Task<List<ScannedFMData>>
         Scan(List<string> missions, string tempPath)
         {
-            return await Scan(missions, tempPath, this.ScanOptions, null, CancellationToken.None);
+            return await ScanMany(missions, tempPath, this.ScanOptions, null, CancellationToken.None);
         }
 
         public async Task<List<ScannedFMData>>
         Scan(List<string> missions, string tempPath, ScanOptions scanOptions)
         {
-            return await Scan(missions, tempPath, scanOptions, null, CancellationToken.None);
+            return await ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
         }
 
         public async Task<List<ScannedFMData>>
         Scan(List<string> missions, string tempPath, IProgress<ProgressReport> progress,
             CancellationToken cancellationToken)
         {
-            return await Scan(missions, tempPath, this.ScanOptions, progress, cancellationToken);
+            return await ScanMany(missions, tempPath, this.ScanOptions, progress, cancellationToken);
         }
 
         public async Task<List<ScannedFMData>>
         Scan(List<string> missions, string tempPath, ScanOptions scanOptions, IProgress<ProgressReport> progress,
             CancellationToken cancellationToken)
+        {
+            return await ScanMany(missions, tempPath, scanOptions, progress, cancellationToken);
+        }
+
+        private async Task<List<ScannedFMData>>
+        ScanMany(List<string> missions, string tempPath, ScanOptions scanOptions,
+                IProgress<ProgressReport> progress, CancellationToken cancellationToken,
+                bool synchronous = false)
         {
             #region Checks
 
@@ -157,13 +167,20 @@ namespace FMScanner
 
                 #endregion
 
-                await Task.Run(() => scannedFMDataList.Add(ScanCurrentFM()), cancellationToken);
+                if (synchronous)
+                {
+                    scannedFMDataList.Add(ScanCurrentFM());
+                }
+                else
+                {
+                    await Task.Run(() => scannedFMDataList.Add(ScanCurrentFM()), cancellationToken);
+                }
 
                 #region Report progress and handle cancellation
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (progress == null) continue;
+                if (synchronous || progress == null) continue;
 
                 var progressReport = new ProgressReport
                 {
