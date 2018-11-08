@@ -94,26 +94,26 @@ namespace FMScanner
         #region Scan many
 
         public async Task<List<ScannedFMData>>
-        Scan(List<string> missions, string tempPath)
+        ScanAsync(List<string> missions, string tempPath)
         {
             return await ScanMany(missions, tempPath, this.ScanOptions, null, CancellationToken.None);
         }
 
         public async Task<List<ScannedFMData>>
-        Scan(List<string> missions, string tempPath, ScanOptions scanOptions)
+        ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions)
         {
             return await ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
         }
 
         public async Task<List<ScannedFMData>>
-        Scan(List<string> missions, string tempPath, IProgress<ProgressReport> progress,
+        ScanAsync(List<string> missions, string tempPath, IProgress<ProgressReport> progress,
             CancellationToken cancellationToken)
         {
             return await ScanMany(missions, tempPath, this.ScanOptions, progress, cancellationToken);
         }
 
         public async Task<List<ScannedFMData>>
-        Scan(List<string> missions, string tempPath, ScanOptions scanOptions, IProgress<ProgressReport> progress,
+        ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions, IProgress<ProgressReport> progress,
             CancellationToken cancellationToken)
         {
             return await ScanMany(missions, tempPath, scanOptions, progress, cancellationToken);
