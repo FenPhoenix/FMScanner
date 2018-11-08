@@ -48,8 +48,8 @@ private async void FMScannerUsageExample()
         ScanCustomResources = true
     };
 
-    // In most cases archives will be scanned without requiring an extract to disk, but when that's not the case,
-    // they will be temporarily extracted to this directory.
+    // In most cases archives will be scanned without requiring an extract to disk, but when that's not the
+    // case, they will be temporarily extracted to this directory.
     var tempPath = "C:\\MyTempDir\\FmScanTemp";
 
     // Single-FM scans are synchronous (which is probably what you want for FM loaders).
@@ -81,7 +81,8 @@ private void ScanSingleFM(FMScanner.ScanOptions scanOptions, string tempPath)
 ```csharp
 private async Task ScanMultipleFMs(FMScanner.ScanOptions scanOptions, string tempPath)
 {
-    // The list can contain both archives (.zip, .7z) and directories. The scanner detects based on extension.
+    // The list can contain both archives (.zip, .7z) and directories. The scanner detects based on
+    // extension.
     var fms = new List<string>
     {
         "C:\\FMs\\BrokenTriad.zip",
@@ -104,7 +105,8 @@ private async Task ScanMultipleFMs(FMScanner.ScanOptions scanOptions, string tem
 private System.Threading.CancellationTokenSource cts;
 private async Task ScanMultipleFMsWithProgressReport(FMScanner.ScanOptions scanOptions, string tempPath)
 {
-    // The list can contain both archives (.zip, .7z) and directories. The scanner detects based on extension.
+    // The list can contain both archives (.zip, .7z) and directories. The scanner detects based on
+    // extension.
     var fms = new List<string>
     {
         "C:\\FMs\\BrokenTriad.zip",
