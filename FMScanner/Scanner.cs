@@ -71,58 +71,61 @@ namespace FMScanner
             Author
         }
 
-        #region Scan one
+        #region Scan synchronous
 
         public ScannedFMData
         Scan(string mission, string tempPath)
         {
             return ScanMany(new List<string> { mission }, tempPath, this.ScanOptions, null,
-                    CancellationToken.None, synchronous: true)
-                .Result[0];
+                    CancellationToken.None)[0];
         }
 
         public ScannedFMData
         Scan(string mission, string tempPath, ScanOptions scanOptions)
         {
             return ScanMany(new List<string> { mission }, tempPath, scanOptions, null,
-                    CancellationToken.None, synchronous: true)
-                .Result[0];
+                    CancellationToken.None)[0];
         }
 
         #endregion
 
-        #region Scan many
+        #region Scan asynchronous
 
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath)
         {
-            return await ScanMany(missions, tempPath, this.ScanOptions, null, CancellationToken.None);
+            return await Task.Run(() =>
+                ScanMany(missions, tempPath, this.ScanOptions, null, CancellationToken.None));
         }
 
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions)
         {
-            return await ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
+            return await Task.Run(() =>
+                ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None));
         }
 
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath, IProgress<ProgressReport> progress,
             CancellationToken cancellationToken)
         {
-            return await ScanMany(missions, tempPath, this.ScanOptions, progress, cancellationToken);
+            return await Task.Run(() =>
+                ScanMany(missions, tempPath, this.ScanOptions, progress, cancellationToken));
         }
 
         public async Task<List<ScannedFMData>>
-        ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions, IProgress<ProgressReport> progress,
-            CancellationToken cancellationToken)
+        ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions,
+            IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
-            return await ScanMany(missions, tempPath, scanOptions, progress, cancellationToken);
+            return await Task.Run(() =>
+                ScanMany(missions, tempPath, scanOptions, progress, cancellationToken));
         }
 
-        private async Task<List<ScannedFMData>>
+        #endregion
+
+        private List<ScannedFMData>
         ScanMany(List<string> missions, string tempPath, ScanOptions scanOptions,
-                IProgress<ProgressReport> progress, CancellationToken cancellationToken,
-                bool synchronous = false)
+            IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
             #region Checks
 
@@ -167,20 +170,13 @@ namespace FMScanner
 
                 #endregion
 
-                if (synchronous)
-                {
-                    scannedFMDataList.Add(ScanCurrentFM());
-                }
-                else
-                {
-                    await Task.Run(() => scannedFMDataList.Add(ScanCurrentFM()), cancellationToken);
-                }
+                scannedFMDataList.Add(ScanCurrentFM());
 
                 #region Report progress and handle cancellation
 
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (synchronous || progress == null) continue;
+                if (progress == null) continue;
 
                 var progressReport = new ProgressReport
                 {
@@ -197,9 +193,7 @@ namespace FMScanner
 
             return scannedFMDataList;
         }
-
-        #endregion
-
+        
         private ScannedFMData ScanCurrentFM()
         {
             OverallTimer.Restart();
