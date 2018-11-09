@@ -1068,26 +1068,24 @@ namespace FMScanner
 
         private List<string> GetTitlesStrLines(List<NameAndIndex> stringsDirFiles)
         {
-            var titlesStrLines = new string[] { };
+            string[] titlesStrLines = null;
 
             #region Read title(s).str file
 
             // Do not change search order: strings/english, strings, strings/[any other language]
-            var titlesStrDirs = new List<string>();
-
-            titlesStrDirs.AddRange(
-                from f in FMFiles.TitlesFiles
-                select FMDirs.Strings + "/english/" + f);
-
-            titlesStrDirs.AddRange(
-                from f in FMFiles.TitlesFiles
-                select FMDirs.Strings + '/' + f);
-
-            foreach (var lang in Languages.Where(x => !x.EqualsI("english")))
+            var titlesStrDirs = new List<string>
             {
-                titlesStrDirs.AddRange(
-                    from f in FMFiles.TitlesFiles
-                    select FMDirs.Strings + '/' + lang + '/' + f);
+                FMDirs.Strings + dsc + "english" + dsc + FMFiles.TitlesStr,
+                FMDirs.Strings + dsc + "english" + dsc + FMFiles.TitleStr,
+                FMDirs.Strings + dsc + FMFiles.TitlesStr,
+                FMDirs.Strings + dsc + FMFiles.TitleStr
+            };
+            foreach (var lang in Languages)
+            {
+                if (lang == "english") continue;
+
+                titlesStrDirs.Add(FMDirs.Strings + dsc + lang + dsc + FMFiles.TitlesStr);
+                titlesStrDirs.Add(FMDirs.Strings + dsc + lang + dsc + FMFiles.TitleStr);
             }
 
             foreach (var titlesFileLocation in titlesStrDirs)
@@ -1113,10 +1111,11 @@ namespace FMScanner
                 }
 
                 break;
-
             }
 
             #endregion
+
+            if (titlesStrLines == null || titlesStrLines.Length == 0) return null;
 
             #region Filter titlesStrLines
 

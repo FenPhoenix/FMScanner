@@ -23,7 +23,8 @@ namespace FMScanner
     internal static class FMFiles
     {
         internal const string MissFlag = "missflag.str";
-        internal static readonly string[] TitlesFiles = { "titles.str", "title.str" };
+        internal const string TitlesStr = "titles.str";
+        internal const string TitleStr = "title.str";
         internal const string NewGameStr = "newgame.str";
 
         // Telliamed's fminfo.xml file, used in a grand total of three missions
