@@ -273,11 +273,11 @@ namespace FMScanner
             var usedMisFiles = new List<NameAndIndex>();
             var stringsDirFiles = new List<NameAndIndex>();
             var intrfaceDirFiles = new List<NameAndIndex>();
-            string[] titlesStrFileLines;
+            string[] titlesStrLines;
 
             #region Cache FM data
 
-            (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles, titlesStrFileLines)
+            (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles, titlesStrLines)
                 = ReadAndCacheFMData();
 
             if (!baseDirFiles.Any() || !misFiles.Any() || !usedMisFiles.Any())
@@ -347,13 +347,18 @@ namespace FMScanner
 
             if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
             {
-                var t = GetMissionNames(titlesStrFileLines, misFiles, usedMisFiles);
+                var (titleFrom0, titleFromNum, cNames) = GetMissionNames(titlesStrLines, misFiles, usedMisFiles);
                 if (ScanOptions.ScanTitle)
                 {
-                    SetOrAddTitle(t.TitleFrom0);
-                    SetOrAddTitle(t.TitleFromNumbered);
+                    SetOrAddTitle(titleFrom0);
+                    SetOrAddTitle(titleFromNum);
                 }
-                if (ScanOptions.ScanCampaignMissionNames) fmData.IncludedMissions = t.CampaignMissionNames;
+
+                if (ScanOptions.ScanCampaignMissionNames && cNames != null && cNames.Length > 0)
+                {
+                    for (int i = 0; i < cNames.Length; i++) cNames[i] = CleanupTitle(cNames[i]);
+                    fmData.IncludedMissions = cNames;
+                }
             }
 
             if (ScanOptions.ScanTitle)
@@ -375,12 +380,14 @@ namespace FMScanner
                 if (fmData.Author.IsEmpty())
                 {
                     // TODO: Do I want to check AlternateTitles for StartsWithI("By ") as well?
-                    fmData.Author =
+                    var author =
                         GetValueFromReadme(SpecialLogic.Author, fmData.Title.StartsWithI("By "),
                             "Author", "Authors", "Autor",
                             "Created by", "Devised by", "Designed by", "Author=", "Made by",
                             "FM Author", "Mission Author", "Mission author", "The author:",
                             "author:");
+
+                    fmData.Author = CleanupValue(author);
                 }
 
                 if (!fmData.Author.IsEmpty())
@@ -835,7 +842,7 @@ namespace FMScanner
                     ini.Load(sr);
                 }
 
-                fmIni = ini.Sections.First().Deserialize<FMIniData>();
+                fmIni = ini.Sections[0].Deserialize<FMIniData>();
 
                 #endregion
 
@@ -884,7 +891,7 @@ namespace FMScanner
             // TODO: Get other info from tags: genre, length, whatever
             if (ScanOptions.ScanAuthor)
             {
-                var tags = ini.Sections.First().Keys["Tags"];
+                var tags = ini.Sections[0].Keys["Tags"];
                 if (tags != null)
                 {
                     var tagsList = tags.Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
@@ -1087,17 +1094,19 @@ namespace FMScanner
 
                             if (success)
                             {
-                                ReadmeFiles.Last().Lines = rtfBox.Lines;
-                                ReadmeFiles.Last().Text = rtfBox.Text;
+                                var last = ReadmeFiles[ReadmeFiles.Count - 1];
+                                last.Lines = rtfBox.Lines;
+                                last.Text = rtfBox.Text;
                             }
                         }
                     }
                     else
                     {
-                        ReadmeFiles.Last().Lines = FmIsZip
+                        var last = ReadmeFiles[ReadmeFiles.Count - 1];
+                        last.Lines = FmIsZip
                             ? ReadAllLinesE(readmeStream, readmeLength)
                             : ReadAllLinesE(readmeFileOnDisk);
-                        ReadmeFiles.Last().Text = string.Join("\r\n", ReadmeFiles.Last().Lines);
+                        last.Text = string.Join("\r\n", last.Lines);
                     }
                 }
                 finally
@@ -1120,6 +1129,8 @@ namespace FMScanner
                 TitleFromNumbered: (string)null,
                 CampaignMissionNames: (string[])null);
 
+            #region Filter titlesStrLines
+
             // There's a way to do this with an IEqualityComparer, but no, for reasons
             string[] tfLinesD;
             {
@@ -1128,7 +1139,7 @@ namespace FMScanner
                 {
                     if (!string.IsNullOrEmpty(titlesStrLine) &&
                         titlesStrLine.Contains(':') &&
-                        titlesStrLine.Count(x => x == '\"') > 1 &&
+                        titlesStrLine.CountChars('\"') > 1 &&
                         titlesStrLine.StartsWithI("title_") &&
                         !temp.Any(x => x.StartsWithI(titlesStrLine.Substring(0, titlesStrLine.IndexOf(':')))))
                     {
@@ -1141,8 +1152,7 @@ namespace FMScanner
 
             Array.Sort(tfLinesD, new TitlesStrNaturalNumericSort());
 
-            string titleNum = null;
-            string title = null;
+            #endregion
 
             string ExtractFromQuotedSection(string line)
             {
@@ -1153,6 +1163,8 @@ namespace FMScanner
             var titles = new List<string>(tfLinesD.Length);
             for (int lineIndex = 0; lineIndex < tfLinesD.Length; lineIndex++)
             {
+                string titleNum = null;
+                string title = null;
                 for (int umfIndex = 0; umfIndex < usedMisFiles.Count; umfIndex++)
                 {
                     var line = tfLinesD[lineIndex];
@@ -1173,7 +1185,7 @@ namespace FMScanner
                         ScanOptions.ScanCampaignMissionNames &&
                         titleNum == umfNoExt.Substring(4))
                     {
-                        titles.Add(CleanupTitle(title));
+                        titles.Add(title);
                     }
                 }
 
@@ -1185,7 +1197,7 @@ namespace FMScanner
                     !usedMisFiles.Any(x => x.Name.ContainsI("miss" + titleNum + ".mis")) &&
                     misFiles.Any(x => x.Name.ContainsI("miss" + titleNum + ".mis")))
                 {
-                    ret.TitleFromNumbered = CleanupTitle(title);
+                    ret.TitleFromNumbered = title;
                     if (!ScanOptions.ScanCampaignMissionNames) break;
                 }
             }
@@ -1342,24 +1354,23 @@ namespace FMScanner
                 }
             }
 
-            if (string.IsNullOrEmpty(ret)) return ret;
-
-            ret = CleanupValue(ret);
-
             return ret;
         }
 
         private static string CleanupValue(string value)
         {
-            var ret = value;
-
-            ret = ret.TrimEnd();
+            if (string.IsNullOrEmpty(value)) return value;
+            
+            var ret = value.TrimEnd();
 
             // Remove surrounding quotes
-            if (ret[0] == '\"' && ret.Last() == '\"') ret = ret.Trim('\"');
+            if (ret[0] == '\"' && ret[ret.Length - 1] == '\"') ret = ret.Trim('\"');
 
             // Remove unpaired leading or trailing quotes
-            if ((ret[0] == '\"' || ret.Last() == '\"') && ret.Count(x => x == '\"') == 1) ret = ret.Trim('\"');
+            if ((ret[0] == '\"' || ret[ret.Length - 1] == '\"') && ret.CountChars('\"') == 1)
+            {
+                ret = ret.Trim('\"');
+            }
 
             ret = ret.RemoveSurroundingParentheses();
 
@@ -1373,7 +1384,7 @@ namespace FMScanner
                 ret = Regex.Replace(ret, @"\s+\)", ")");
 
                 // If there's stuff like "(this an incomplete sentence and" at the end, chop it right off
-                if (ret.Count(x => x == '(') == 1 && !ret.Contains(')'))
+                if (ret.CountChars('(') == 1 && !ret.Contains(')'))
                 {
                     ret = ret.Substring(0, ret.LastIndexOf('(')).TrimEnd();
                 }
@@ -1451,6 +1462,8 @@ namespace FMScanner
 
         private static string CleanupTitle(string value)
         {
+            if (string.IsNullOrEmpty(value)) return value;
+
             // Some titles are clever and  A r e  W r i t t e n  L i k e  T h i s
             // But we want to leave titles that are supposed to be acronyms - ie, "U F O", "R G B"
             if (value.Contains(' ') &&
@@ -1602,7 +1615,7 @@ namespace FMScanner
             var yearMatch = CopyrightAuthorYearRegex.Match(author);
             if (yearMatch.Success) author = author.Substring(0, yearMatch.Index);
 
-            if ("!@#$%^&*".Any(x => author.Last() == x) &&
+            if ("!@#$%^&*".Any(x => author[author.Length - 1] == x) &&
                 author.ElementAt(author.Length - 2) == ' ')
             {
                 author = author.Substring(0, author.Length - 2);

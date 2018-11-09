@@ -20,6 +20,21 @@ namespace FMScanner
                      !rNoExt.Equals("fminfo", StringComparison.OrdinalIgnoreCase));
         }
 
+        /// <summary>
+        /// Returns the number of times a character appears in a string.
+        /// Avoids whatever silly overhead junk Count(predicate) is doing.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="character"></param>
+        /// <returns></returns>
+        internal static int CountChars(this string value, char character)
+        {
+            int count = 0;
+            for (int i = 0; i < value.Length; i++) if (value[i] == character) count++;
+
+            return count;
+        }
+
         internal static bool Contains(this char[] input, char[] pattern)
         {
             var firstChar = pattern[0];
