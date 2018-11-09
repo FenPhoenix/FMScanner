@@ -244,16 +244,6 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Converts all backslashes (\) to forward slashes (/).
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        internal static string ToForwardSlashed(this string str)
-        {
-            return str.Replace('\\', '/');
-        }
-
-        /// <summary>
         /// Just removes the extension from a filename, without the rather large overhead of
         /// Path.GetFileNameWithoutExtension().
         /// </summary>
@@ -262,15 +252,10 @@ namespace FMScanner
         internal static string RemoveExtension(this string fileName)
         {
             if (fileName == null) return null;
-            int i;
-            return (i = fileName.LastIndexOf('.')) == -1 ? fileName : fileName.Substring(0, i);
-        }
-
-        internal static string GetFileNameFast(this string path)
-        {
-            if (path == null) return null;
-            int i;
-            return (i = path.LastIndexOf('\\')) == -1 ? path : path.Substring(i + 1);
+            int i = fileName.LastIndexOf('.');
+            return i > -1 && i > fileName.LastIndexOf('\\') && i > fileName.LastIndexOf('/')
+                ? fileName.Substring(0, i)
+                : fileName;
         }
 
         #endregion

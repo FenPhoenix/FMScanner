@@ -116,6 +116,9 @@ namespace FMScanner
 
     internal static class Regexes
     {
+        internal static Regex VersionExclude1Regex =
+            new Regex(@"\d\.\d+\+", RegexOptions.Compiled);
+
         internal static Regex TitleAnyConsecutiveLettersRegex =
             new Regex(@"\w\w", RegexOptions.Compiled);
 

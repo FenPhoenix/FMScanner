@@ -41,6 +41,7 @@ namespace FMScanner
     #endregion
 
     [SuppressMessage("ReSharper", "ArrangeStaticMemberQualifier")]
+    [SuppressMessage("ReSharper", "UnusedMember.Global")]
     public class Scanner : IDisposable
     {
         private Stopwatch OverallTimer { get; } = new Stopwatch();
@@ -569,7 +570,7 @@ namespace FMScanner
                 for (var i = 0; i < misFiles.Count; i++)
                 {
                     var mf = misFiles[i];
-                    var mfNoExt = GetFileNameWithoutExtension(mf.Name);
+                    var mfNoExt = mf.Name.RemoveExtension();
                     if (mfNoExt.StartsWithI("miss") && mfNoExt.Length > 4)
                     {
                         for (var j = 0; j < mfLines.Length; j++)
@@ -1295,7 +1296,7 @@ namespace FMScanner
                     (lineStartTrimmed.StartsWithI("Version History") ||
                      lineStartTrimmed.ContainsI("NewDark") ||
                      lineStartTrimmed.ContainsI("64 Cubed") ||
-                     Regex.Match(lineStartTrimmed, @"\d\.\d+\+").Success))
+                     VersionExclude1Regex.Match(lineStartTrimmed).Success))
                 {
                     continue;
                 }
