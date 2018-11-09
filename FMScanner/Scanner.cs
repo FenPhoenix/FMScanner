@@ -1273,18 +1273,20 @@ namespace FMScanner
             return ret;
         }
 
+        // TODO: Every project has that one part with Eldritch Old Code. This could really use a rewrite.
         private static string GetValueFromLines(SpecialLogic specialLogic, string[] keys, string[] lines)
         {
-            string ret = null;
-
-            foreach (var line in lines)
+            for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
             {
+                var line = lines[lineIndex];
                 var lineStartTrimmed = line.TrimStart();
 
-                // Either in given case or in all caps, but not in lowercase, because that's given me at least
-                // one false positive
-                if (!keys.Any(x =>
-                    lineStartTrimmed.StartsWith(x) || lineStartTrimmed.StartsWith(x.ToUpperInvariant())))
+                #region Excludes
+
+                if (specialLogic == SpecialLogic.Title &&
+                    (lineStartTrimmed.StartsWithI("Title & Description") ||
+                     lineStartTrimmed.StartsWith("Title screen") ||
+                     lineStartTrimmed.StartsWith("title screen")))
                 {
                     continue;
                 }
@@ -1297,14 +1299,26 @@ namespace FMScanner
                 {
                     continue;
                 }
-                else if (specialLogic == SpecialLogic.Author && lineStartTrimmed.StartsWithI("Authors note"))
+
+                if (specialLogic == SpecialLogic.Author &&
+                    (lineStartTrimmed.StartsWithI("Authors note")))
                 {
                     continue;
                 }
 
+                #endregion
+
+                // Either in given case or in all caps, but not in lowercase, because that's given me at least
+                // one false positive
+                if (!keys.Any(x =>
+                    lineStartTrimmed.StartsWith(x) || lineStartTrimmed.StartsWith(x.ToUpperInvariant())))
+                {
+                    continue;
+                }
+
+                // Regex perf: fast enough not to worry about it
                 if (keys.Any(x =>
-                    Regex.Match(lineStartTrimmed, @"^" + x + @"\s*(?<Separator>(:|-))", RegexOptions.IgnoreCase)
-                        .Success))
+                    Regex.Match(lineStartTrimmed, @"^" + x + @"\s*(:|-)", RegexOptions.IgnoreCase).Success))
                 {
                     int indexColon = lineStartTrimmed.IndexOf(':');
                     int indexDash = lineStartTrimmed.IndexOf('-');
@@ -1313,28 +1327,19 @@ namespace FMScanner
                         ? Math.Min(indexColon, indexDash)
                         : Math.Max(indexColon, indexDash);
 
-                    ret = lineStartTrimmed.Substring(index + 1).Trim();
-                    if (!string.IsNullOrEmpty(ret)) break;
+                    var finalValue = lineStartTrimmed.Substring(index + 1).Trim();
+                    if (!string.IsNullOrEmpty(finalValue)) return finalValue;
                 }
                 else
                 {
                     // Don't detect "Version "; too many false positives
-                    if (specialLogic == SpecialLogic.Version) break;
+                    // TODO: Can probably remove this check and then just sort out any false positives in
+                    // TODO: GetVersion()
+                    if (specialLogic == SpecialLogic.Version) continue;
 
-                    if (specialLogic == SpecialLogic.Title &&
-                        lineStartTrimmed.StartsWithI("Title & Description"))
+                    for (var keyIndex = 0; keyIndex < keys.Length; keyIndex++)
                     {
-                        break;
-                    }
-
-                    if (!keys.Any(x =>
-                        lineStartTrimmed.StartsWithI(x + ' ') || lineStartTrimmed.StartsWith(x + '\t')))
-                    {
-                        continue;
-                    }
-
-                    foreach (var key in keys)
-                    {
+                        var key = keys[keyIndex];
                         if (!lineStartTrimmed.StartsWithI(key)) continue;
 
                         // It's supposed to be finding a space after a key; this prevents it from finding the
@@ -1351,7 +1356,7 @@ namespace FMScanner
                 }
             }
 
-            return ret;
+            return null;
         }
 
         private static string CleanupValue(string value)

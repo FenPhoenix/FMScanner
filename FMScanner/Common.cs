@@ -143,7 +143,7 @@ namespace FMScanner
             new Regex(@"[0123456789\.]+", RegexOptions.Compiled);
 
         // Much, much faster to iterate through possible regex matches, common ones first
-        // TODO: These are still kind slow comparatively, but can they be made faster?
+        // TODO: These are still kinda slow comparatively. Profile to see if any are bottlenecks
         internal static Regex[] NewDarkVersionRegexes { get; } =
         {
             new Regex(@"NewDark (?<Version>\d\.\d+)",
