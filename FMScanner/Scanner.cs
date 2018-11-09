@@ -47,6 +47,8 @@ namespace FMScanner
 
         #region Properties
 
+        private char dsc { get; set; }
+
         private ScanOptions ScanOptions { get; set; } = new ScanOptions();
 
         private bool FmIsZip { get; set; }
@@ -207,6 +209,8 @@ namespace FMScanner
         private ScannedFMData ScanCurrentFM()
         {
             OverallTimer.Restart();
+
+            dsc = FmIsZip ? '/' : Path.DirectorySeparatorChar;
 
             #region Check for and setup 7-Zip
 
@@ -414,7 +418,7 @@ namespace FMScanner
 
             if (ScanOptions.ScanLanguages)
             {
-                fmData.Languages = GetLanguages(baseDirFiles);
+                fmData.Languages = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
             }
 
             #region NewDark/GameType checks
@@ -476,7 +480,7 @@ namespace FMScanner
                         }
                         else if (e.FullName.StartsWithI(FMDirs.Books + '/'))
                         {
-                            booksDirFiles.Add(new NameAndIndex {Name = e.FullName, Index = i});
+                            booksDirFiles.Add(new NameAndIndex { Name = e.FullName, Index = i });
                         }
                     }
                 }
@@ -533,18 +537,16 @@ namespace FMScanner
 
             NameAndIndex missFlag = null;
 
-            char ds = FmIsZip ? '/' : Path.DirectorySeparatorChar;
-
             if (stringsDirFiles.Count > 0)
             {
                 // I don't remember if I need to search in this exact order, so uh... not rockin' the boat.
                 missFlag =
                     stringsDirFiles.FirstOrDefault(x =>
-                        x.Name.EqualsI(FMDirs.Strings + ds + FMFiles.MissFlag))
+                        x.Name.EqualsI(FMDirs.Strings + dsc + FMFiles.MissFlag))
                     ?? stringsDirFiles.FirstOrDefault(x =>
-                        x.Name.EqualsI(FMDirs.Strings + ds + "english" + ds + FMFiles.MissFlag))
+                        x.Name.EqualsI(FMDirs.Strings + dsc + "english" + dsc + FMFiles.MissFlag))
                     ?? stringsDirFiles.FirstOrDefault(x =>
-                        x.Name.EndsWithI(ds + FMFiles.MissFlag));
+                        x.Name.EndsWithI(dsc + FMFiles.MissFlag));
             }
 
             if (missFlag != null)
@@ -1410,8 +1412,6 @@ namespace FMScanner
             if (intrfaceDirFiles.Count == 0) return null;
             var newGameStrFile = new NameAndIndex();
 
-            char dsc = FmIsZip ? '/' : Path.DirectorySeparatorChar;
-
             if (intrfaceDirFiles.Count > 0)
             {
                 newGameStrFile =
@@ -1689,54 +1689,61 @@ namespace FMScanner
         }
 
         // TODO: Add all missing languages, and implement language detection for non-folder-specified FMs
-        private string[] GetLanguages(List<NameAndIndex> baseDirFiles)
+        private string[] GetLanguages(List<NameAndIndex> baseDirFiles, List<NameAndIndex> booksDirFiles,
+            List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> stringsDirFiles)
         {
             var langs = new List<string>();
 
-            // Check multiple folders just to be sure
-            foreach (var langDir in LanguageDirs)
+            // Some code dupe, but I feel better about this overall than intertwining them more tightly
+            for (var dirIndex = 0; dirIndex < 3; dirIndex++)
             {
                 if (FmIsZip)
                 {
-                    foreach (var lang in Languages)
+                    var dirFiles =
+                        dirIndex == 0 ? booksDirFiles : dirIndex == 1 ? intrfaceDirFiles : stringsDirFiles;
+
+                    for (var langIndex = 0; langIndex < Languages.Length; langIndex++)
                     {
-                        langs.AddRange(
-                            from e in Archive.Entries
-                            let d = e.FullName.TrimEnd('/')
-                            where d.StartsWithI(langDir) &&
-                                  Regex.Match(d, @"/" + lang + @"( Language)?/", RegexOptions.IgnoreCase).Success &&
-                                  Regex.Match(d, @"\..*$").Success
-                            let dTrimmedStart = d.Substring(d.IndexOf('/') + 1)
-                            select lang);
+                        var lang = Languages[langIndex];
+                        for (var dfIndex = 0; dfIndex < dirFiles.Count; dfIndex++)
+                        {
+                            var df = dirFiles[dfIndex];
+                            if (df.Name.LastIndexOf('.') > df.Name.LastIndexOf('/') &&
+                                (df.Name.ContainsI('/' + lang + '/') ||
+                                 df.Name.ContainsI('/' + lang + " Language/")))
+                            {
+                                langs.Add(lang);
+                            }
+                        }
                     }
                 }
                 else
                 {
+                    var langDir = LanguageDirs[dirIndex];
+
                     if (!Directory.Exists(Path.Combine(FmWorkingPath, langDir))) continue;
 
-                    var dirs = Directory.EnumerateDirectories(Path.Combine(FmWorkingPath, langDir), "*",
-                        SearchOption.AllDirectories);
+                    var dirFiles = Directory.EnumerateFiles(Path.Combine(FmWorkingPath, langDir), "*",
+                        SearchOption.AllDirectories).ToArray();
 
-                    // TODO: Why am I doing this backwards?!
-                    // TODO: The +" Language" thing is really ill-fitting for this, try and make it more like above
-                    langs.AddRange(
-                        from d in dirs
-                        let dn = DirName(d)
-                        // absolutely disgusting, but works
-                        where (Languages.ContainsI(dn) ||
-                               (dn.EndsWithI(" Language") &&
-                                Languages.ContainsI(dn.Substring(0, dn.IndexOf(' '))))) &&
-                              EnumFiles(d, "*", SearchOption.AllDirectories).Any()
-                        select dn.Contains(' ')
-                            ? dn.ToLowerInvariant().Substring(0, dn.IndexOf(' '))
-                            : dn.ToLowerInvariant());
+                    for (var langIndex = 0; langIndex < Languages.Length; langIndex++)
+                    {
+                        var lang = Languages[langIndex];
+                        for (var dfIndex = 0; dfIndex < dirFiles.Length; dfIndex++)
+                        {
+                            var df = dirFiles[dfIndex];
+                            if (df.LastIndexOf('.') > df.LastIndexOf('\\') &&
+                                (df.ContainsI('\\' + lang + '\\') ||
+                                 df.ContainsI('\\' + lang + @" Language\")))
+                            {
+                                langs.Add(lang);
+                            }
+                        }
+                    }
                 }
             }
 
-            if (!langs.ContainsI("english"))
-            {
-                langs.Add("english");
-            }
+            if (!langs.ContainsI("english")) langs.Add("english");
 
             // Sometimes extra languages are in zip files inside the FM archive
             for (var i = 0; i < baseDirFiles.Count; i++)
