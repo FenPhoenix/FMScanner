@@ -87,6 +87,16 @@ namespace FMScanner
                     CancellationToken.None)[0];
         }
 
+        // Debug - scan on UI thread so breaks will actually break where they're supposed to
+#if DEBUG
+        public List<ScannedFMData>
+            Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
+                IProgress<ProgressReport> progress, CancellationToken cancellationToken)
+        {
+            return ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
+        }
+#endif
+
         #endregion
 
         #region Scan asynchronous
@@ -193,7 +203,7 @@ namespace FMScanner
 
             return scannedFMDataList;
         }
-        
+
         private ScannedFMData ScanCurrentFM()
         {
             OverallTimer.Restart();
@@ -335,16 +345,15 @@ namespace FMScanner
 
             #region Title and IncludedMissions
 
-            if (ScanOptions.ScanTitle)
-            {
-                SetOrAddTitle(GetTitleFromTitlesStrZeroLine(titlesStrFileLines));
-            }
-
             if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
             {
                 var t = GetMissionNames(titlesStrFileLines, misFiles, usedMisFiles);
-                if (ScanOptions.ScanTitle) SetOrAddTitle(t.Item1);
-                if (ScanOptions.ScanCampaignMissionNames) fmData.IncludedMissions = t.Item2;
+                if (ScanOptions.ScanTitle)
+                {
+                    SetOrAddTitle(t.TitleFrom0);
+                    SetOrAddTitle(t.TitleFromNumbered);
+                }
+                if (ScanOptions.ScanCampaignMissionNames) fmData.IncludedMissions = t.CampaignMissionNames;
             }
 
             if (ScanOptions.ScanTitle)
@@ -1098,49 +1107,32 @@ namespace FMScanner
             }
         }
 
-        private static string GetTitleFromTitlesStrZeroLine(string[] titlesFileLines)
+        private (string TitleFrom0, string TitleFromNumbered, string[] CampaignMissionNames)
+        GetMissionNames(string[] titlesStrLines, List<NameAndIndex> misFiles, List<NameAndIndex> usedMisFiles)
         {
-            if (titlesFileLines == null || !titlesFileLines.Any()) return null;
-
-            for (int i = 0; i < titlesFileLines.Length; i++)
+            if (titlesStrLines == null || titlesStrLines.Length == 0)
             {
-                var line = titlesFileLines[i];
-                if (line.StartsWithI("title_0:") && line.Count(x => x == '\"') > 1)
-                {
-                    line = line.Substring(line.IndexOf('\"') + 1);
-                    line = line.Substring(0, line.IndexOf('\"'));
-                    return line;
-                }
+                return (null, null, null);
             }
 
-            return null;
-        }
-
-        private Tuple<string, string[]>
-        GetMissionNames(string[] titlesStrFileLines, List<NameAndIndex> misFiles,
-            List<NameAndIndex> usedMisFiles)
-        {
-            string retTitle = null;
-            string[] retIncludedMissions = null;
-
-            var nullRet = Tuple.Create((string)null, (string[])null);
-
-            if (titlesStrFileLines == null || titlesStrFileLines.Length == 0)
-            {
-                return nullRet;
-            }
-
-            var titles = new List<string>();
+            var ret =
+                (TitleFrom0: (string)null,
+                TitleFromNumbered: (string)null,
+                CampaignMissionNames: (string[])null);
 
             // There's a way to do this with an IEqualityComparer, but no, for reasons
             string[] tfLinesD;
             {
-                var temp = new List<string>();
-                foreach (var line in titlesStrFileLines.Where(x => x.Contains(':') && x.StartsWithI("title_")))
+                var temp = new List<string>(titlesStrLines.Length);
+                foreach (var titlesStrLine in titlesStrLines)
                 {
-                    if (!temp.Any(x => x.Contains(':') && x.StartsWithI(line.Substring(0, line.IndexOf(':')))))
+                    if (!string.IsNullOrEmpty(titlesStrLine) &&
+                        titlesStrLine.Contains(':') &&
+                        titlesStrLine.Count(x => x == '\"') > 1 &&
+                        titlesStrLine.StartsWithI("title_") &&
+                        !temp.Any(x => x.StartsWithI(titlesStrLine.Substring(0, titlesStrLine.IndexOf(':')))))
                     {
-                        temp.Add(line);
+                        temp.Add(titlesStrLine);
                     }
                 }
 
@@ -1151,21 +1143,32 @@ namespace FMScanner
 
             string titleNum = null;
             string title = null;
-            for (int line = 0; line < tfLinesD.Length; line++)
+
+            string ExtractFromQuotedSection(string line)
             {
-                for (int umf = 0; umf < usedMisFiles.Count; umf++)
+                int i;
+                return line.Substring(i = line.IndexOf('\"') + 1, line.IndexOf('\"', i) - i);
+            }
+
+            var titles = new List<string>(tfLinesD.Length);
+            for (int lineIndex = 0; lineIndex < tfLinesD.Length; lineIndex++)
+            {
+                for (int umfIndex = 0; umfIndex < usedMisFiles.Count; umfIndex++)
                 {
-                    titleNum = tfLinesD[line].Substring("title_".Length);
-                    titleNum = titleNum.Substring(0, titleNum.IndexOf(':')).Trim();
+                    var line = tfLinesD[lineIndex];
+                    {
+                        int i;
+                        titleNum = line.Substring(i = line.IndexOf('_') + 1, line.IndexOf(':') - i).Trim();
+                    }
+                    if (titleNum == "0")
+                    {
+                        ret.TitleFrom0 = ExtractFromQuotedSection(line);
+                    }
 
-                    var startOfQuotedSection =
-                        tfLinesD[line].Substring(tfLinesD[line].IndexOf(':') + 1).Trim();
+                    title = ExtractFromQuotedSection(line);
+                    if (string.IsNullOrEmpty(title)) continue;
 
-                    var titleStringMatch = TitleStringQuotedRegex.Match(startOfQuotedSection);
-                    if (!titleStringMatch.Success) continue;
-
-                    title = titleStringMatch.Groups["Title"].Value;
-                    var umfNoExt = usedMisFiles[umf].Name.RemoveExtension();
+                    var umfNoExt = usedMisFiles[umfIndex].Name.RemoveExtension();
                     if (umfNoExt != null && umfNoExt.StartsWithI("miss") && umfNoExt.Length > 4 &&
                         ScanOptions.ScanCampaignMissionNames &&
                         titleNum == umfNoExt.Substring(4))
@@ -1175,14 +1178,14 @@ namespace FMScanner
                 }
 
                 if (ScanOptions.ScanTitle &&
-                    retTitle.IsEmpty() &&
-                    line == tfLinesD.Length - 1 &&
+                    ret.TitleFromNumbered.IsEmpty() &&
+                    lineIndex == tfLinesD.Length - 1 &&
                     !string.IsNullOrEmpty(titleNum) &&
                     !string.IsNullOrEmpty(title) &&
                     !usedMisFiles.Any(x => x.Name.ContainsI("miss" + titleNum + ".mis")) &&
                     misFiles.Any(x => x.Name.ContainsI("miss" + titleNum + ".mis")))
                 {
-                    retTitle = CleanupTitle(title);
+                    ret.TitleFromNumbered = CleanupTitle(title);
                     if (!ScanOptions.ScanCampaignMissionNames) break;
                 }
             }
@@ -1191,15 +1194,15 @@ namespace FMScanner
             {
                 if (ScanOptions.ScanTitle && titles.Count == 1)
                 {
-                    retTitle = titles.First();
+                    ret.TitleFromNumbered = titles[0];
                 }
                 else if (ScanOptions.ScanCampaignMissionNames)
                 {
-                    retIncludedMissions = titles.ToArray();
+                    ret.CampaignMissionNames = titles.ToArray();
                 }
             }
 
-            return Tuple.Create(retTitle, retIncludedMissions);
+            return ret;
         }
 
         private string GetValueFromReadme(SpecialLogic specialLogic, params string[] keys)

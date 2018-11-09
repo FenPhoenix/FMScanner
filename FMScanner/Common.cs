@@ -136,9 +136,6 @@ namespace FMScanner
         internal static Regex EndsWithExtensionRegex =
             new Regex(@"\..+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        internal static Regex TitleStringQuotedRegex =
-            new Regex(@"^""(?<Title>.+)""", RegexOptions.Compiled);
-
         internal static Regex ReadmeLineScanFinalValueRegex =
             new Regex(@"^\s+(?<Value>.+)", RegexOptions.Compiled);
 
