@@ -329,9 +329,9 @@ namespace FMScanner
                 if (fmInfoXml != null)
                 {
                     var t = ReadFmInfoXml(fmInfoXml);
-                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Item1);
-                    if (ScanOptions.ScanAuthor) fmData.Author = t.Item2;
-                    fmData.Version = t.Item3;
+                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
+                    if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
+                    fmData.Version = t.Version;
                 }
             }
             {
@@ -694,7 +694,7 @@ namespace FMScanner
                       FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
         }
 
-        private Tuple<string, string, string>
+        private (string Title, string Author, string Version)
         ReadFmInfoXml(NameAndIndex file)
         {
             string title = null;
@@ -741,18 +741,14 @@ namespace FMScanner
             // These files also specify languages and whether the mission has custom stuff, but we're not going
             // to trust what we're told - we're going to detect that stuff by looking at what's actually there.
 
-            return Tuple.Create(title, author, version);
+            return (title, author, version);
         }
 
-        private Tuple<string, string, string, string>
+        private (string Title, string Author, string Description, string LastUpdateDate)
         ReadFmIni(NameAndIndex file)
         {
-            var nullRet = Tuple.Create((string)null, (string)null, (string)null, (string)null);
-
-            string title = null;
-            string author = null;
-            string description = null;
-            string lastUpdateDate = null;
+            var ret = (Title: (string)null, Author: (string)null, Description: (string)null,
+                LastUpdateDate: (string)null);
 
             var ini = new IniFile();
 
@@ -785,7 +781,7 @@ namespace FMScanner
                     ? ReadAllTextE(fmIniStream, fmIniLength, streamIsSeekable: true)
                     : ReadAllTextE(fmIniFileOnDisk);
 
-                if (string.IsNullOrEmpty(iniText)) return nullRet;
+                if (string.IsNullOrEmpty(iniText)) return (null, null, null, null);
 
                 using (var sr = new StringReader(iniText))
                 {
@@ -857,15 +853,15 @@ namespace FMScanner
 
                         first = false;
                     }
-                    author = authorString;
+                    ret.Author = authorString;
                 }
             }
 
             #endregion
 
-            if (ScanOptions.ScanTitle) title = fmIni.NiceName;
-            lastUpdateDate = fmIni.ReleaseDate;
-            description = fmIni.Descr;
+            if (ScanOptions.ScanTitle) ret.Title = fmIni.NiceName;
+            ret.LastUpdateDate = fmIni.ReleaseDate;
+            ret.Description = fmIni.Descr;
 
             /*
                Notes:
@@ -875,7 +871,8 @@ namespace FMScanner
                 - Although fm.ini wasn't used before NewDark, its presence doesn't necessarily mean the mission
                   is NewDark-only. Sturmdrang Peak has it but doesn't require NewDark, for instance.
             */
-            return Tuple.Create(title, author, description, lastUpdateDate);
+
+            return ret;
         }
 
         // Because RTF files can have embedded images, their size can far exceed that normally expected of a
@@ -1805,11 +1802,10 @@ namespace FMScanner
             }
         }
 
-        private Tuple<bool?, string>
+        private (bool? NewDarkRequired, string Game)
         GetGameTypeAndEngine(List<NameAndIndex> usedMisFiles)
         {
-            bool? retNewDarkRequired = null;
-            string retGame = null;
+            var ret = (NewDarkRequired: (bool?)null, Game: (string)null);
 
             var misFile = Path.Combine(FmWorkingPath, usedMisFiles[0].Name);
 
@@ -1888,15 +1884,14 @@ namespace FMScanner
                         // fortunately they're interchangeable in meaning so we don't have to do anything
                         if (locations[i] == newDarkLocation1 || locations[i] == newDarkLocation2)
                         {
-                            retNewDarkRequired = true;
+                            ret.NewDarkRequired = true;
                             foundAtNewDarkLocation = true;
                             break;
                         }
                         else if (locations[i] == oldDarkThief2Location)
                         {
-                            return Tuple.Create(
-                                ScanOptions.ScanNewDarkRequired ? (bool?)false : null,
-                                ScanOptions.ScanGameType ? Games.TMA : null);
+                            return (ScanOptions.ScanNewDarkRequired ? (bool?)false : null,
+                                    ScanOptions.ScanGameType ? Games.TMA : null);
                         }
                     }
 
@@ -1907,9 +1902,9 @@ namespace FMScanner
 
             #endregion
 
-            if (!foundAtNewDarkLocation) retNewDarkRequired = false;
+            if (!foundAtNewDarkLocation) ret.NewDarkRequired = false;
 
-            if (!ScanOptions.ScanGameType) return Tuple.Create(retNewDarkRequired, (string)null);
+            if (!ScanOptions.ScanGameType) return (ret.NewDarkRequired, (string)null);
 
             #region Check for RopeyArrow (determines game type for both OldDark and NewDark)
 
@@ -1959,7 +1954,7 @@ namespace FMScanner
                         br.BaseStream.Position = offset;
 
                         var content = br.ReadChars((int)length);
-                        retGame = content.Contains(MisFileStrings.RopeyArrow)
+                        ret.Game = content.Contains(MisFileStrings.RopeyArrow)
                             ? Games.TMA
                             : Games.TDP;
                         break;
@@ -1969,7 +1964,7 @@ namespace FMScanner
 
             #endregion
 
-            return Tuple.Create(retNewDarkRequired, retGame);
+            return ret;
         }
 
         private static string GetNewDarkVersionFromText(string text)
