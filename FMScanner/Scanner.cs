@@ -273,17 +273,20 @@ namespace FMScanner
             var usedMisFiles = new List<NameAndIndex>();
             var stringsDirFiles = new List<NameAndIndex>();
             var intrfaceDirFiles = new List<NameAndIndex>();
-            string[] titlesStrLines;
+            var booksDirFiles = new List<NameAndIndex>();
 
             #region Cache FM data
 
-            (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles, titlesStrLines)
-                = ReadAndCacheFMData();
-
-            if (!baseDirFiles.Any() || !misFiles.Any() || !usedMisFiles.Any())
             {
-                if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
-                return null;
+                var success =
+                    ReadAndCacheFMData(baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles,
+                        booksDirFiles);
+
+                if (!success)
+                {
+                    if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
+                    return null;
+                }
             }
 
             #endregion
@@ -347,11 +350,11 @@ namespace FMScanner
 
             if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
             {
-                var (titleFrom0, titleFromNum, cNames) = GetMissionNames(titlesStrLines, misFiles, usedMisFiles);
+                var (titleFrom0, titleFromN, cNames) = GetMissionNames(stringsDirFiles, misFiles, usedMisFiles);
                 if (ScanOptions.ScanTitle)
                 {
                     SetOrAddTitle(titleFrom0);
-                    SetOrAddTitle(titleFromNum);
+                    SetOrAddTitle(titleFromN);
                 }
 
                 if (ScanOptions.ScanCampaignMissionNames && cNames != null && cNames.Length > 0)
@@ -446,21 +449,10 @@ namespace FMScanner
             return fmData;
         }
 
-        private (List<NameAndIndex> BaseDirFiles, List<NameAndIndex> MisFiles,
-        List<NameAndIndex> UsedMisFiles, List<NameAndIndex> StringsDirFiles,
-        List<NameAndIndex> intrfaceDirFiles, string[] TitlesStrFileLines)
-        ReadAndCacheFMData()
+        private bool ReadAndCacheFMData(List<NameAndIndex> baseDirFiles, List<NameAndIndex> misFiles,
+            List<NameAndIndex> usedMisFiles, List<NameAndIndex> stringsDirFiles,
+            List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> booksDirFiles)
         {
-            string[] titlesStrFileLines = { };
-            var misFiles = new List<NameAndIndex>();
-            var usedMisFiles = new List<NameAndIndex>();
-            var baseDirFiles = new List<NameAndIndex>();
-            var stringsDirFiles = new List<NameAndIndex>();
-            var intrfaceDirFiles = new List<NameAndIndex>();
-
-            var nullRet = ((List<NameAndIndex>)null, (List<NameAndIndex>)null, (List<NameAndIndex>)null,
-                (List<NameAndIndex>)null, (List<NameAndIndex>)null, (string[])null);
-
             #region Add BaseDirFiles
 
             try
@@ -482,6 +474,10 @@ namespace FMScanner
                         {
                             intrfaceDirFiles.Add(new NameAndIndex { Name = e.FullName, Index = i });
                         }
+                        else if (e.FullName.StartsWithI(FMDirs.Books + '/'))
+                        {
+                            booksDirFiles.Add(new NameAndIndex {Name = e.FullName, Index = i});
+                        }
                     }
                 }
                 else
@@ -501,13 +497,20 @@ namespace FMScanner
                         intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
                     }
 
+                    foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
+                    {
+                        intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
+                    }
+
                 }
             }
             catch (Exception e)
             {
                 Debug.WriteLine(e);
-                return nullRet;
+                return false;
             }
+
+            if (baseDirFiles.Count == 0) return false;
 
             #endregion
 
@@ -522,7 +525,7 @@ namespace FMScanner
                 }
             }
 
-            if (!misFiles.Any()) return nullRet;
+            if (misFiles.Count == 0) return false;
 
             #endregion
 
@@ -532,7 +535,7 @@ namespace FMScanner
 
             char ds = FmIsZip ? '/' : Path.DirectorySeparatorChar;
 
-            if (stringsDirFiles.Any())
+            if (stringsDirFiles.Count > 0)
             {
                 // I don't remember if I need to search in this exact order, so uh... not rockin' the boat.
                 missFlag =
@@ -582,67 +585,11 @@ namespace FMScanner
             }
 
             // Fallback we hope never happens, but... sometimes it does
-            if (!usedMisFiles.Any()) usedMisFiles = misFiles;
+            if (usedMisFiles.Count == 0) usedMisFiles.AddRange(misFiles);
 
             #endregion
 
-            #region Cache titles.str
-
-            // Do not change search order: strings/english, strings, strings/[any other language]
-            var titlesStrDirs = new List<string>();
-
-            titlesStrDirs.AddRange(
-                from f in FMFiles.TitlesFiles
-                select FMDirs.Strings + "/english/" + f);
-
-            titlesStrDirs.AddRange(
-                from f in FMFiles.TitlesFiles
-                select FMDirs.Strings + '/' + f);
-
-            foreach (var lang in Languages.Where(x => !x.EqualsI("english")))
-            {
-                titlesStrDirs.AddRange(
-                    from f in FMFiles.TitlesFiles
-                    select FMDirs.Strings + '/' + lang + '/' + f);
-            }
-
-            foreach (var titlesFileLocation in titlesStrDirs)
-            {
-                var titlesFile =
-                    FmIsZip
-                        ? stringsDirFiles.FirstOrDefault(x => x.Name.EqualsI(titlesFileLocation))
-                        : new NameAndIndex { Name = Path.Combine(FmWorkingPath, titlesFileLocation) };
-
-                if (titlesFile == null || !FmIsZip && !File.Exists(titlesFile.Name)) continue;
-
-                if (FmIsZip)
-                {
-                    var e = Archive.Entries[titlesFile.Index];
-                    if (e != null)
-                    {
-                        using (var es = e.Open())
-                        {
-                            titlesStrFileLines = ReadAllLinesE(es, e.Length);
-                        }
-                    }
-                }
-                else
-                {
-                    titlesStrFileLines = ReadAllLinesE(titlesFile.Name);
-                }
-
-                // The corner cases...
-                for (int i = 0; i < titlesStrFileLines.Length; i++)
-                {
-                    titlesStrFileLines[i] = titlesStrFileLines[i].TrimStart();
-                }
-
-                break;
-            }
-
-            #endregion
-
-            return (baseDirFiles, misFiles, usedMisFiles, stringsDirFiles, intrfaceDirFiles, titlesStrFileLines);
+            return true;
         }
 
         // Willing to hand this one the entire object because you can tell with a simple glance which properties
@@ -1117,43 +1064,95 @@ namespace FMScanner
             }
         }
 
-        private (string TitleFrom0, string TitleFromNumbered, string[] CampaignMissionNames)
-        GetMissionNames(string[] titlesStrLines, List<NameAndIndex> misFiles, List<NameAndIndex> usedMisFiles)
+        private List<string> GetTitlesStrLines(List<NameAndIndex> stringsDirFiles)
         {
-            if (titlesStrLines == null || titlesStrLines.Length == 0)
+            var titlesStrLines = new string[] { };
+
+            #region Read title(s).str file
+
+            // Do not change search order: strings/english, strings, strings/[any other language]
+            var titlesStrDirs = new List<string>();
+
+            titlesStrDirs.AddRange(
+                from f in FMFiles.TitlesFiles
+                select FMDirs.Strings + "/english/" + f);
+
+            titlesStrDirs.AddRange(
+                from f in FMFiles.TitlesFiles
+                select FMDirs.Strings + '/' + f);
+
+            foreach (var lang in Languages.Where(x => !x.EqualsI("english")))
             {
-                return (null, null, null);
+                titlesStrDirs.AddRange(
+                    from f in FMFiles.TitlesFiles
+                    select FMDirs.Strings + '/' + lang + '/' + f);
             }
+
+            foreach (var titlesFileLocation in titlesStrDirs)
+            {
+                var titlesFile =
+                    FmIsZip
+                        ? stringsDirFiles.FirstOrDefault(x => x.Name.EqualsI(titlesFileLocation))
+                        : new NameAndIndex { Name = Path.Combine(FmWorkingPath, titlesFileLocation) };
+
+                if (titlesFile == null || !FmIsZip && !File.Exists(titlesFile.Name)) continue;
+
+                if (FmIsZip)
+                {
+                    var e = Archive.Entries[titlesFile.Index];
+                    using (var es = e.Open())
+                    {
+                        titlesStrLines = ReadAllLinesE(es, e.Length);
+                    }
+                }
+                else
+                {
+                    titlesStrLines = ReadAllLinesE(titlesFile.Name);
+                }
+
+                break;
+
+            }
+
+            #endregion
+
+            #region Filter titlesStrLines
+
+            // There's a way to do this with an IEqualityComparer, but no, for reasons
+            var tfLinesD = new List<string>(titlesStrLines.Length);
+            {
+                for (var i = 0; i < titlesStrLines.Length; i++)
+                {
+                    // Note: the Trim() is important, don't remove it
+                    var line = titlesStrLines[i].Trim();
+                    if (!string.IsNullOrEmpty(line) &&
+                        line.Contains(':') &&
+                        line.CountChars('\"') > 1 &&
+                        line.StartsWithI("title_") &&
+                        !tfLinesD.Any(x => x.StartsWithI(line.Substring(0, line.IndexOf(':')))))
+                    {
+                        tfLinesD.Add(line);
+                    }
+                }
+            }
+
+            tfLinesD.Sort(new TitlesStrNaturalNumericSort());
+
+            #endregion
+
+            return tfLinesD;
+        }
+
+        private (string TitleFrom0, string TitleFromNumbered, string[] CampaignMissionNames)
+        GetMissionNames(List<NameAndIndex> stringsDirFiles, List<NameAndIndex> misFiles, List<NameAndIndex> usedMisFiles)
+        {
+            var titlesStrLines = GetTitlesStrLines(stringsDirFiles);
+            if (titlesStrLines == null || titlesStrLines.Count == 0) return (null, null, null);
 
             var ret =
                 (TitleFrom0: (string)null,
                 TitleFromNumbered: (string)null,
                 CampaignMissionNames: (string[])null);
-
-            #region Filter titlesStrLines
-
-            // There's a way to do this with an IEqualityComparer, but no, for reasons
-            string[] tfLinesD;
-            {
-                var temp = new List<string>(titlesStrLines.Length);
-                foreach (var titlesStrLine in titlesStrLines)
-                {
-                    if (!string.IsNullOrEmpty(titlesStrLine) &&
-                        titlesStrLine.Contains(':') &&
-                        titlesStrLine.CountChars('\"') > 1 &&
-                        titlesStrLine.StartsWithI("title_") &&
-                        !temp.Any(x => x.StartsWithI(titlesStrLine.Substring(0, titlesStrLine.IndexOf(':')))))
-                    {
-                        temp.Add(titlesStrLine);
-                    }
-                }
-
-                tfLinesD = temp.ToArray();
-            }
-
-            Array.Sort(tfLinesD, new TitlesStrNaturalNumericSort());
-
-            #endregion
 
             string ExtractFromQuotedSection(string line)
             {
@@ -1161,14 +1160,14 @@ namespace FMScanner
                 return line.Substring(i = line.IndexOf('\"') + 1, line.IndexOf('\"', i) - i);
             }
 
-            var titles = new List<string>(tfLinesD.Length);
-            for (int lineIndex = 0; lineIndex < tfLinesD.Length; lineIndex++)
+            var titles = new List<string>(titlesStrLines.Count);
+            for (int lineIndex = 0; lineIndex < titlesStrLines.Count; lineIndex++)
             {
                 string titleNum = null;
                 string title = null;
                 for (int umfIndex = 0; umfIndex < usedMisFiles.Count; umfIndex++)
                 {
-                    var line = tfLinesD[lineIndex];
+                    var line = titlesStrLines[lineIndex];
                     {
                         int i;
                         titleNum = line.Substring(i = line.IndexOf('_') + 1, line.IndexOf(':') - i).Trim();
@@ -1192,7 +1191,7 @@ namespace FMScanner
 
                 if (ScanOptions.ScanTitle &&
                     ret.TitleFromNumbered.IsEmpty() &&
-                    lineIndex == tfLinesD.Length - 1 &&
+                    lineIndex == titlesStrLines.Count - 1 &&
                     !string.IsNullOrEmpty(titleNum) &&
                     !string.IsNullOrEmpty(title) &&
                     !usedMisFiles.Any(x => x.Name.ContainsI("miss" + titleNum + ".mis")) &&
@@ -1408,12 +1407,12 @@ namespace FMScanner
 
         private string GetTitleFromNewGameStrFile(List<NameAndIndex> intrfaceDirFiles)
         {
-            if (!intrfaceDirFiles.Any()) return null;
+            if (intrfaceDirFiles.Count == 0) return null;
             var newGameStrFile = new NameAndIndex();
 
             char dsc = FmIsZip ? '/' : Path.DirectorySeparatorChar;
 
-            if (intrfaceDirFiles.Any())
+            if (intrfaceDirFiles.Count > 0)
             {
                 newGameStrFile =
                     intrfaceDirFiles.FirstOrDefault(x =>
@@ -1521,9 +1520,9 @@ namespace FMScanner
                 if (i == 0 && fmTitleStartsWithBy) continue;
 
                 string lineT = lines[i].Trim();
-                if (new[] { "By ", "By: " }.Any(x => lineT.StartsWithI(x)))
+                if (lineT.StartsWithI("By ") || lineT.StartsWithI("By: "))
                 {
-                    string author = lineT.Substring(lineT.IndexOf(' ')).TrimStart();
+                    var author = lineT.Substring(lineT.IndexOf(' ')).TrimStart();
                     if (!string.IsNullOrEmpty(author)) return author;
                 }
                 else
@@ -1531,9 +1530,7 @@ namespace FMScanner
                     var m = AuthorGeneralCopyrightRegex.Match(lineT);
                     if (!m.Success) continue;
 
-                    string author = m.Groups["Author"].Value;
-
-                    author = CleanupCopyrightAuthor(author);
+                    var author = CleanupCopyrightAuthor(m.Groups["Author"].Value);
                     if (!string.IsNullOrEmpty(author)) return author;
                 }
             }
@@ -1742,13 +1739,16 @@ namespace FMScanner
             }
 
             // Sometimes extra languages are in zip files inside the FM archive
-            var zipFiles =
-                from f in baseDirFiles
-                where new[] { ".zip", ".7z", ".rar" }.Any(x => f.Name.ExtEqualsI(x))
-                select f.Name.RemoveExtension();
-
-            foreach (var fn in zipFiles)
+            for (var i = 0; i < baseDirFiles.Count; i++)
             {
+                var fn = baseDirFiles[i].Name;
+                if (!fn.ExtEqualsI(".zip") && !fn.ExtEqualsI(".7z") && !fn.ExtEqualsI(".rar"))
+                {
+                    continue;
+                }
+
+                fn = fn.RemoveExtension();
+
                 langs.AddRange(
                     from lang in Languages
                     where fn.StartsWithI(lang)
@@ -1761,7 +1761,7 @@ namespace FMScanner
                     fn.EndsWithI("_ru") ||
                     fn.EndsWithI("_rus") ||
                     Regex.Match(fn, @"[a-z]+RUS$").Success ||
-                    new[] { "RusPack", "RusText" }.Any(x => fn.ContainsI(x)))
+                    fn.ContainsI("RusPack") || fn.ContainsI("RusText"))
                 {
                     langs.Add("russian");
                 }
@@ -1769,7 +1769,7 @@ namespace FMScanner
                 {
                     langs.Add("french");
                 }
-                else if (new[] { "Deutsch", "Deutch" }.Any(x => fn.ContainsI(x)))
+                else if (fn.ContainsI("Deutsch") || fn.ContainsI("Deutch"))
                 {
                     langs.Add("german");
                 }
@@ -1787,7 +1787,7 @@ namespace FMScanner
                 }
             }
 
-            if (langs.Any())
+            if (langs.Count > 0)
             {
                 var langsD = langs.Distinct().ToArray();
                 Array.Sort(langsD);
