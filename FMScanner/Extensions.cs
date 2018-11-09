@@ -133,6 +133,13 @@ namespace FMScanner
             return value.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
         }
 
+        internal static bool HasFileExtension(this string value)
+        {
+            return value.LastIndexOf('.') > value.LastIndexOf('/') ||
+                   value.LastIndexOf('.') > value.LastIndexOf('\\') ||
+                   (!value.Contains('/') && !value.Contains('\\') && value.Contains('.'));
+        }
+
         /// <summary>
         /// Returns true if the string ends with extension (case-insensitive).
         /// </summary>

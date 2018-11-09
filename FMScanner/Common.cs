@@ -124,32 +124,26 @@ namespace FMScanner
             new Regex(@"[a-z]", RegexOptions.Compiled);
 
         internal static Regex MapRegex =
-            new Regex(@"^" + FMDirs.Intrface + @"/.+/page0.*\..+$",
+            new Regex(@"^" + FMDirs.Intrface + /*language=regexp*/ @"/.+/page0.*\..+$",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         internal static Regex AutomapRegex =
-            new Regex(@"^" + FMDirs.Intrface + @"/.+/.*ra\.bin$",
+            new Regex(@"^" + FMDirs.Intrface + /*language=regexp*/ @"/.+/.*ra\.bin$",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         internal static Regex AuthorEmailRegex =
             new Regex(@"\(?\S+@\S+\.\S{2,5}\)?", RegexOptions.Compiled);
 
-        internal static Regex EndsWithExtensionRegex =
-            new Regex(@"\..+$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        internal static Regex ReadmeLineScanFinalValueRegex =
-            new Regex(@"^\s+(?<Value>.+)", RegexOptions.Compiled);
-
+        // This doesn't need to be a regex really, but it takes like 5.4 microseconds per FM, so, yeah
         internal static Regex NewGameStrTitleRegex =
             new Regex(@"^skip_training\:\s*""(?<Title>.+)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        internal static Regex CopyrightAuthorYearRegex =
-            new Regex(@" \d+.*$", RegexOptions.Compiled);
-
+        // TODO: This one looks iffy though
         internal static Regex VersionFirstNumberRegex =
             new Regex(@"[0123456789\.]+", RegexOptions.Compiled);
 
         // Much, much faster to iterate through possible regex matches, common ones first
+        // TODO: These are still kind slow comparatively, but can they be made faster?
         internal static Regex[] NewDarkVersionRegexes { get; } =
         {
             new Regex(@"NewDark (?<Version>\d\.\d+)",
@@ -191,13 +185,16 @@ namespace FMScanner
         };
 
         private const string CopyrightSecondPart =
+            //language=regexp
             @"(?<Months>( January| February| March| April| May| June| July| August| September| October| November| December))?" +
+            //language=regexp
             @"(?(Months)(, ?| ))\d*( by| to)? (?<Author>.+)";
 
         // Unicode 00A9 = copyright symbol
 
         internal static Regex AuthorMissionCopyrightRegex { get; } =
             new Regex(
+                //language=regexp
                 @"^This (level|mission|fan(-| )?mission|FM) is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
@@ -206,13 +203,17 @@ namespace FMScanner
         // means what we think it means.
         internal static Regex AuthorGeneralCopyrightIncludeAtSymbolRegex { get; } =
             new Regex(
+                //language=regexp
                 @"^(Copyright )?(\(c\)|\u00A9|@) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
         internal static Regex AuthorGeneralCopyrightRegex { get; } =
             new Regex(
+                //language=regexp
                 @"^(Copyright )?(\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+
+        internal static Regex CopyrightAuthorYearRegex = new Regex(@" \d+.*$", RegexOptions.Compiled);
     }
 
     /// <summary>

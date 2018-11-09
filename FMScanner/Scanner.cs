@@ -637,7 +637,7 @@ namespace FMScanner
                 FmIsZip
                     ? Archive.Entries.Any(f =>
                         f.FullName.StartsWithI(FMDirs.Movies + '/') &&
-                        EndsWithExtensionRegex.Match(f.FullName).Success)
+                        f.FullName.HasFileExtension())
                     : baseDirFolders.ContainsI(FMDirs.Movies) &&
                       FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
 
@@ -672,7 +672,7 @@ namespace FMScanner
                         (!f.FullName.Contains('/') &&
                          ScriptFileExtensions.Any(f.FullName.EndsWithI)) ||
                         (f.FullName.StartsWithI(FMDirs.Scripts + '/') &&
-                         EndsWithExtensionRegex.Match(f.FullName).Success))
+                         f.FullName.HasFileExtension()))
                     : baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
                       (baseDirFolders.ContainsI(FMDirs.Scripts) &&
                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
@@ -681,7 +681,7 @@ namespace FMScanner
                 FmIsZip
                     ? Archive.Entries.Any(f =>
                         f.FullName.StartsWithI(FMDirs.Snd + '/') &&
-                        EndsWithExtensionRegex.Match(f.FullName).Success)
+                        f.FullName.HasFileExtension())
                     : baseDirFolders.ContainsI(FMDirs.Snd) &&
                       FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
 
@@ -1328,12 +1328,11 @@ namespace FMScanner
                     }
 
                     if (!keys.Any(x =>
-                        lineStartTrimmed.StartsWithI(x + " ") || lineStartTrimmed.StartsWith(x + '\t')))
+                        lineStartTrimmed.StartsWithI(x + ' ') || lineStartTrimmed.StartsWith(x + '\t')))
                     {
                         continue;
                     }
 
-                    Match match = null;
                     foreach (var key in keys)
                     {
                         if (!lineStartTrimmed.StartsWithI(key)) continue;
@@ -1341,14 +1340,14 @@ namespace FMScanner
                         // It's supposed to be finding a space after a key; this prevents it from finding the
                         // first space in the key itself if there is one.
                         var lineAfterKey = lineStartTrimmed.Remove(0, key.Length);
-                        match = ReadmeLineScanFinalValueRegex.Match(lineAfterKey);
-                        if (match.Success) break;
+
+                        if (!string.IsNullOrEmpty(lineAfterKey) &&
+                            (lineAfterKey[0] == ' ' || lineAfterKey[0] == '\t'))
+                        {
+                            var finalValue = lineAfterKey.TrimStart();
+                            if (!string.IsNullOrEmpty(finalValue)) return finalValue;
+                        }
                     }
-
-                    if (match == null || !match.Success) continue;
-
-                    ret = match.Groups["Value"].Value;
-                    break;
                 }
             }
 
@@ -1704,7 +1703,7 @@ namespace FMScanner
                         for (var dfIndex = 0; dfIndex < dirFiles.Count; dfIndex++)
                         {
                             var df = dirFiles[dfIndex];
-                            if (df.Name.LastIndexOf('.') > df.Name.LastIndexOf('/') &&
+                            if (df.Name.HasFileExtension() &&
                                 (df.Name.ContainsI('/' + lang + '/') ||
                                  df.Name.ContainsI('/' + lang + " Language/")))
                             {
