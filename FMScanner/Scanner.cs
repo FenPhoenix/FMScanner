@@ -364,9 +364,10 @@ namespace FMScanner
             if (ScanOptions.ScanTitle)
             {
                 SetOrAddTitle(
-                    GetValueFromReadme(SpecialLogic.Title, "Title", "Mission Title", "Mission title",
-                        "Mission Name", "Mission name", "Level Name", "Level name", "Mission:", "Mission ",
-                        "Campaign Title", "Campaign title", "The name of Mission:"));
+                    GetValueFromReadme(SpecialLogic.Title, "Title of the Mission", "Title of the mission",
+                        "Title", "Mission Title", "Mission title", "Mission Name", "Mission name", "Level Name",
+                        "Level name", "Mission:", "Mission ", "Campaign Title", "Campaign title",
+                        "The name of Mission:"));
 
                 SetOrAddTitle(GetTitleFromNewGameStrFile(intrfaceDirFiles));
             }
@@ -1360,35 +1361,47 @@ namespace FMScanner
         private static string CleanupValue(string value)
         {
             if (string.IsNullOrEmpty(value)) return value;
-            
+
             var ret = value.TrimEnd();
 
             // Remove surrounding quotes
             if (ret[0] == '\"' && ret[ret.Length - 1] == '\"') ret = ret.Trim('\"');
 
             // Remove unpaired leading or trailing quotes
-            if ((ret[0] == '\"' || ret[ret.Length - 1] == '\"') && ret.CountChars('\"') == 1)
+            if (ret.CountChars('\"') == 1)
             {
-                ret = ret.Trim('\"');
+                if (ret[0] == '\"')
+                {
+                    ret = ret.Substring(1);
+                }
+                else if (ret[ret.Length - 1] == '\"')
+                {
+                    ret = ret.Substring(0, ret.Length - 1);
+                }
             }
-
-            ret = ret.RemoveSurroundingParentheses();
 
             // Remove duplicate spaces
             ret = Regex.Replace(ret, @"\s{2,}", " ");
+            ret = ret.Replace('\t', ' ');
 
-            if (ret.Contains('(') || ret.Contains(')'))
+            #region Parentheses
+
+            ret = ret.RemoveSurroundingParentheses();
+
+            var containsOpenParen = ret.Contains('(');
+            var containsCloseParen = ret.Contains(')');
+
+            // Remove extraneous whitespace within parentheses
+            if (containsOpenParen) ret = ret.Replace("( ", "(");
+            if (containsCloseParen) ret = ret.Replace(" )", ")");
+
+            // If there's stuff like "(this an incomplete sentence and" at the end, chop it right off
+            if (containsOpenParen && ret.CountChars('(') == 1 && !containsCloseParen)
             {
-                // Remove extraneous whitespace within parentheses
-                ret = Regex.Replace(ret, @"\(\s+", "(");
-                ret = Regex.Replace(ret, @"\s+\)", ")");
-
-                // If there's stuff like "(this an incomplete sentence and" at the end, chop it right off
-                if (ret.CountChars('(') == 1 && !ret.Contains(')'))
-                {
-                    ret = ret.Substring(0, ret.LastIndexOf('(')).TrimEnd();
-                }
+                ret = ret.Substring(0, ret.LastIndexOf('(')).TrimEnd();
             }
+
+            #endregion
 
             return ret;
         }

@@ -206,7 +206,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static string RemoveSurroundingParentheses(this string value)
         {
-            if (!value.StartsWith("(") || !value.EndsWith(")")) return value;
+            if (value[0] != '(' || value[value.Length - 1] != ')') return value;
 
             bool surroundedByParens = false;
             do
