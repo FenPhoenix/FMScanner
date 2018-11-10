@@ -680,9 +680,6 @@ namespace FMScanner
             return true;
         }
 
-        // Willing to hand this one the entire object because you can tell with a simple glance which properties
-        // it's setting, and having it return a set of values gets sort of absurd no matter how you look at it.
-        // Note: This 
         private void CheckForCustomResources_FmIsDir(ScannedFMData scannedFMData, List<NameAndIndex> baseDirFiles)
         {
             Debug.Assert(!FmIsZip, nameof(CheckForCustomResources_FmIsDir) +
