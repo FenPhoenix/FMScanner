@@ -584,7 +584,7 @@ namespace FMScanner
 
                     foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
                     {
-                        intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
+                        booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
                     }
 
                     // Call this here just so both calls are in one place
