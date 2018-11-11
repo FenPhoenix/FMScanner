@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using static System.IO.Path;
 using static System.StringComparison;
 
 namespace FMScanner
@@ -151,8 +150,7 @@ namespace FMScanner
         {
             if (extension[0] != '.') extension = '.' + extension;
 
-            return !string.IsNullOrEmpty(value) &&
-                   GetExtension(value).Equals(extension, OrdinalIgnoreCase);
+            return value.EndsWithI(extension);
         }
 
         /// <summary>
@@ -162,12 +160,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool ExtIsHtml(this string value)
         {
-            if (string.IsNullOrEmpty(value)) return false;
-
-            var ext = GetExtension(value);
-
-            return ext.Equals(".html", OrdinalIgnoreCase) ||
-                   ext.Equals(".htm", OrdinalIgnoreCase);
+            return value.EndsWithI(".html") || value.EndsWithI(".htm");
         }
 
         #region StartsWith
@@ -180,6 +173,12 @@ namespace FMScanner
             GivenOrLower
         }
 
+        private enum StartOrEnd
+        {
+            Start,
+            End
+        }
+
         /// <summary>
         /// StartsWith (case-insensitive). Uses a fast ASCII compare where possible.
         /// </summary>
@@ -188,7 +187,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool StartsWithI(this string str, string value)
         {
-            return StartsWithFastInternal(str, value, CaseComparison.CaseInsensitive);
+            return StartsWithOrEndsWithFast(str, value, CaseComparison.CaseInsensitive, StartOrEnd.Start);
         }
 
         /// <summary>
@@ -199,7 +198,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool StartsWithGU(this string str, string value)
         {
-            return StartsWithFastInternal(str, value, CaseComparison.GivenOrUpper);
+            return StartsWithOrEndsWithFast(str, value, CaseComparison.GivenOrUpper, StartOrEnd.Start);
         }
 
         /// <summary>
@@ -210,10 +209,11 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool StartsWithGL(this string str, string value)
         {
-            return StartsWithFastInternal(str, value, CaseComparison.GivenOrLower);
+            return StartsWithOrEndsWithFast(str, value, CaseComparison.GivenOrLower, StartOrEnd.Start);
         }
 
-        private static bool StartsWithFastInternal(this string str, string value, CaseComparison caseComparison)
+        private static bool StartsWithOrEndsWithFast(this string str, string value,
+            CaseComparison caseComparison, StartOrEnd startOrEnd)
         {
             if (string.IsNullOrEmpty(str) || str.Length < value.Length) return false;
 
@@ -221,35 +221,39 @@ namespace FMScanner
             // Therefore, if a char is in one of these ranges, one can convert between cases by simply adding or
             // subtracting 32.
 
-            for (int i = 0; i < value.Length; i++)
+            var start = startOrEnd == StartOrEnd.Start;
+            var siStart = start ? 0 : str.Length - value.Length;
+            var siEnd = start ? value.Length : str.Length;
+
+            for (int si = siStart, vi = 0; si < siEnd; si++, vi++)
             {
                 // Only run the slow case check if the char is non-ASCII. This also means we run it per-char
                 // instead of per-string, which should make it faster, although the double ToString() and one
                 // To*Invariant() hurts. How much, I dunno. I don't currently test any non-ASCII strings. We'll
                 // see.
-                if (value[i] > 127)
+                if (value[vi] > 127)
                 {
-                    if (value[i] != str[i] &&
+                    if (value[vi] != str[si] &&
                         caseComparison == CaseComparison.GivenOrUpper
-                        ? !value[i].ToString().ToUpperInvariant().Equals(str[i].ToString(), Ordinal) :
+                        ? !value[vi].ToString().ToUpperInvariant().Equals(str[si].ToString(), Ordinal) :
                         caseComparison == CaseComparison.GivenOrLower
-                        ? !value[i].ToString().ToLowerInvariant().Equals(str[i].ToString(), Ordinal)
-                        : !value[i].ToString().Equals(str[i].ToString(), OrdinalIgnoreCase))
+                        ? !value[vi].ToString().ToLowerInvariant().Equals(str[si].ToString(), Ordinal)
+                        : !value[vi].ToString().Equals(str[si].ToString(), OrdinalIgnoreCase))
                     {
                         return false;
                     }
                     continue;
                 }
 
-                if (str[i] >= 65 && str[i] <= 90 && value[i] >= 97 && value[i] <= 122)
+                if (str[si] >= 65 && str[si] <= 90 && value[vi] >= 97 && value[vi] <= 122)
                 {
-                    if (caseComparison == CaseComparison.GivenOrLower || str[i] != value[i] - 32) return false;
+                    if (caseComparison == CaseComparison.GivenOrLower || str[si] != value[vi] - 32) return false;
                 }
-                else if (value[i] >= 65 && value[i] <= 90 && str[i] >= 97 && str[i] <= 122)
+                else if (value[vi] >= 65 && value[vi] <= 90 && str[si] >= 97 && str[si] <= 122)
                 {
-                    if (caseComparison == CaseComparison.GivenOrUpper || str[i] != value[i] + 32) return false;
+                    if (caseComparison == CaseComparison.GivenOrUpper || str[si] != value[vi] + 32) return false;
                 }
-                else if (str[i] != value[i])
+                else if (str[si] != value[vi])
                 {
                     return false;
                 }
@@ -268,7 +272,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool EndsWithI(this string str, string value)
         {
-            return !string.IsNullOrEmpty(str) && str.EndsWith(value, OrdinalIgnoreCase);
+            return StartsWithOrEndsWithFast(str, value, CaseComparison.CaseInsensitive, StartOrEnd.End);
         }
 
         /// <summary>
