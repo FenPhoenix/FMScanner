@@ -1326,42 +1326,46 @@ namespace FMScanner
 
                 #region Excludes
 
-                if (specialLogic == SpecialLogic.Title &&
-                    (lineStartTrimmed.StartsWithI("Title & Description") ||
-                     lineStartTrimmed.StartsWith("Title screen") ||
-                     lineStartTrimmed.StartsWith("title screen")))
+                switch (specialLogic)
                 {
-                    continue;
-                }
-
-                if (specialLogic == SpecialLogic.Version &&
-                    (lineStartTrimmed.StartsWithI("Version History") ||
-                     lineStartTrimmed.ContainsI("NewDark") ||
-                     lineStartTrimmed.ContainsI("64 Cubed") ||
-                     VersionExclude1Regex.Match(lineStartTrimmed).Success))
-                {
-                    continue;
-                }
-
-                if (specialLogic == SpecialLogic.Author &&
-                    (lineStartTrimmed.StartsWithI("Authors note")))
-                {
-                    continue;
+                    // I can't believe fallthrough is actually useful (for visual purposes only, but still!)
+                    case SpecialLogic.Title when
+                        lineStartTrimmed.StartsWithI("Title & Description") ||
+                        lineStartTrimmed.StartsWithGL("Title screen"):
+                    case SpecialLogic.Version when
+                        lineStartTrimmed.StartsWithI("Version History") ||
+                        lineStartTrimmed.ContainsI("NewDark") ||
+                        lineStartTrimmed.ContainsI("64 Cubed") ||
+                        VersionExclude1Regex.Match(lineStartTrimmed).Success:
+                    case SpecialLogic.Author when
+                        lineStartTrimmed.StartsWithI("Authors note"):
+                        continue;
                 }
 
                 #endregion
 
                 // Either in given case or in all caps, but not in lowercase, because that's given me at least
                 // one false positive
-                if (!keys.Any(x =>
-                    lineStartTrimmed.StartsWith(x) || lineStartTrimmed.StartsWith(x.ToUpperInvariant())))
+                bool lineStartsWithKey = false;
+                bool lineStartsWithKeyAndSeparatorChar = false;
+                for (var i = 0; i < keys.Length; i++)
                 {
-                    continue;
+                    var x = keys[i];
+                    if (lineStartTrimmed.StartsWithGU(x))
+                    {
+                        lineStartsWithKey = true;
+                        // Regex perf: fast enough not to worry about it
+                        if (Regex.Match(lineStartTrimmed, @"^" + x + @"\s*(:|-)", RegexOptions.IgnoreCase)
+                            .Success)
+                        {
+                            lineStartsWithKeyAndSeparatorChar = true;
+                            break;
+                        }
+                    }
                 }
+                if (!lineStartsWithKey) continue;
 
-                // Regex perf: fast enough not to worry about it
-                if (keys.Any(x =>
-                    Regex.Match(lineStartTrimmed, @"^" + x + @"\s*(:|-)", RegexOptions.IgnoreCase).Success))
+                if (lineStartsWithKeyAndSeparatorChar)
                 {
                     int indexColon = lineStartTrimmed.IndexOf(':');
                     int indexDash = lineStartTrimmed.IndexOf('-');
@@ -1380,9 +1384,9 @@ namespace FMScanner
                     // TODO: GetVersion()
                     if (specialLogic == SpecialLogic.Version) continue;
 
-                    for (var keyIndex = 0; keyIndex < keys.Length; keyIndex++)
+                    for (var i = 0; i < keys.Length; i++)
                     {
-                        var key = keys[keyIndex];
+                        var key = keys[i];
                         if (!lineStartTrimmed.StartsWithI(key)) continue;
 
                         // It's supposed to be finding a space after a key; this prevents it from finding the

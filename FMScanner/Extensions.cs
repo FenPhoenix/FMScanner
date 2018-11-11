@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using static System.IO.Path;
+using static System.StringComparison;
 
 namespace FMScanner
 {
@@ -14,10 +15,10 @@ namespace FMScanner
             var rNoExt = value.RemoveExtension();
             if (string.IsNullOrEmpty(rNoExt)) return false;
 
-            return rNoExt.Equals("fminfo-en", StringComparison.OrdinalIgnoreCase) ||
-                   rNoExt.Equals("fminfo-eng", StringComparison.OrdinalIgnoreCase) ||
-                   !(rNoExt.StartsWith("fminfo", StringComparison.OrdinalIgnoreCase) &&
-                     !rNoExt.Equals("fminfo", StringComparison.OrdinalIgnoreCase));
+            return rNoExt.Equals("fminfo-en", OrdinalIgnoreCase) ||
+                   rNoExt.Equals("fminfo-eng", OrdinalIgnoreCase) ||
+                   !(rNoExt.StartsWith("fminfo", OrdinalIgnoreCase) &&
+                     !rNoExt.Equals("fminfo", OrdinalIgnoreCase));
         }
 
         /// <summary>
@@ -76,7 +77,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool ContainsI(this string value, string substring)
         {
-            return value.Contains(substring, StringComparison.OrdinalIgnoreCase);
+            return value.Contains(substring, OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -98,7 +99,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool ContainsS(this string value, string substring)
         {
-            return value.Contains(substring, StringComparison.Ordinal);
+            return value.Contains(substring, Ordinal);
         }
 
         /// <summary>
@@ -120,7 +121,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool EqualsI(this string first, string second)
         {
-            return first.Equals(second, StringComparison.OrdinalIgnoreCase);
+            return first.Equals(second, OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -130,7 +131,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool EqualsTrue(this string value)
         {
-            return value.Equals(bool.TrueString, StringComparison.OrdinalIgnoreCase);
+            return value.Equals(bool.TrueString, OrdinalIgnoreCase);
         }
 
         internal static bool HasFileExtension(this string value)
@@ -151,7 +152,7 @@ namespace FMScanner
             if (extension[0] != '.') extension = '.' + extension;
 
             return !string.IsNullOrEmpty(value) &&
-                   GetExtension(value).Equals(extension, StringComparison.OrdinalIgnoreCase);
+                   GetExtension(value).Equals(extension, OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -165,20 +166,91 @@ namespace FMScanner
 
             var ext = GetExtension(value);
 
-            return ext.Equals(".html", StringComparison.OrdinalIgnoreCase) ||
-                   ext.Equals(".htm", StringComparison.OrdinalIgnoreCase);
+            return ext.Equals(".html", OrdinalIgnoreCase) ||
+                   ext.Equals(".htm", OrdinalIgnoreCase);
+        }
+
+        #region StartsWith
+
+        private enum CaseComparison
+        {
+            CaseSensitive,
+            CaseInsensitive,
+            GivenOrUpper,
+            GivenOrLower
         }
 
         /// <summary>
-        /// Case-insensitive StartsWith.
+        /// StartsWith (case-insensitive). Uses a fast ASCII compare where possible.
         /// </summary>
         /// <param name="str"></param>
         /// <param name="value"></param>
         /// <returns></returns>
         internal static bool StartsWithI(this string str, string value)
         {
-            return !string.IsNullOrEmpty(str) && str.StartsWith(value, StringComparison.OrdinalIgnoreCase);
+            return StartsWithFastInternal(str, value, CaseComparison.CaseInsensitive);
         }
+
+        /// <summary>
+        /// StartsWith (given case or uppercase). Uses a fast ASCII compare where possible.
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        internal static bool StartsWithGU(this string str, string value)
+        {
+            return StartsWithFastInternal(str, value, CaseComparison.GivenOrUpper);
+        }
+
+        /// <summary>
+        /// StartsWith (given case or lowercase). Uses a fast ASCII compare where possible.
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        internal static bool StartsWithGL(this string str, string value)
+        {
+            return StartsWithFastInternal(str, value, CaseComparison.GivenOrLower);
+        }
+
+        private static bool StartsWithFastInternal(this string str, string value, CaseComparison caseComparison)
+        {
+            if (string.IsNullOrEmpty(str) || str.Length < value.Length) return false;
+
+            for (int i = 0; i < value.Length; i++)
+            {
+                if (value[i] > 127)
+                {
+                    if (value[i] != str[i] &&
+                        caseComparison == CaseComparison.GivenOrUpper
+                        ? !value[i].ToString().ToUpperInvariant().Equals(str[i].ToString(), OrdinalIgnoreCase) :
+                        caseComparison == CaseComparison.GivenOrLower
+                        ? !value[i].ToString().ToLowerInvariant().Equals(str[i].ToString(), OrdinalIgnoreCase)
+                        : !value[i].ToString().Equals(str[i].ToString(), OrdinalIgnoreCase))
+                    {
+                        return false;
+                    }
+                    continue;
+                }
+
+                if (str[i] >= 65 && str[i] <= 90 && value[i] >= 97 && value[i] <= 122)
+                {
+                    if (caseComparison == CaseComparison.GivenOrLower || str[i] != value[i] - 32) return false;
+                }
+                else if (value[i] >= 65 && value[i] <= 90 && str[i] >= 97 && str[i] <= 122)
+                {
+                    if (caseComparison == CaseComparison.GivenOrUpper || str[i] != value[i] + 32) return false;
+                }
+                else if (str[i] != value[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        #endregion
 
         /// <summary>
         /// Case-insensitive EndsWith.
@@ -188,7 +260,7 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool EndsWithI(this string str, string value)
         {
-            return !string.IsNullOrEmpty(str) && str.EndsWith(value, StringComparison.OrdinalIgnoreCase);
+            return !string.IsNullOrEmpty(str) && str.EndsWith(value, OrdinalIgnoreCase);
         }
 
         /// <summary>
