@@ -126,14 +126,6 @@ namespace FMScanner
         internal static Regex TitleContainsLowerCaseCharsRegex =
             new Regex(@"[a-z]", RegexOptions.Compiled);
 
-        internal static Regex MapRegex =
-            new Regex(@"^" + FMDirs.Intrface + /*language=regexp*/ @"/.+/page0.*\..+$",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        internal static Regex AutomapRegex =
-            new Regex(@"^" + FMDirs.Intrface + /*language=regexp*/ @"/.+/.*ra\.bin$",
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         internal static Regex AuthorEmailRegex =
             new Regex(@"\(?\S+@\S+\.\S{2,5}\)?", RegexOptions.Compiled);
 

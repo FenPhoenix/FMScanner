@@ -454,6 +454,25 @@ namespace FMScanner
         {
             #region Add BaseDirFiles
 
+            // This is split out because of weird semantics with if(this && that) vs nested ifs (required in
+            // order to have a var in the middle to avoid multiple LastIndexOf calls).
+            bool MapFileExists(string path)
+            {
+                if (path.StartsWithI(FMDirs.Intrface + '/') &&
+                    path.CountChars('/') >= 2)
+                {
+                    var lsi = path.LastIndexOf('/');
+                    if (path.Length > lsi + 5 &&
+                        path.Substring(lsi + 1, 5).EqualsI("page0") &&
+                        path.LastIndexOf('.') > lsi)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+
             try
             {
                 if (FmIsZip)
@@ -485,15 +504,18 @@ namespace FMScanner
                         // Inlined for performance. We cut the time roughly in half by doing this.
                         if (ScanOptions.ScanCustomResources)
                         {
-                            if (fmd.HasMap == null &&
-                                MapRegex.Match(e.FullName).Success)
-                            {
-                                fmd.HasMap = true;
-                            }
-                            else if (fmd.HasAutomap == null &&
-                                     AutomapRegex.Match(e.FullName).Success)
+                            if (fmd.HasAutomap == null &&
+                                     e.FullName.StartsWithI(FMDirs.Intrface + '/') &&
+                                     e.FullName.CountChars('/') >= 2 &&
+                                     e.FullName.EndsWithI("ra.bin"))
                             {
                                 fmd.HasAutomap = true;
+                                // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
+                                fmd.HasMap = true;
+                            }
+                            else if (fmd.HasMap == null && MapFileExists(e.FullName))
+                            {
+                                fmd.HasMap = true;
                             }
                             else if (fmd.HasCustomMotions == null &&
                                      e.FullName.StartsWithI(FMDirs.Motions + '/') &&
@@ -550,9 +572,6 @@ namespace FMScanner
 
                     if (ScanOptions.ScanCustomResources)
                     {
-                        // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
-                        if (fmd.HasAutomap == true) fmd.HasMap = true;
-
                         if (fmd.HasMap == null) fmd.HasMap = false;
                         if (fmd.HasAutomap == null) fmd.HasAutomap = false;
                         if (fmd.HasCustomMotions == null) fmd.HasCustomMotions = false;
