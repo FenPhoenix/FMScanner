@@ -163,7 +163,7 @@ namespace FMScanner
             return value.EndsWithI(".html") || value.EndsWithI(".htm");
         }
 
-        #region StartsWith
+        #region StartsWith and EndsWith
 
         private enum CaseComparison
         {
@@ -210,6 +210,17 @@ namespace FMScanner
         internal static bool StartsWithGL(this string str, string value)
         {
             return StartsWithOrEndsWithFast(str, value, CaseComparison.GivenOrLower, StartOrEnd.Start);
+        }
+
+        /// <summary>
+        /// Case-insensitive EndsWith.
+        /// </summary>
+        /// <param name="str"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        internal static bool EndsWithI(this string str, string value)
+        {
+            return StartsWithOrEndsWithFast(str, value, CaseComparison.CaseInsensitive, StartOrEnd.End);
         }
 
         private static bool StartsWithOrEndsWithFast(this string str, string value,
@@ -263,17 +274,6 @@ namespace FMScanner
         }
 
         #endregion
-
-        /// <summary>
-        /// Case-insensitive EndsWith.
-        /// </summary>
-        /// <param name="str"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        internal static bool EndsWithI(this string str, string value)
-        {
-            return StartsWithOrEndsWithFast(str, value, CaseComparison.CaseInsensitive, StartOrEnd.End);
-        }
 
         /// <summary>
         /// string.IsNullOrEmpty(str) but with less typing.

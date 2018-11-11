@@ -1335,7 +1335,6 @@ namespace FMScanner
             return ret;
         }
 
-        // TODO: Every project has that one part with Eldritch Old Code. This could really use a rewrite.
         private static string GetValueFromLines(SpecialLogic specialLogic, string[] keys, string[] lines)
         {
             for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
@@ -1363,13 +1362,14 @@ namespace FMScanner
 
                 #endregion
 
-                // Either in given case or in all caps, but not in lowercase, because that's given me at least
-                // one false positive
                 bool lineStartsWithKey = false;
                 bool lineStartsWithKeyAndSeparatorChar = false;
                 for (var i = 0; i < keys.Length; i++)
                 {
                     var x = keys[i];
+
+                    // Either in given case or in all caps, but not in lowercase, because that's given me at
+                    // least one false positive
                     if (lineStartTrimmed.StartsWithGU(x))
                     {
                         lineStartsWithKey = true;
@@ -1497,13 +1497,7 @@ namespace FMScanner
             if (FmIsZip)
             {
                 var e = Archive.Entries[newGameStrFile.Index];
-                if (e != null)
-                {
-                    using (var es = e.Open())
-                    {
-                        lines = ReadAllLinesE(es, e.Length);
-                    }
-                }
+                using (var es = e.Open()) lines = ReadAllLinesE(es, e.Length);
             }
             else
             {
