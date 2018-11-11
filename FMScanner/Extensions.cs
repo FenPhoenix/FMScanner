@@ -217,15 +217,23 @@ namespace FMScanner
         {
             if (string.IsNullOrEmpty(str) || str.Length < value.Length) return false;
 
+            // Notes: ASCII chars are 0-127. Uppercase is 65-90; lowercase is 97-122.
+            // Therefore, if a char is in one of these ranges, one can convert between cases by simply adding or
+            // subtracting 32.
+
             for (int i = 0; i < value.Length; i++)
             {
+                // Only run the slow case check if the char is non-ASCII. This also means we run it per-char
+                // instead of per-string, which should make it faster, although the double ToString() and one
+                // To*Invariant() hurts. How much, I dunno. I don't currently test any non-ASCII strings. We'll
+                // see.
                 if (value[i] > 127)
                 {
                     if (value[i] != str[i] &&
                         caseComparison == CaseComparison.GivenOrUpper
-                        ? !value[i].ToString().ToUpperInvariant().Equals(str[i].ToString(), OrdinalIgnoreCase) :
+                        ? !value[i].ToString().ToUpperInvariant().Equals(str[i].ToString(), Ordinal) :
                         caseComparison == CaseComparison.GivenOrLower
-                        ? !value[i].ToString().ToLowerInvariant().Equals(str[i].ToString(), OrdinalIgnoreCase)
+                        ? !value[i].ToString().ToLowerInvariant().Equals(str[i].ToString(), Ordinal)
                         : !value[i].ToString().Equals(str[i].ToString(), OrdinalIgnoreCase))
                     {
                         return false;
