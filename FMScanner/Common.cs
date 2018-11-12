@@ -35,12 +35,15 @@ namespace FMScanner
     }
 
     // Used for stripping RTF files of embedded images before scanning (performance and memory optimization)
+    [SuppressMessage("ReSharper", "IdentifierTypo")]
+    [SuppressMessage("ReSharper", "InconsistentNaming")]
+    [SuppressMessage("ReSharper", "StringLiteralTypo")]
     internal static class RtfTags
     {
-        internal static readonly byte[] shppictB = Encoding.ASCII.GetBytes(@"\*\shppict");
-        internal static readonly byte[] objDatatB = Encoding.ASCII.GetBytes(@"\*\objdata");
-        internal static readonly byte[] nonshppictB = Encoding.ASCII.GetBytes(@"\nonshppict");
-        internal static readonly byte[] pictB = Encoding.ASCII.GetBytes(@"\pict");
+        internal static readonly byte[] shppict = Encoding.ASCII.GetBytes(@"\*\shppict");
+        internal static readonly byte[] objdata = Encoding.ASCII.GetBytes(@"\*\objdata");
+        internal static readonly byte[] nonshppict = Encoding.ASCII.GetBytes(@"\nonshppict");
+        internal static readonly byte[] pict = Encoding.ASCII.GetBytes(@"\pict");
         internal static readonly byte[] Bytes11 = new byte[11];
         internal static readonly byte[] Bytes10 = new byte[10];
         internal static readonly byte[] Bytes5 = new byte[5];

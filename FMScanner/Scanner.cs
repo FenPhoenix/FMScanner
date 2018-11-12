@@ -974,10 +974,10 @@ namespace FMScanner
                         Array.Copy(RtfTags.Bytes11, RtfTags.Bytes10, 10);
                         Array.Copy(RtfTags.Bytes11, RtfTags.Bytes5, 5);
 
-                        if (RtfTags.Bytes10.SequenceEqual(RtfTags.shppictB) ||
-                            RtfTags.Bytes10.SequenceEqual(RtfTags.objDatatB) ||
-                            RtfTags.Bytes11.SequenceEqual(RtfTags.nonshppictB) ||
-                            RtfTags.Bytes5.SequenceEqual(RtfTags.pictB))
+                        if (RtfTags.Bytes10.SequenceEqual(RtfTags.shppict) ||
+                            RtfTags.Bytes10.SequenceEqual(RtfTags.objdata) ||
+                            RtfTags.Bytes11.SequenceEqual(RtfTags.nonshppict) ||
+                            RtfTags.Bytes5.SequenceEqual(RtfTags.pict))
                         {
                             stack++;
                             stream.Position -= RtfTags.Bytes11.Length;
@@ -1492,7 +1492,7 @@ namespace FMScanner
 
             if (newGameStrFile == null) return null;
 
-            string[] lines = null;
+            string[] lines;
 
             if (FmIsZip)
             {
@@ -1579,7 +1579,7 @@ namespace FMScanner
                 // Preemptive check
                 if (i == 0 && fmTitleStartsWithBy) continue;
 
-                string lineT = lines[i].Trim();
+                var lineT = lines[i].Trim();
                 if (lineT.StartsWithI("By ") || lineT.StartsWithI("By: "))
                 {
                     var author = lineT.Substring(lineT.IndexOf(' ')).TrimStart();
@@ -2113,6 +2113,7 @@ namespace FMScanner
         }
 
         #endregion
+
         public void Dispose()
         {
             ArchiveStream?.Dispose();

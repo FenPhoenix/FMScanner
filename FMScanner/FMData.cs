@@ -6,41 +6,41 @@ namespace FMScanner
     public sealed class ScanOptions
     {
         /// <summary>
-        /// true to detect the mission's title.
+        /// <see langword="true"/> to detect the mission's title.
         /// </summary>
         public bool ScanTitle { get; set; } = true;
         /// <summary>
-        /// true to detect the titles of individual campaign missions.
+        /// <see langword="true"/> to detect the titles of individual campaign missions.
         /// If the mission is not a campaign, this option has no effect.
         /// </summary>
         public bool ScanCampaignMissionNames { get; set; } = true;
         /// <summary>
-        /// true to detect the mission's author.
+        /// <see langword="true"/> to detect the mission's author.
         /// </summary>
         public bool ScanAuthor { get; set; } = true;
         /// <summary>
-        /// true to detect the mission's version.
+        /// <see langword="true"/> to detect the mission's version.
         /// </summary>
         public bool ScanVersion { get; set; } = true;
         /// <summary>
-        /// true to detect the languages the mission supports.
+        /// <see langword="true"/> to detect the languages the mission supports.
         /// </summary>
         public bool ScanLanguages { get; set; } = true;
         /// <summary>
-        /// true to detect which game the mission is for (Thief 1 or Thief 2).
+        /// <see langword="true"/> to detect which game the mission is for (Thief 1 or Thief 2).
         /// </summary>
         public bool ScanGameType { get; set; } = true;
         /// <summary>
-        /// true to detect whether the mission requires NewDark.
+        /// <see langword="true"/> to detect whether the mission requires NewDark.
         /// </summary>
         public bool ScanNewDarkRequired { get; set; } = true;
         /// <summary>
-        /// true to detect the minimum NewDark version the mission requires.
+        /// <see langword="true"/> to detect the minimum NewDark version the mission requires.
         /// If ScanNewDarkRequired is false, this option has no effect.
         /// </summary>
         public bool ScanNewDarkMinimumVersion { get; set; } = true;
         /// <summary>
-        /// true to detect whether the mission contains custom resources.
+        /// <see langword="true"/> to detect whether the mission contains custom resources.
         /// </summary>
         public bool ScanCustomResources { get; set; } = true;
     }

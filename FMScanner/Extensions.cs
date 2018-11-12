@@ -213,7 +213,7 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Case-insensitive EndsWith.
+        /// EndsWith (case-insensitive). Uses a fast ASCII compare where possible.
         /// </summary>
         /// <param name="str"></param>
         /// <param name="value"></param>
