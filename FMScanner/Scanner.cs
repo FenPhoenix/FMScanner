@@ -48,6 +48,13 @@ namespace FMScanner
 
         #region Properties
 
+        #region Disposable
+
+        private FileStream ArchiveStream { get; set; }
+        private ZipArchive Archive { get; set; }
+
+        #endregion
+
         private char dsc { get; set; }
 
         private ScanOptions ScanOptions { get; set; } = new ScanOptions();
@@ -55,9 +62,6 @@ namespace FMScanner
         private bool FmIsZip { get; set; }
 
         private string ArchivePath { get; set; }
-
-        private FileStream ArchiveStream { get; set; }
-        private ZipArchive Archive { get; set; }
 
         private string FmWorkingPath { get; set; }
 
@@ -159,55 +163,60 @@ namespace FMScanner
 
             var scannedFMDataList = new List<ScannedFMData>();
 
-            for (var i = 0; i < missions.Count; i++)
+            // Init and dispose rtfBox here to avoid cross-thread exceptions.
+            // For performance, we only have one instance and we just change its content as needed.
+            using (var rtfBox = new RichTextBox())
             {
-                #region Init
-
-                var fm = missions[i];
-                FmIsZip = fm.ExtEqualsI(".zip") || fm.ExtEqualsI(".7z");
-
-                ArchiveStream?.Dispose();
-                Archive?.Dispose();
-
-                if (FmIsZip)
+                for (var i = 0; i < missions.Count; i++)
                 {
-                    ArchivePath = fm;
-                    FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+                    #region Init
+
+                    var fm = missions[i];
+                    FmIsZip = fm.ExtEqualsI(".zip") || fm.ExtEqualsI(".7z");
+
+                    ArchiveStream?.Dispose();
+                    Archive?.Dispose();
+
+                    if (FmIsZip)
+                    {
+                        ArchivePath = fm;
+                        FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+                    }
+                    else
+                    {
+                        FmWorkingPath = fm;
+                    }
+
+                    ReadmeFiles = new List<ReadmeInternal>();
+
+                    #endregion
+
+                    scannedFMDataList.Add(ScanCurrentFM(rtfBox));
+
+                    #region Report progress and handle cancellation
+
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (progress == null) continue;
+
+                    var progressReport = new ProgressReport
+                    {
+                        FMName = missions[i],
+                        FMNumber = i + 1,
+                        FMsTotal = missions.Count,
+                        Percent = (100 * (i + 1)) / missions.Count,
+                        Finished = i == missions.Count - 1
+                    };
+                    progress.Report(progressReport);
+
+                    #endregion
                 }
-                else
-                {
-                    FmWorkingPath = fm;
-                }
-
-                ReadmeFiles = new List<ReadmeInternal>();
-
-                #endregion
-
-                scannedFMDataList.Add(ScanCurrentFM());
-
-                #region Report progress and handle cancellation
-
-                cancellationToken.ThrowIfCancellationRequested();
-
-                if (progress == null) continue;
-
-                var progressReport = new ProgressReport
-                {
-                    FMName = missions[i],
-                    FMNumber = i + 1,
-                    FMsTotal = missions.Count,
-                    Percent = (100 * (i + 1)) / missions.Count,
-                    Finished = i == missions.Count - 1
-                };
-                progress.Report(progressReport);
-
-                #endregion
             }
 
             return scannedFMDataList;
         }
 
-        private ScannedFMData ScanCurrentFM()
+        private ScannedFMData ScanCurrentFM(RichTextBox rtfBox)
         {
             OverallTimer.Restart();
 
@@ -343,7 +352,7 @@ namespace FMScanner
 
             #endregion
 
-            ReadAndCacheReadmeFiles(baseDirFiles);
+            ReadAndCacheReadmeFiles(baseDirFiles, rtfBox);
 
             #region Title and IncludedMissions
 
@@ -1005,7 +1014,7 @@ namespace FMScanner
             }
         }
 
-        private void ReadAndCacheReadmeFiles(List<NameAndIndex> baseDirFiles)
+        private void ReadAndCacheReadmeFiles(List<NameAndIndex> baseDirFiles, RichTextBox rtfBox)
         {
             // Note: .wri files look like they may be just plain text with garbage at the top. Shrug.
             // Treat 'em like plaintext and see how it goes.
@@ -1072,6 +1081,8 @@ namespace FMScanner
                         }
                     }
 
+                    // Saw one ".rtf" that was actually a plaintext file, and one vice versa. So detect by
+                    // header alone.
                     var rtfHeader = new char[6];
                     using (var sr = FmIsZip
                         ? new StreamReader(readmeStream, Encoding.ASCII, false, 6, true)
@@ -1079,34 +1090,28 @@ namespace FMScanner
                     {
                         sr.ReadBlock(rtfHeader, 0, 6);
                     }
-
                     if (FmIsZip) readmeStream.Position = 0;
 
-                    // Saw one ".rtf" that was actually a plaintext file, and one vice versa. So detect by
-                    // header alone.
                     if (string.Concat(rtfHeader).EqualsI(@"{\rtf1"))
                     {
-                        using (var rtfBox = new RichTextBox())
+                        bool success;
+                        if (FmIsZip)
                         {
-                            bool success;
-                            if (FmIsZip)
+                            success = GetRtfFileLinesAndText(readmeStream, fileLen, rtfBox);
+                        }
+                        else
+                        {
+                            using (var fs = new FileStream(readmeFileOnDisk, FileMode.Open, FileAccess.Read))
                             {
-                                success = GetRtfFileLinesAndText(readmeStream, fileLen, rtfBox);
+                                success = GetRtfFileLinesAndText(fs, fileLen, rtfBox);
                             }
-                            else
-                            {
-                                using (var fs = new FileStream(readmeFileOnDisk, FileMode.Open, FileAccess.Read))
-                                {
-                                    success = GetRtfFileLinesAndText(fs, fileLen, rtfBox);
-                                }
-                            }
+                        }
 
-                            if (success)
-                            {
-                                var last = ReadmeFiles[ReadmeFiles.Count - 1];
-                                last.Lines = rtfBox.Lines;
-                                last.Text = rtfBox.Text;
-                            }
+                        if (success)
+                        {
+                            var last = ReadmeFiles[ReadmeFiles.Count - 1];
+                            last.Lines = rtfBox.Lines;
+                            last.Text = rtfBox.Text;
                         }
                     }
                     else
