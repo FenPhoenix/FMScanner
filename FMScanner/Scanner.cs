@@ -1977,35 +1977,43 @@ namespace FMScanner
 
             #region Check for RopeyArrow (determines game type for both OldDark and NewDark)
 
-            /*
-            We couldn't determine the game type the fast way, so we're going to search the OBJ_MAP chunk for
-            "RopeyArrow", which is a 100% reliable marker for Thief 2, whether OldDark or NewDark. This is
-            actually perfectly fast for already-extracted FMs, but not so much for zips. With zips, we can
-            only read a file entry forwards; we can't seek around. That's fine for SKYOBJVAR because it's only
-            a few hundred bytes to a few K into the .mis file, so we can save a lot of time by not having to
-            extract the whole thing into a MemoryStream. For the "RopeyArrow" string, though, we're out of
-            luck: it can be absolutely anywhere, and the only way we can narrow its location down is to read
-            the table of contents. Which is at the end of the .mis file, of course. So we'd be reading through
-            95%+ of the file anyway, and then we'd have to reopen the stream and read through it again until
-            we hit the right position. Faster just to copy it to a MemoryStream and seek through that.
-            */
-            long len = 0;
-            if (FmIsZip) len = misFileZipArchiveEntry.Length;
-            using (var misFileMemoryStream = new MemoryStream((int)len))
+            // We couldn't determine the game type the fast way, so we're going to search for "RopeyArrow", which
+            // is a 100% reliable marker for Thief 2, whether OldDark or NewDark.
+            if (FmIsZip)
             {
-                if (FmIsZip)
+                // For zips, since we can't seek within the stream, the fastest way to find our string is just to
+                // brute-force straight through.
+                using (var misFileZipStream = misFileZipArchiveEntry.Open())
                 {
-                    using (var misFileZipStream = misFileZipArchiveEntry.Open())
-                    {
-                        misFileZipStream.CopyTo(misFileMemoryStream);
-                        misFileMemoryStream.Position = 0;
-                    }
-                }
+                    var boundaryLen = MisFileStrings.RopeyArrowB.Length;
+                    var bufSize = 81_920;
+                    var chunk = new byte[bufSize + boundaryLen];
 
-                using (var br = FmIsZip
-                    ? new BinaryReader(misFileMemoryStream, Encoding.ASCII, leaveOpen: true)
-                    : new BinaryReader(File.Open(misFile, FileMode.Open, FileAccess.Read), Encoding.ASCII,
-                        leaveOpen: false))
+                    while (misFileZipStream.Read(chunk, boundaryLen, bufSize) != 0)
+                    {
+                        if (chunk.Contains(MisFileStrings.RopeyArrowB))
+                        {
+                            ret.Game = Games.TMA;
+                            break;
+                        }
+                        else
+                        {
+                            for (int startI = 0, endI = bufSize; startI < boundaryLen; startI++, endI++)
+                            {
+                                chunk[startI] = chunk[endI];
+                            }
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(ret.Game)) ret.Game = Games.TDP;
+                }
+            }
+            else
+            {
+                // For uncompressed files on disk, we mercifully can just look at the TOC and then seek to the
+                // OBJ_MAP chunk and search it for the string. Phew.
+                using (var br = new BinaryReader(File.Open(misFile, FileMode.Open, FileAccess.Read),
+                    Encoding.ASCII, leaveOpen: false))
                 {
                     uint tocOffset = br.ReadUInt32();
 
@@ -2029,9 +2037,9 @@ namespace FMScanner
                         break;
                     }
                 }
-            }
 
-            #endregion
+                #endregion
+            }
 
             return ret;
         }

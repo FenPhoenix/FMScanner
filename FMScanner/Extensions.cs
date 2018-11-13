@@ -58,6 +58,30 @@ namespace FMScanner
             return index > -1;
         }
 
+        // TODO: This is pretty slow when searching .mis file chunks for "RopeyArrow". See if it can be sped up.
+        internal static bool Contains(this byte[] input, byte[] pattern)
+        {
+            var firstByte = pattern[0];
+            int index = Array.IndexOf(input, firstByte);
+
+            while (index > -1)
+            {
+                for (int i = 0; i < pattern.Length; i++)
+                {
+                    if (index + i >= input.Length) return false;
+                    if (pattern[i] != input[index + i])
+                    {
+                        if ((index = Array.IndexOf(input, firstByte, index + i)) == -1) return false;
+                        break;
+                    }
+
+                    if (i == pattern.Length - 1) return true;
+                }
+            }
+
+            return index > -1;
+        }
+
         internal static bool Contains(this string value, string substring, StringComparison comparison)
         {
             return value.IndexOf(substring, comparison) >= 0;

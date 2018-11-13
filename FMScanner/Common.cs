@@ -105,6 +105,7 @@ namespace FMScanner
         internal static char[] SkyObjVar = { 'S', 'K', 'Y', 'O', 'B', 'J', 'V', 'A', 'R' };
         internal static char[] RopeyArrow = { 'R', 'o', 'p', 'e', 'y', 'A', 'r', 'r', 'o', 'w' };
         internal static char[] ObjMap = { 'O', 'B', 'J', '_', 'M', 'A', 'P' };
+        internal static byte[] RopeyArrowB = Encoding.ASCII.GetBytes("RopeyArrow");
     }
 
     [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
