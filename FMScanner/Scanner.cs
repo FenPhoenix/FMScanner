@@ -1985,9 +1985,12 @@ namespace FMScanner
                 // brute-force straight through.
                 using (var misFileZipStream = misFileZipArchiveEntry.Open())
                 {
+                    // To catch matches on a boundary between chunks, leave extra space at the start of each
+                    // chunk for the last boundaryLen bytes of the previous chunk to go into, thus achieving a
+                    // kind of quick-n-dirty "step back and re-read" type thing. Dunno man, it works.
                     var boundaryLen = MisFileStrings.RopeyArrowB.Length;
-                    var bufSize = 81_920;
-                    var chunk = new byte[bufSize + boundaryLen];
+                    const int bufSize = 81_920;
+                    var chunk = new byte[boundaryLen + bufSize];
 
                     while (misFileZipStream.Read(chunk, boundaryLen, bufSize) != 0)
                     {
@@ -1996,13 +1999,9 @@ namespace FMScanner
                             ret.Game = Games.TMA;
                             break;
                         }
-                        else
-                        {
-                            for (int startI = 0, endI = bufSize; startI < boundaryLen; startI++, endI++)
-                            {
-                                chunk[startI] = chunk[endI];
-                            }
-                        }
+
+                        // Copy the last boundaryLen bytes from chunk and put them at the beginning
+                        for (int si = 0, ei = bufSize; si < boundaryLen; si++, ei++) chunk[si] = chunk[ei];
                     }
 
                     if (string.IsNullOrEmpty(ret.Game)) ret.Game = Games.TDP;
