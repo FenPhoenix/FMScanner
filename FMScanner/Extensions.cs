@@ -58,7 +58,10 @@ namespace FMScanner
             return index > -1;
         }
 
-        // TODO: This is pretty slow when searching .mis file chunks for "RopeyArrow". See if it can be sped up.
+        // TODO: These two Array.Index()s are the last big do-something-about-able bottleneck for the zip scan.
+        // In theory I could probably parallelize this. This is really about the only thing I could parallelize,
+        // because it operates completely on memory, whereas the other big bottlenecks are all file I/O so we're
+        // outta luck with those.
         internal static bool Contains(this byte[] input, byte[] pattern)
         {
             var firstByte = pattern[0];
