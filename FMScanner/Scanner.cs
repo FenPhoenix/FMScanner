@@ -1876,7 +1876,7 @@ namespace FMScanner
         {
             var ret = (NewDarkRequired: (bool?)null, Game: (string)null);
 
-            #region Find smallest used .mis file
+            #region Choose smallest used .mis file
 
             var misSizeList = new List<(string Name, int Index, long Size)>();
             foreach (var mis in usedMisFiles)
@@ -1889,36 +1889,42 @@ namespace FMScanner
 
             var smallestUsedMisFile = misSizeList.OrderBy(x => x.Size).First();
 
-            #endregion
 
             ZipArchiveEntry misFileZipArchiveEntry = null;
-            if (FmIsZip) misFileZipArchiveEntry = Archive.Entries[smallestUsedMisFile.Index];
+            string misFileOnDisk = null;
+            if (FmIsZip)
+            {
+                misFileZipArchiveEntry = Archive.Entries[smallestUsedMisFile.Index];
+            }
+            else
+            {
+                misFileOnDisk = Path.Combine(FmWorkingPath, smallestUsedMisFile.Name);
+            }
 
-            //var misFileOnDisk = Path.Combine(FmWorkingPath, Archive.Entries[smallestUsedMisFileIndex].Name);
-            var misFileOnDisk = Path.Combine(FmWorkingPath, smallestUsedMisFile.Name);
+            #endregion
 
             #region Check for SKYOBJVAR (determines OldDark/NewDark; determines game type for OldDark)
 
             /*
-            Because the string "SKYOBJVAR" occurs very early in .mis files and its possible positions are known
-            down to the dozen or so bytes, checking it is the fastest way to determine the game type, and will
-            always tell us whether or not the mission requires NewDark. If the mission does require NewDark,
-            though, then we have to run a much slower game type scan.
+             Because the string "SKYOBJVAR" occurs very early in .mis files and its possible positions are known
+             down to the dozen or so bytes, checking it is the fastest way to determine the game type, and will
+             always tell us whether or not the mission requires NewDark. If the mission does require NewDark,
+             though, then we have to run a much slower game type scan.
 
-            SKYOBJVAR position commonness:
-            ~770    ~80%
-            ~7216   ~14%
-            ~3092   ~4%
+             SKYOBJVAR position commonness:
+             ~770    - ~80%
+             ~7216   - ~14%
+             ~3092   - ~4%
 
-            Key:
-                No SKYOBJVAR                       - OldDark Thief 1/G
-                SKYOBJVAR at ~770                  - OldDark Thief 2
-                SKYOBJVAR at ~3092 or ~7216        - NewDark, could be either T1/G or T2
-                SKYOBJVAR at any other location *  - OldDark Thief2
+             Key:
+                 No SKYOBJVAR                       - OldDark Thief 1/G
+                 SKYOBJVAR at ~770                  - OldDark Thief 2
+                 SKYOBJVAR at ~3092 or ~7216        - NewDark, could be either T1/G or T2
+                 SKYOBJVAR at any other location *  - OldDark Thief2
 
-            * We skip this check because only a handful of OldDark Thief 2 missions have SKYOBJVAR in a wacky
-              location, and we don't want to try to guess where it is when we're about to do the much more
-              reliable and just as fast OBJ_MAP check anyway.
+             * We skip this check because only a handful of OldDark Thief 2 missions have SKYOBJVAR in a wacky
+               location, and we don't want to try to guess where it is when we're about to do the much more
+               reliable and just as fast OBJ_MAP check anyway.
             */
 
             // For folder scans, we can seek to these positions directly, but for zip scans, we have to read
@@ -1935,31 +1941,32 @@ namespace FMScanner
 
             const int locationBytesToRead = 100;
             var foundAtNewDarkLocation = false;
+            var foundAtOldDarkThief2Location = false;
 
             char[] zipBuf = null;
-            var misAllChars = new char[locationBytesToRead];
+            var dirBuf = new char[locationBytesToRead];
 
             Stream misZipStream = null;
 
             using (var sr = FmIsZip
-                ? new StreamReader(misZipStream = misFileZipArchiveEntry.Open(), Encoding.ASCII, false, 1024, true)
-                : new StreamReader(misFileOnDisk, Encoding.ASCII, false, locationBytesToRead))
+                ? new BinaryReader(misZipStream = misFileZipArchiveEntry.Open(), Encoding.ASCII, true)
+                : new BinaryReader(new FileStream(misFileOnDisk, FileMode.Open, FileAccess.Read), Encoding.ASCII,
+                    false))
             {
                 for (int i = 0; i < locations.Length; i++)
                 {
                     if (FmIsZip)
                     {
-                        zipBuf = new char[zipOffsets[i]];
-                        sr.ReadBlock(zipBuf, 0, zipOffsets[i]);
+                        zipBuf = sr.ReadChars(zipOffsets[i]);
                     }
                     else
                     {
                         sr.BaseStream.Position = locations[i];
-                        sr.ReadBlock(misAllChars, 0, locationBytesToRead);
+                        dirBuf = sr.ReadChars(locationBytesToRead);
                     }
 
                     // We avoid string.Concat() in favor of directly searching char arrays, as that's WAY faster
-                    if ((FmIsZip ? zipBuf : misAllChars).Contains(MisFileStrings.SkyObjVar))
+                    if ((FmIsZip ? zipBuf : dirBuf).Contains(MisFileStrings.SkyObjVar))
                     {
                         // Zip reading is going to check the NewDark locations the other way round, but
                         // fortunately they're interchangeable in meaning so we don't have to do anything
@@ -1971,19 +1978,22 @@ namespace FMScanner
                         }
                         else if (locations[i] == oldDarkThief2Location)
                         {
-                            return (ScanOptions.ScanNewDarkRequired ? (bool?)false : null,
-                                    ScanOptions.ScanGameType ? Games.TMA : null);
+                            foundAtOldDarkThief2Location = true;
+                            break;
                         }
                     }
-
-                    // Necessary to get it to read from the correct location
-                    sr.DiscardBufferedData();
                 }
+
+                if (!foundAtNewDarkLocation) ret.NewDarkRequired = false;
             }
 
             #endregion
 
-            if (!foundAtNewDarkLocation) ret.NewDarkRequired = false;
+            if (foundAtOldDarkThief2Location)
+            {
+                return (ScanOptions.ScanNewDarkRequired ? (bool?)false : null,
+                        ScanOptions.ScanGameType ? Games.TMA : null);
+            }
 
             if (!ScanOptions.ScanGameType) return (ret.NewDarkRequired, (string)null);
 
@@ -1991,7 +2001,7 @@ namespace FMScanner
 
             // We couldn't determine the game type the fast way, so we're going to search the OBJ_MAP chunk for
             // a string that's unique to Thief 2. The actual string is subject to change if I find one that's
-            // faster to get.
+            // faster to get, but you can look at its definition to see what it currently is.
             if (FmIsZip)
             {
                 // For zips, since we can't seek within the stream, the fastest way to find our string is just to
@@ -2042,7 +2052,6 @@ namespace FMScanner
 
                         br.BaseStream.Position = offset;
 
-                        //var content = br.ReadChars((int)length);
                         var content = br.ReadBytes((int)length);
                         ret.Game = content.Contains(MisFileStrings.Thief2UniqueString)
                             ? Games.TMA
@@ -2050,9 +2059,9 @@ namespace FMScanner
                         break;
                     }
                 }
-
-                #endregion
             }
+
+            #endregion
 
             return ret;
         }
