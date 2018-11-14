@@ -1997,7 +1997,7 @@ namespace FMScanner
 
             if (!ScanOptions.ScanGameType) return (ret.NewDarkRequired, (string)null);
 
-            #region Check for RopeyArrow (determines game type for both OldDark and NewDark)
+            #region Check for T2-unique value in OBJ_MAP (determines game type for both OldDark and NewDark)
 
             // We couldn't determine the game type the fast way, so we're going to search the OBJ_MAP chunk for
             // a string that's unique to Thief 2. The actual string is subject to change if I find one that's
