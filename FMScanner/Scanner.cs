@@ -1876,31 +1876,39 @@ namespace FMScanner
         {
             var ret = (NewDarkRequired: (bool?)null, Game: (string)null);
 
-            var misFile = Path.Combine(FmWorkingPath, usedMisFiles[0].Name);
+            #region Find smallest used .mis file
+
+            var misSizeList = new List<(string Name, int Index, long Size)>();
+            foreach (var mis in usedMisFiles)
+            {
+                misSizeList.Add((mis.Name, mis.Index,
+                    FmIsZip
+                        ? Archive.Entries[mis.Index].Length
+                        : new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length));
+            }
+
+            var smallestUsedMisFile = misSizeList.OrderBy(x => x.Size).First();
+
+            #endregion
 
             ZipArchiveEntry misFileZipArchiveEntry = null;
-            if (FmIsZip)
-            {
-                misFileZipArchiveEntry = Archive.Entries[usedMisFiles[0].Index];
-            }
+            if (FmIsZip) misFileZipArchiveEntry = Archive.Entries[smallestUsedMisFile.Index];
+
+            //var misFileOnDisk = Path.Combine(FmWorkingPath, Archive.Entries[smallestUsedMisFileIndex].Name);
+            var misFileOnDisk = Path.Combine(FmWorkingPath, smallestUsedMisFile.Name);
 
             #region Check for SKYOBJVAR (determines OldDark/NewDark; determines game type for OldDark)
 
-            // Note: DarkLoader looks for "SKYOBJVAR" and "MAPPARAM", but the latter only occurs in System
-            // Shock 2 files. http://www.ttlg.com/forums/showthread.php?t=113389 Good to know!
-
             /*
-            Note: The SKYOBJVAR check is the fastest way to tell if a mission is for Thief 1 or Thief 2, and
-            for OldDark or NewDark. We check it first because it's fast. It will always tell us whether an FM
-            is OldDark or NewDark, but for NewDark FMs it can't tell us what game the mission is for. In that
-            case, we check for the string "RopeyArrow", and if we find it then it's for Thief 2, otherwise
-            Thief 1. But that's slow so we only do it if all else fails.
+            Because the string "SKYOBJVAR" occurs very early in .mis files and its possible positions are known
+            down to the dozen or so bytes, checking it is the fastest way to determine the game type, and will
+            always tell us whether or not the mission requires NewDark. If the mission does require NewDark,
+            though, then we have to run a much slower game type scan.
 
-            In 99% of cases, if the text "SKYOBJVAR" exists, it will be somewhere around 770, 3092, or 7200
-            bytes in. To speed things up, we read the locations in order of commonness (770 = 80%, 7200 = 14%,
-            3092 = 4%). This cuts the operation time down by a huge amount.
-            Note: unless we're reading a zip, in which case we can't seek the stream so we just read the
-            locations sequentially.
+            SKYOBJVAR position commonness:
+            ~770    ~80%
+            ~7216   ~14%
+            ~3092   ~4%
 
             Key:
                 No SKYOBJVAR                       - OldDark Thief 1/G
@@ -1910,9 +1918,11 @@ namespace FMScanner
 
             * We skip this check because only a handful of OldDark Thief 2 missions have SKYOBJVAR in a wacky
               location, and we don't want to try to guess where it is when we're about to do the much more
-              reliable and nearly as fast RopeyArrow check anyway.
+              reliable and just as fast OBJ_MAP check anyway.
             */
 
+            // For folder scans, we can seek to these positions directly, but for zip scans, we have to read
+            // through the stream sequentially until we hit each one.
             const int oldDarkThief2Location = 750;
             const int newDarkLocation1 = 7180;
             const int newDarkLocation2 = 3050;
@@ -1929,9 +1939,11 @@ namespace FMScanner
             char[] zipBuf = null;
             var misAllChars = new char[locationBytesToRead];
 
+            Stream misZipStream = null;
+
             using (var sr = FmIsZip
-                ? new StreamReader(misFileZipArchiveEntry.Open(), Encoding.ASCII, false, 1024, true)
-                : new StreamReader(misFile, Encoding.ASCII, false, locationBytesToRead))
+                ? new StreamReader(misZipStream = misFileZipArchiveEntry.Open(), Encoding.ASCII, false, 1024, true)
+                : new StreamReader(misFileOnDisk, Encoding.ASCII, false, locationBytesToRead))
             {
                 for (int i = 0; i < locations.Length; i++)
                 {
@@ -1977,24 +1989,25 @@ namespace FMScanner
 
             #region Check for RopeyArrow (determines game type for both OldDark and NewDark)
 
-            // We couldn't determine the game type the fast way, so we're going to search for "RopeyArrow", which
-            // is a 100% reliable marker for Thief 2, whether OldDark or NewDark.
+            // We couldn't determine the game type the fast way, so we're going to search the OBJ_MAP chunk for
+            // a string that's unique to Thief 2. The actual string is subject to change if I find one that's
+            // faster to get.
             if (FmIsZip)
             {
                 // For zips, since we can't seek within the stream, the fastest way to find our string is just to
                 // brute-force straight through.
-                using (var misFileZipStream = misFileZipArchiveEntry.Open())
+                using (misZipStream)
                 {
                     // To catch matches on a boundary between chunks, leave extra space at the start of each
                     // chunk for the last boundaryLen bytes of the previous chunk to go into, thus achieving a
                     // kind of quick-n-dirty "step back and re-read" type thing. Dunno man, it works.
-                    var boundaryLen = MisFileStrings.RopeyArrowB.Length;
+                    var boundaryLen = MisFileStrings.Thief2UniqueString.Length;
                     const int bufSize = 81_920;
                     var chunk = new byte[boundaryLen + bufSize];
 
-                    while (misFileZipStream.Read(chunk, boundaryLen, bufSize) != 0)
+                    while (misZipStream.Read(chunk, boundaryLen, bufSize) != 0)
                     {
-                        if (chunk.Contains(MisFileStrings.RopeyArrowB))
+                        if (chunk.Contains(MisFileStrings.Thief2UniqueString))
                         {
                             ret.Game = Games.TMA;
                             break;
@@ -2011,7 +2024,7 @@ namespace FMScanner
             {
                 // For uncompressed files on disk, we mercifully can just look at the TOC and then seek to the
                 // OBJ_MAP chunk and search it for the string. Phew.
-                using (var br = new BinaryReader(File.Open(misFile, FileMode.Open, FileAccess.Read),
+                using (var br = new BinaryReader(File.Open(misFileOnDisk, FileMode.Open, FileAccess.Read),
                     Encoding.ASCII, leaveOpen: false))
                 {
                     uint tocOffset = br.ReadUInt32();
@@ -2029,8 +2042,9 @@ namespace FMScanner
 
                         br.BaseStream.Position = offset;
 
-                        var content = br.ReadChars((int)length);
-                        ret.Game = content.Contains(MisFileStrings.RopeyArrow)
+                        //var content = br.ReadChars((int)length);
+                        var content = br.ReadBytes((int)length);
+                        ret.Game = content.Contains(MisFileStrings.Thief2UniqueString)
                             ? Games.TMA
                             : Games.TDP;
                         break;
