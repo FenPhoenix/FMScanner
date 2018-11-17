@@ -37,12 +37,10 @@ namespace FMScanner
 
         #region Fast byte[] / char[] search
 
-        // This takes about 1 second out of the entire 1098 mission scan. That makes it a hotspot, but literally
-        // everything I've tried to make it faster has failed. IndexOf() calls an internal method TrySZIndexOf(),
-        // which is clearly some voodoo cause it's faster than everything else in the world apparently. Also
-        // multithreading? Forget it. The problem is the 1sec time is an aggregate; this takes like 5.9ms per
-        // FM (5.9ms * 170 NewDark FMs = ~1sec), and setting up threads probably outweighs that, or at least
-        // that's my best guess because that hasn't really worked out either. Anyway.
+        // I don't know if this is "supposed" to be the fastest way, but every other algorithm I've tried is at
+        // least 2-8x slower. IndexOf() calls an internal method TrySZIndexOf() which is obviously some voodoo
+        // speed demon stuff because none of this Moyer-Bohr-Kensington-Smythe-Wappcapplet fancy stuff beats it.
+        // Or maybe I just don't know what I'm doing. Either way.
         internal static bool Contains(this byte[] input, byte[] pattern)
         {
             var firstByte = pattern[0];

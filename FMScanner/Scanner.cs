@@ -429,7 +429,7 @@ namespace FMScanner
 
             if (ScanOptions.ScanNewDarkRequired || ScanOptions.ScanGameType)
             {
-                var t = GetGameTypeAndEngine(usedMisFiles);
+                var t = GetGameTypeAndEngine(baseDirFiles, usedMisFiles);
                 if (ScanOptions.ScanNewDarkRequired) fmData.NewDarkRequired = t.Item1;
                 if (ScanOptions.ScanGameType) fmData.Game = t.Item2;
             }
@@ -1872,29 +1872,77 @@ namespace FMScanner
         }
 
         private (bool? NewDarkRequired, string Game)
-        GetGameTypeAndEngine(List<NameAndIndex> usedMisFiles)
+        GetGameTypeAndEngine(List<NameAndIndex> baseDirFiles, List<NameAndIndex> usedMisFiles)
         {
             var ret = (NewDarkRequired: (bool?)null, Game: (string)null);
 
-            #region Choose smallest used .mis file
+            #region Choose smallest .gam file
 
-            var misSizeList = new List<(string Name, int Index, long Size)>();
-            foreach (var mis in usedMisFiles)
+            var gamFiles = baseDirFiles.Where(x => x.Name.ExtEqualsI(".gam")).ToArray();
+            var gamFileExists = gamFiles.Length > 0;
+
+            var gamSizeList = new List<(string Name, int Index, long Size)>();
+            NameAndIndex smallestGamFile = null;
+
+            if (gamFileExists)
             {
-                misSizeList.Add((mis.Name, mis.Index,
-                    FmIsZip
-                        ? Archive.Entries[mis.Index].Length
-                        : new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length));
+                if (gamFiles.Length == 1)
+                {
+                    smallestGamFile = gamFiles[0];
+                }
+                else
+                {
+                    foreach (var gam in gamFiles)
+                    {
+                        gamSizeList.Add((gam.Name, gam.Index,
+                            FmIsZip
+                                ? Archive.Entries[gam.Index].Length
+                                : new FileInfo(Path.Combine(FmWorkingPath, gam.Name)).Length));
+                    }
+
+                    var gamToUse = gamSizeList.OrderBy(x => x.Size).First();
+                    smallestGamFile = new NameAndIndex { Name = gamToUse.Name, Index = gamToUse.Index };
+                }
             }
 
-            var smallestUsedMisFile = misSizeList.OrderBy(x => x.Size).First();
+            #endregion
 
+            #region Choose smallest .mis file
 
-            ZipArchiveEntry misFileZipArchiveEntry = null;
+            var misSizeList = new List<(string Name, int Index, long Size)>();
+            NameAndIndex smallestUsedMisFile;
+
+            if (usedMisFiles.Count == 1)
+            {
+                smallestUsedMisFile = usedMisFiles[0];
+            }
+            else
+            {
+                foreach (var mis in usedMisFiles)
+                {
+                    misSizeList.Add((mis.Name, mis.Index,
+                        FmIsZip
+                            ? Archive.Entries[mis.Index].Length
+                            : new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length));
+                }
+
+                var misToUse = misSizeList.OrderBy(x => x.Size).First();
+                smallestUsedMisFile = new NameAndIndex { Name = misToUse.Name, Index = misToUse.Index };
+            }
+
+            #endregion
+
+            #region Setup
+
+            ZipArchiveEntry gamFileZipEntry = null;
+            ZipArchiveEntry misFileZipEntry = null;
+
             string misFileOnDisk = null;
+
             if (FmIsZip)
             {
-                misFileZipArchiveEntry = Archive.Entries[smallestUsedMisFile.Index];
+                if (gamFileExists) gamFileZipEntry = Archive.Entries[smallestGamFile.Index];
+                misFileZipEntry = Archive.Entries[smallestUsedMisFile.Index];
             }
             else
             {
@@ -1903,28 +1951,19 @@ namespace FMScanner
 
             #endregion
 
-            #region Check for SKYOBJVAR (determines OldDark/NewDark; determines game type for OldDark)
+            #region Check for SKYOBJVAR in .mis (determines OldDark/NewDark; determines game type for OldDark)
 
             /*
-             Because the string "SKYOBJVAR" occurs very early in .mis files and its possible positions are known
-             down to the dozen or so bytes, checking it is the fastest way to determine the game type, and will
-             always tell us whether or not the mission requires NewDark. If the mission does require NewDark,
-             though, then we have to run a much slower game type scan.
-
-             SKYOBJVAR position commonness:
-             ~770    - ~80%
-             ~7216   - ~14%
-             ~3092   - ~4%
-
-             Key:
-                 No SKYOBJVAR                       - OldDark Thief 1/G
-                 SKYOBJVAR at ~770                  - OldDark Thief 2
-                 SKYOBJVAR at ~3092 or ~7216        - NewDark, could be either T1/G or T2
-                 SKYOBJVAR at any other location *  - OldDark Thief2
+             SKYOBJVAR location key:
+                 No SKYOBJVAR           - OldDark Thief 1/G
+                 ~770                   - OldDark Thief 2                        Commonness: ~80%
+                 ~7216                  - NewDark, could be either T1/G or T2    Commonness: ~14%
+                 ~3092                  - NewDark, could be either T1/G or T2    Commonness: ~4%
+                 Any other location*    - OldDark Thief2
 
              * We skip this check because only a handful of OldDark Thief 2 missions have SKYOBJVAR in a wacky
-               location, and we don't want to try to guess where it is when we're about to do the much more
-               reliable and just as fast OBJ_MAP check anyway.
+               location, and it's faster and more reliable to simply carry on with the secondary check than to
+               try to guess where SKYOBJVAR is in this case.
             */
 
             // For folder scans, we can seek to these positions directly, but for zip scans, we have to read
@@ -1946,10 +1985,8 @@ namespace FMScanner
             char[] zipBuf = null;
             var dirBuf = new char[locationBytesToRead];
 
-            Stream misZipStream = null;
-
             using (var sr = FmIsZip
-                ? new BinaryReader(misZipStream = misFileZipArchiveEntry.Open(), Encoding.ASCII, true)
+                ? new BinaryReader(misFileZipEntry.Open(), Encoding.ASCII, false)
                 : new BinaryReader(new FileStream(misFileOnDisk, FileMode.Open, FileAccess.Read), Encoding.ASCII,
                     false))
             {
@@ -1997,27 +2034,28 @@ namespace FMScanner
 
             if (!ScanOptions.ScanGameType) return (ret.NewDarkRequired, (string)null);
 
-            #region Check for T2-unique value in OBJ_MAP (determines game type for both OldDark and NewDark)
+            #region Check for T2-unique value in .gam or .mis (determines game type for both OldDark and NewDark)
 
-            // We couldn't determine the game type the fast way, so we're going to search the OBJ_MAP chunk for
-            // a string that's unique to Thief 2. The actual string is subject to change if I find one that's
-            // faster to get, but you can look at its definition to see what it currently is.
             if (FmIsZip)
             {
                 // For zips, since we can't seek within the stream, the fastest way to find our string is just to
                 // brute-force straight through.
-                using (misZipStream)
+                using (var zipEntryStream = gamFileExists ? gamFileZipEntry.Open() : misFileZipEntry.Open())
                 {
+                    var identString = gamFileExists
+                        ? MisFileStrings.Thief2UniqueStringGam
+                        : MisFileStrings.Thief2UniqueStringMis;
+
                     // To catch matches on a boundary between chunks, leave extra space at the start of each
                     // chunk for the last boundaryLen bytes of the previous chunk to go into, thus achieving a
                     // kind of quick-n-dirty "step back and re-read" type thing. Dunno man, it works.
-                    var boundaryLen = MisFileStrings.Thief2UniqueString.Length;
+                    var boundaryLen = identString.Length;
                     const int bufSize = 81_920;
                     var chunk = new byte[boundaryLen + bufSize];
 
-                    while (misZipStream.Read(chunk, boundaryLen, bufSize) != 0)
+                    while (zipEntryStream.Read(chunk, boundaryLen, bufSize) != 0)
                     {
-                        if (chunk.Contains(MisFileStrings.Thief2UniqueString))
+                        if (chunk.Contains(identString))
                         {
                             ret.Game = Games.TMA;
                             break;
@@ -2053,7 +2091,7 @@ namespace FMScanner
                         br.BaseStream.Position = offset;
 
                         var content = br.ReadBytes((int)length);
-                        ret.Game = content.Contains(MisFileStrings.Thief2UniqueString)
+                        ret.Game = content.Contains(MisFileStrings.Thief2UniqueStringMis)
                             ? Games.TMA
                             : Games.TDP;
                         break;
