@@ -35,33 +35,14 @@ namespace FMScanner
             return count;
         }
 
-        internal static bool Contains(this char[] input, char[] pattern)
-        {
-            var firstChar = pattern[0];
-            int index = Array.IndexOf(input, firstChar);
+        #region Fast byte[] / char[] search
 
-            while (index > -1)
-            {
-                for (int i = 0; i < pattern.Length; i++)
-                {
-                    if (index + i >= input.Length) return false;
-                    if (pattern[i] != input[index + i])
-                    {
-                        if ((index = Array.IndexOf(input, firstChar, index + i)) == -1) return false;
-                        break;
-                    }
-
-                    if (i == pattern.Length - 1) return true;
-                }
-            }
-
-            return index > -1;
-        }
-
-        // TODO: These two Array.Index()s are the last big do-something-about-able bottleneck for the zip scan.
-        // In theory I could probably parallelize this. This is really about the only thing I could parallelize,
-        // because it operates completely on memory, whereas the other big bottlenecks are all file I/O so we're
-        // outta luck with those.
+        // This takes about 1 second out of the entire 1098 mission scan. That makes it a hotspot, but literally
+        // everything I've tried to make it faster has failed. IndexOf() calls an internal method TrySZIndexOf(),
+        // which is clearly some voodoo cause it's faster than everything else in the world apparently. Also
+        // multithreading? Forget it. The problem is the 1sec time is an aggregate; this takes like 5.9ms per
+        // FM (5.9ms * 170 NewDark FMs = ~1sec), and setting up threads probably outweighs that, or at least
+        // that's my best guess because that hasn't really worked out either. Anyway.
         internal static bool Contains(this byte[] input, byte[] pattern)
         {
             var firstByte = pattern[0];
@@ -85,10 +66,31 @@ namespace FMScanner
             return index > -1;
         }
 
-        internal static bool Contains(this string value, string substring, StringComparison comparison)
+        // Exact duplicate except for the array type, but there's nothing I can do if I want to be fast :/
+        internal static bool Contains(this char[] input, char[] pattern)
         {
-            return value.IndexOf(substring, comparison) >= 0;
+            var firstChar = pattern[0];
+            int index = Array.IndexOf(input, firstChar);
+
+            while (index > -1)
+            {
+                for (int i = 0; i < pattern.Length; i++)
+                {
+                    if (index + i >= input.Length) return false;
+                    if (pattern[i] != input[index + i])
+                    {
+                        if ((index = Array.IndexOf(input, firstChar, index + i)) == -1) return false;
+                        break;
+                    }
+
+                    if (i == pattern.Length - 1) return true;
+                }
+            }
+
+            return index > -1;
         }
+
+        #endregion
 
         internal static bool Contains(this string value, char character)
         {
@@ -103,40 +105,18 @@ namespace FMScanner
         /// <returns></returns>
         internal static bool ContainsI(this string value, string substring)
         {
-            return value.Contains(substring, OrdinalIgnoreCase);
+            return value.IndexOf(substring, OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>
         /// Case-insensitive Contains.
         /// </summary>
         /// <param name="value"></param>
-        /// <param name="stringToSearchFor"></param>
-        /// <returns></returns>
-        internal static bool ContainsI(this IEnumerable<string> value, string stringToSearchFor)
-        {
-            return value.Contains(stringToSearchFor, StringComparer.OrdinalIgnoreCase);
-        }
-
-        /// <summary>
-        /// Case-sensitive Contains.
-        /// </summary>
-        /// <param name="value"></param>
         /// <param name="substring"></param>
         /// <returns></returns>
-        internal static bool ContainsS(this string value, string substring)
+        internal static bool ContainsI(this IEnumerable<string> value, string substring)
         {
-            return value.Contains(substring, Ordinal);
-        }
-
-        /// <summary>
-        /// Case-sensitive Contains.
-        /// </summary>
-        /// <param name="value"></param>
-        /// <param name="stringToSearchFor"></param>
-        /// <returns></returns>
-        internal static bool ContainsS(this IEnumerable<string> value, string stringToSearchFor)
-        {
-            return value.Contains(stringToSearchFor, StringComparer.Ordinal);
+            return value.Contains(substring, StringComparer.OrdinalIgnoreCase);
         }
 
         /// <summary>
@@ -150,16 +130,6 @@ namespace FMScanner
             return first.Equals(second, OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// Returns true if the string is "true" (case-insensitive), otherwise false.
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        internal static bool EqualsTrue(this string value)
-        {
-            return value.Equals(bool.TrueString, OrdinalIgnoreCase);
-        }
-
         internal static bool HasFileExtension(this string value)
         {
             return value.LastIndexOf('.') > value.LastIndexOf('/') ||
@@ -168,7 +138,7 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Returns true if the string ends with extension (case-insensitive).
+        /// Returns true if the string ends with <paramref name="extension"/> (case-insensitive).
         /// </summary>
         /// <param name="value"></param>
         /// <param name="extension"></param>
