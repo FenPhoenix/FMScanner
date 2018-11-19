@@ -172,7 +172,7 @@ namespace FMScanner
                     #region Init
 
                     var fm = missions[i];
-                    FmIsZip = fm.ExtEqualsI(".zip") || fm.ExtEqualsI(".7z");
+                    FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
 
                     ArchiveStream?.Dispose();
                     Archive?.Dispose();
@@ -225,7 +225,7 @@ namespace FMScanner
             #region Check for and setup 7-Zip
 
             bool fmIsSevenZip = false;
-            if (FmIsZip && ArchivePath.ExtEqualsI(".7z"))
+            if (FmIsZip && ArchivePath.EndsWithI(".7z"))
             {
                 FmIsZip = false;
                 fmIsSevenZip = true;
@@ -253,7 +253,7 @@ namespace FMScanner
             {
                 Debug.WriteLine(@"----------" + ArchivePath);
 
-                if (ArchivePath.ExtEqualsI(".zip"))
+                if (ArchivePath.EndsWithI(".zip"))
                 {
                     ArchiveStream = new FileStream(ArchivePath, FileMode.Open, FileAccess.Read);
                     try
@@ -637,7 +637,7 @@ namespace FMScanner
             for (var i = 0; i < baseDirFiles.Count; i++)
             {
                 var f = baseDirFiles[i];
-                if (f.Name.ExtEqualsI(".mis"))
+                if (f.Name.EndsWithI(".mis"))
                 {
                     misFiles.Add(new NameAndIndex { Name = GetFileName(f.Name), Index = f.Index });
                 }
@@ -1021,7 +1021,7 @@ namespace FMScanner
 
             var readmes =
                 (from fd in baseDirFiles
-                 where new[] { ".txt", ".rtf", ".wri" }.Any(x => fd.Name.ExtEqualsI(x)) ||
+                 where new[] { ".txt", ".rtf", ".wri" }.Any(x => fd.Name.EndsWithI(x)) ||
                     fd.Name.ExtIsHtml()
                  select fd).ToList();
 
@@ -1814,7 +1814,7 @@ namespace FMScanner
             for (var i = 0; i < baseDirFiles.Count; i++)
             {
                 var fn = baseDirFiles[i].Name;
-                if (!fn.ExtEqualsI(".zip") && !fn.ExtEqualsI(".7z") && !fn.ExtEqualsI(".rar"))
+                if (!fn.EndsWithI(".zip") && !fn.EndsWithI(".7z") && !fn.EndsWithI(".rar"))
                 {
                     continue;
                 }
@@ -1878,7 +1878,7 @@ namespace FMScanner
 
             #region Choose smallest .gam file
 
-            var gamFiles = baseDirFiles.Where(x => x.Name.ExtEqualsI(".gam")).ToArray();
+            var gamFiles = baseDirFiles.Where(x => x.Name.EndsWithI(".gam")).ToArray();
             var gamFileExists = gamFiles.Length > 0;
 
             var gamSizeList = new List<(string Name, int Index, long Size)>();

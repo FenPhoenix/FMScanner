@@ -96,7 +96,8 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Case-insensitive Contains.
+        /// Determines whether a string contains a specified substring. Uses
+        /// <see cref="StringComparison.OrdinalIgnoreCase"/>.
         /// </summary>
         /// <param name="value"></param>
         /// <param name="substring"></param>
@@ -107,7 +108,8 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Case-insensitive Contains.
+        /// Determines whether an <see cref="IEnumerable{T}"/> contains a specified element. Uses 
+        /// <see cref="StringComparer.OrdinalIgnoreCase"/>.
         /// </summary>
         /// <param name="value"></param>
         /// <param name="substring"></param>
@@ -118,7 +120,8 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Case-insensitive Equals.
+        /// Determines whether this string and a specified <see langword="string"/> object have the same value.
+        /// Uses <see cref="StringComparison.OrdinalIgnoreCase"/>.
         /// </summary>
         /// <param name="first"></param>
         /// <param name="second"></param>
@@ -128,24 +131,17 @@ namespace FMScanner
             return first.Equals(second, OrdinalIgnoreCase);
         }
 
-        internal static bool HasFileExtension(this string value)
-        {
-            return value.LastIndexOf('.') > value.LastIndexOf('/') ||
-                   value.LastIndexOf('.') > value.LastIndexOf('\\') ||
-                   (!value.Contains('/') && !value.Contains('\\') && value.Contains('.'));
-        }
-
         /// <summary>
-        /// Returns true if the string ends with <paramref name="extension"/> (case-insensitive).
+        /// Determines whether this string ends with a file extension. Obviously only makes sense for strings
+        /// that are supposed to be file names.
         /// </summary>
         /// <param name="value"></param>
-        /// <param name="extension"></param>
         /// <returns></returns>
-        internal static bool ExtEqualsI(this string value, string extension)
+        internal static bool HasFileExtension(this string value)
         {
-            if (extension[0] != '.') extension = '.' + extension;
-
-            return value.EndsWithI(extension);
+            var lastDotIndex = value.LastIndexOf('.');
+            return lastDotIndex > value.LastIndexOf('/') ||
+                   lastDotIndex > value.LastIndexOf('\\');
         }
 
         /// <summary>
