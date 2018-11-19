@@ -219,7 +219,7 @@ namespace FMScanner
         {
             if (string.IsNullOrEmpty(str) || str.Length < value.Length) return false;
 
-            // Notes: ASCII chars are 0-127. Uppercase is 65-90; lowercase is 97-122.
+            // Note: ASCII chars are 0-127. Uppercase is 65-90; lowercase is 97-122.
             // Therefore, if a char is in one of these ranges, one can convert between cases by simply adding or
             // subtracting 32.
 
@@ -229,22 +229,37 @@ namespace FMScanner
 
             for (int si = siStart, vi = 0; si < siEnd; si++, vi++)
             {
-                // Only run the slow case check if the char is non-ASCII. This also means we run it per-char
-                // instead of per-string, which should make it faster, although the double ToString() and one
-                // To*Invariant() hurts. How much, I dunno. I don't currently test any non-ASCII strings. We'll
-                // see.
+                // If we find a non-ASCII character, give up and run the slow check on the whole string. We do
+                // this because one .NET char doesn't necessarily equal one Unicode char. Multiple .NET chars
+                // might be needed. So we grit our teeth and take the perf hit of letting .NET handle it.
+                // This is tuned for ASCII being the more common case, so we can save an advance check for non-
+                // ASCII chars, at the expense of being slightly (probably insignificantly) slower if there are
+                // in fact non-ASCII chars in value.
                 if (value[vi] > 127)
                 {
-                    if (value[vi] != str[si] &&
-                        caseComparison == CaseComparison.GivenOrUpper
-                        ? !value[vi].ToString().ToUpperInvariant().Equals(str[si].ToString(), Ordinal) :
-                        caseComparison == CaseComparison.GivenOrLower
-                        ? !value[vi].ToString().ToLowerInvariant().Equals(str[si].ToString(), Ordinal)
-                        : !value[vi].ToString().Equals(str[si].ToString(), OrdinalIgnoreCase))
+                    switch (caseComparison)
                     {
-                        return false;
+                        case CaseComparison.CaseSensitive:
+                            return start
+                                ? str.StartsWith(value, Ordinal)
+                                : str.EndsWith(value, Ordinal);
+                        case CaseComparison.CaseInsensitive:
+                            return start
+                                ? str.StartsWith(value, OrdinalIgnoreCase)
+                                : str.EndsWith(value, OrdinalIgnoreCase);
+                        case CaseComparison.GivenOrUpper:
+                            return start
+                                ? str.StartsWith(value, Ordinal) ||
+                                  str.StartsWith(value.ToUpperInvariant(), Ordinal)
+                                : str.EndsWith(value, Ordinal) ||
+                                  str.EndsWith(value.ToUpperInvariant(), Ordinal);
+                        case CaseComparison.GivenOrLower:
+                            return start
+                                ? str.StartsWith(value, Ordinal) ||
+                                  str.StartsWith(value.ToLowerInvariant(), Ordinal)
+                                : str.EndsWith(value, Ordinal) ||
+                                  str.EndsWith(value.ToLowerInvariant(), Ordinal);
                     }
-                    continue;
                 }
 
                 if (str[si] >= 65 && str[si] <= 90 && value[vi] >= 97 && value[vi] <= 122)
