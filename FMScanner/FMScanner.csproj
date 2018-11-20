@@ -23,6 +23,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,6 +33,8 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -60,9 +64,22 @@
       <HintPath>..\packages\Squid-Box.SevenZipSharp.1.1.106\lib\net45\SevenZipSharp.dll</HintPath>
     </Reference>
     <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
+    </Reference>
     <Reference Include="System.Core" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Memory, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.5.1\lib\netstandard2.0\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.4.0\lib\net46\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=4.0.4.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.4.5.0\lib\netstandard2.0\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -83,10 +100,54 @@
     <Compile Include="Scanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleHelpers\FileEncoding.cs" />
+    <Compile Include="SysIoComp\Interop\Interop.zlib.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\CompressionLevel.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\CompressionMode.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\Crc32Helper.ZLib.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\BlockType.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\CopyEncoder.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\DeflateInput.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\DeflateManagedStream.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\DeflaterManaged.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FastEncoder.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FastEncoderStatus.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FastEncoderWindow.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FileFormats.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\HuffmanTree.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InflaterManaged.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InflaterState.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InputBuffer.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\Match.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\MatchState.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputBuffer.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputWindow.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\Deflater.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\DeflateStream.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\Inflater.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibException.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibNative.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibNative.ZStream.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\GZipStream.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\PositionPreservingWriteOnlyStreamWrapper.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\PositionPreservingWriteOnlyStreamWrapper.netcoreapp.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipArchive.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.netcoreapp.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.Unix.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.Windows.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveMode.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipBlocks.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.netcoreapp.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipHelper.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\ZipVersion.cs" />
     <Compile Include="ZipArchiveFast.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="SysIoComp\Resources\Strings.resx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\7z.Libs.18.05\build\net\7z.Libs.targets" Condition="Exists('..\packages\7z.Libs.18.05\build\net\7z.Libs.targets')" />

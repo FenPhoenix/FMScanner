@@ -84,7 +84,7 @@
 //        private byte[] _fileComment;
 //        private CompressionLevel? _compressionLevel;
 
-//       // Initializes, attaches it to archive
+//        // Initializes, attaches it to archive
 //        internal ZipArchiveEntry(ZipArchive archive, ZipCentralDirectoryFileHeader cd)
 //        {
 //            _archive = archive;
