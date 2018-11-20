@@ -83,6 +83,7 @@
     <Compile Include="Scanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleHelpers\FileEncoding.cs" />
+    <Compile Include="ZipArchiveFast.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
