@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
+using System;
 
 namespace SysIOComp
 {
@@ -39,7 +40,7 @@ namespace SysIOComp
 
         // Compress data but don't format as block (doesn't have header and footer)
         internal void GetCompressedData(DeflateInput input, OutputBuffer output) =>
-            GetCompressedOutput(input, output, maxBytesToCopy:- 1);
+            GetCompressedOutput(input, output, maxBytesToCopy: -1);
 
         internal void GetBlockHeader(OutputBuffer output) => WriteDeflatePreamble(output);
 

@@ -2,7 +2,9 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Diagnostics;
+using System.IO;
 
 namespace SysIOComp
 {
@@ -226,7 +228,7 @@ namespace SysIOComp
                 }
                 else
                 {
-                    throw new InvalidDataException(SR.UnknownBlockType);
+                    throw new InvalidDataException("SR.UnknownBlockType");
                 }
             }
 
@@ -252,7 +254,7 @@ namespace SysIOComp
             }
             else
             {
-                throw new InvalidDataException(SR.UnknownBlockType);
+                throw new InvalidDataException("SR.UnknownBlockType");
             }
 
             //
@@ -314,7 +316,7 @@ namespace SysIOComp
                             // make sure complement matches
                             if ((ushort)_blockLength != (ushort)(~blockLengthComplement))
                             {
-                                throw new InvalidDataException(SR.InvalidBlockLength);
+                                throw new InvalidDataException("SR.InvalidBlockLength");
                             }
                         }
 
@@ -347,7 +349,7 @@ namespace SysIOComp
 
                     default:
                         Debug.Fail("check why we are here!");
-                        throw new InvalidDataException(SR.UnknownState);
+                        throw new InvalidDataException("SR.UnknownState");
                 }
             }
         }
@@ -409,7 +411,7 @@ namespace SysIOComp
                             {
                                 if (symbol < 0 || symbol >= s_extraLengthBits.Length)
                                 {
-                                    throw new InvalidDataException(SR.GenericInvalidData);
+                                    throw new InvalidDataException("SR.GenericInvalidData");
                                 }
                                 _extraBits = s_extraLengthBits[symbol];
                                 Debug.Assert(_extraBits != 0, "We handle other cases separately!");
@@ -431,7 +433,7 @@ namespace SysIOComp
 
                             if (_length < 0 || _length >= s_lengthBase.Length)
                             {
-                                throw new InvalidDataException(SR.GenericInvalidData);
+                                throw new InvalidDataException("SR.GenericInvalidData");
                             }
                             _length = s_lengthBase[_length] + bits;
                         }
@@ -488,7 +490,7 @@ namespace SysIOComp
 
                     default:
                         Debug.Fail("check why we are here!");
-                        throw new InvalidDataException(SR.UnknownState);
+                        throw new InvalidDataException("SR.UnknownState");
                 }
             }
 
@@ -685,7 +687,7 @@ namespace SysIOComp
 
                 default:
                     Debug.Fail("check why we are here!");
-                    throw new InvalidDataException(SR.UnknownState);
+                    throw new InvalidDataException("SR.UnknownState");
             }
 
             byte[] literalTreeCodeLength = new byte[HuffmanTree.MaxLiteralTreeElements];

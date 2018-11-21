@@ -5,6 +5,7 @@
 // Compression engine
 
 using System.Diagnostics;
+using System;
 
 namespace SysIOComp
 {

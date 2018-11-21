@@ -200,6 +200,9 @@
     <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.netcoreapp.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipHelper.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipVersion.cs" />
+    <Compile Include="SysIo\Error.cs" />
+    <Compile Include="SysIo\Stream.cs" />
+    <Compile Include="SysIo\StreamHelpers.CopyValidation.cs" />
     <Compile Include="SysThreadingTasks\ConcurrentExclusiveSchedulerPair.cs" />
     <Compile Include="SysThreadingTasks\Sources\IValueTaskSource.cs" />
     <Compile Include="SysThreadingTasks\Sources\ManualResetValueTaskSourceCore.cs" />
@@ -209,6 +212,7 @@
     <Compile Include="SysThreadingTasks\TaskSchedulerException.cs" />
     <Compile Include="SysThreadingTasks\TaskToApm.cs" />
     <Compile Include="SysThreadingTasks\ValueTask.cs" />
+    <Compile Include="Sys\IAsyncDisposable.cs" />
     <Compile Include="ZipArchiveFast.cs" />
   </ItemGroup>
   <ItemGroup>

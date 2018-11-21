@@ -3,6 +3,7 @@
 // See the LICENSE file in the project root for more information.
 
 using System.Diagnostics;
+using System.IO;
 
 namespace SysIOComp
 {
@@ -181,7 +182,7 @@ namespace SysIOComp
                         int increment = 1 << len;
                         if (start >= increment)
                         {
-                            throw new InvalidDataException(SR.InvalidHuffmanData);
+                            throw new InvalidDataException("SR.InvalidHuffmanData");
                         }
 
                         // Note the bits in the table are reverted.
@@ -223,7 +224,7 @@ namespace SysIOComp
                             if (value > 0)
                             {
                                 // prevent an IndexOutOfRangeException from array[index]
-                                throw new InvalidDataException(SR.InvalidHuffmanData);
+                                throw new InvalidDataException("SR.InvalidHuffmanData");
                             }
 
                             Debug.Assert(value < 0, "CreateTable: Only negative numbers are used for tree pointers!");
@@ -288,7 +289,7 @@ namespace SysIOComp
             // huffman code lengths must be at least 1 bit long
             if (codeLength <= 0)
             {
-                throw new InvalidDataException(SR.InvalidHuffmanData);
+                throw new InvalidDataException("SR.InvalidHuffmanData");
             }
 
             //
