@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.IO.Compression;
+//using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -51,7 +51,8 @@ namespace FMScanner
         #region Disposable
 
         private FileStream ArchiveStream { get; set; }
-        private ZipArchive Archive { get; set; }
+        //private ZipArchive Archive { get; set; }
+        private SysIOComp.ZipArchive Archive { get; set; }
 
         #endregion
 
@@ -258,7 +259,7 @@ namespace FMScanner
                     ArchiveStream = new FileStream(ArchivePath, FileMode.Open, FileAccess.Read);
                     try
                     {
-                        Archive = new ZipArchive(ArchiveStream, ZipArchiveMode.Read);
+                        Archive = new SysIOComp.ZipArchive(ArchiveStream, SysIOComp.ZipArchiveMode.Read);
                     }
                     catch (InvalidDataException)
                     {
@@ -1028,7 +1029,7 @@ namespace FMScanner
             // Maybe could combine these checks, but this works for now
             foreach (var readmeFile in readmes)
             {
-                ZipArchiveEntry readmeEntry = null;
+                SysIOComp.ZipArchiveEntry readmeEntry = null;
 
                 if (FmIsZip) readmeEntry = Archive.Entries[readmeFile.Index];
 
@@ -1934,8 +1935,8 @@ namespace FMScanner
 
             #region Setup
 
-            ZipArchiveEntry gamFileZipEntry = null;
-            ZipArchiveEntry misFileZipEntry = null;
+            SysIOComp.ZipArchiveEntry gamFileZipEntry = null;
+            SysIOComp.ZipArchiveEntry misFileZipEntry = null;
 
             string misFileOnDisk = null;
 

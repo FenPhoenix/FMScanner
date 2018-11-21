@@ -69,25 +69,25 @@ namespace SysIOComp
         private void ThrowIfDisposed()
         {
             if (_isDisposed)
-                throw new ObjectDisposedException(GetType().ToString(), SR.HiddenStreamName);
+                throw new ObjectDisposedException(GetType().ToString(), "SR.HiddenStreamName");
         }
 
         private void ThrowIfCantRead()
         {
             if (!CanRead)
-                throw new NotSupportedException(SR.ReadingNotSupported);
+                throw new NotSupportedException("SR.ReadingNotSupported");
         }
 
         private void ThrowIfCantWrite()
         {
             if (!CanWrite)
-                throw new NotSupportedException(SR.WritingNotSupported);
+                throw new NotSupportedException("SR.WritingNotSupported");
         }
 
         private void ThrowIfCantSeek()
         {
             if (!CanSeek)
-                throw new NotSupportedException(SR.SeekingNotSupported);
+                throw new NotSupportedException("SR.SeekingNotSupported");
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -187,7 +187,7 @@ namespace SysIOComp
             {
                 ThrowIfDisposed();
 
-                throw new NotSupportedException(SR.SeekingNotSupported);
+                throw new NotSupportedException("SR.SeekingNotSupported");
             }
         }
 
@@ -200,13 +200,13 @@ namespace SysIOComp
         private void ThrowIfDisposed()
         {
             if (_isDisposed)
-                throw new ObjectDisposedException(GetType().ToString(), SR.HiddenStreamName);
+                throw new ObjectDisposedException(GetType().ToString(), "SR.HiddenStreamName");
         }
 
         private void ThrowIfCantRead()
         {
             if (!CanRead)
-                throw new NotSupportedException(SR.ReadingNotSupported);
+                throw new NotSupportedException("SR.ReadingNotSupported");
         }
 
         public override int Read(byte[] buffer, int offset, int count)
@@ -234,25 +234,25 @@ namespace SysIOComp
         public override long Seek(long offset, SeekOrigin origin)
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.SeekingNotSupported);
+            throw new NotSupportedException("SR.SeekingNotSupported");
         }
 
         public override void SetLength(long value)
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.SetLengthRequiresSeekingAndWriting);
+            throw new NotSupportedException("SR.SetLengthRequiresSeekingAndWriting");
         }
 
         public override void Write(byte[] buffer, int offset, int count)
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.WritingNotSupported);
+            throw new NotSupportedException("SR.WritingNotSupported");
         }
 
         public override void Flush()
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.WritingNotSupported);
+            throw new NotSupportedException("SR.WritingNotSupported");
         }
 
         // Close the stream for reading.  Note that this does NOT close the superStream (since
@@ -318,7 +318,7 @@ namespace SysIOComp
             get
             {
                 ThrowIfDisposed();
-                throw new NotSupportedException(SR.SeekingNotSupported);
+                throw new NotSupportedException("SR.SeekingNotSupported");
             }
         }
 
@@ -332,7 +332,7 @@ namespace SysIOComp
             set
             {
                 ThrowIfDisposed();
-                throw new NotSupportedException(SR.SeekingNotSupported);
+                throw new NotSupportedException("SR.SeekingNotSupported");
             }
         }
 
@@ -345,25 +345,25 @@ namespace SysIOComp
         private void ThrowIfDisposed()
         {
             if (_isDisposed)
-                throw new ObjectDisposedException(GetType().ToString(), SR.HiddenStreamName);
+                throw new ObjectDisposedException(GetType().ToString(), "SR.HiddenStreamName");
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.ReadingNotSupported);
+            throw new NotSupportedException("SR.ReadingNotSupported");
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.SeekingNotSupported);
+            throw new NotSupportedException("SR.SeekingNotSupported");
         }
 
         public override void SetLength(long value)
         {
             ThrowIfDisposed();
-            throw new NotSupportedException(SR.SetLengthRequiresSeekingAndWriting);
+            throw new NotSupportedException("SR.SetLengthRequiresSeekingAndWriting");
         }
 
         public override void Write(byte[] buffer, int offset, int count)
@@ -372,11 +372,11 @@ namespace SysIOComp
             if (buffer == null)
                 throw new ArgumentNullException(nameof(buffer));
             if (offset < 0)
-                throw new ArgumentOutOfRangeException(nameof(offset), SR.ArgumentNeedNonNegative);
+                throw new ArgumentOutOfRangeException(nameof(offset), "SR.ArgumentNeedNonNegative");
             if (count < 0)
-                throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentNeedNonNegative);
+                throw new ArgumentOutOfRangeException(nameof(count), "SR.ArgumentNeedNonNegative");
             if ((buffer.Length - offset) < count)
-                throw new ArgumentException(SR.OffsetLengthInvalid);
+                throw new ArgumentException("SR.OffsetLengthInvalid");
 
             // if we're not actually writing anything, we don't want to trigger as if we did write something
             ThrowIfDisposed();

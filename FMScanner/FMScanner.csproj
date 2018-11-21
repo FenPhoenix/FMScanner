@@ -45,6 +45,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
     <OutputPath>bin\x86\Release\</OutputPath>
@@ -55,6 +56,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="MadMilkman.Ini, Version=1.0.6.0, Culture=neutral, PublicKeyToken=4e0b5157a7ffbb74, processorArchitecture=MSIL">
@@ -100,75 +102,14 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Common.cs" />
-    <Compile Include="Diagnostics\CodeAnalysis\SuppressMessageAttribute.cs" />
-    <Compile Include="Diagnostics\ConditionalAttribute.cs" />
-    <Compile Include="Diagnostics\Debug.cs" />
-    <Compile Include="Diagnostics\DebuggableAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerBrowsableAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerDisplayAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerHiddenAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerNonUserCodeAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerStepperBoundaryAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerStepThroughAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerTypeProxyAttribute.cs" />
-    <Compile Include="Diagnostics\DebuggerVisualizerAttribute.cs" />
-    <Compile Include="Diagnostics\DebugProvider.cs" />
-    <Compile Include="Diagnostics\DebugProvider.Unix.cs" />
-    <Compile Include="Diagnostics\StackFrame.cs" />
-    <Compile Include="Diagnostics\StackTraceHiddenAttribute.cs" />
-    <Compile Include="Diagnostics\Tracing\ActivityTracker.cs" />
-    <Compile Include="Diagnostics\Tracing\EventActivityOptions.cs" />
-    <Compile Include="Diagnostics\Tracing\EventDescriptor.cs" />
-    <Compile Include="Diagnostics\Tracing\EventProvider.cs" />
-    <Compile Include="Diagnostics\Tracing\EventSource.cs" />
-    <Compile Include="Diagnostics\Tracing\EventSourceException.cs" />
-    <Compile Include="Diagnostics\Tracing\IEventProvider.cs" />
-    <Compile Include="Diagnostics\Tracing\StubEnvironment.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\ArrayTypeInfo.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\ConcurrentSet.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\ConcurrentSetItem.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\DataCollector.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EmptyStruct.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EnumerableTypeInfo.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EnumHelper.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventDataAttribute.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventFieldAttribute.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventFieldFormat.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventIgnoreAttribute.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventPayload.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventSourceActivity.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\EventSourceOptions.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\FieldMetadata.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\InvokeTypeInfo.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\NameInfo.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\PropertyAnalysis.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\PropertyValue.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\SimpleEventTypes.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\SimpleTypeInfos.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\Statics.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingDataCollector.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingDataType.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingEventSource.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingEventTraits.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingEventTypes.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingMetadataCollector.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TraceLoggingTypeInfo.cs" />
-    <Compile Include="Diagnostics\Tracing\TraceLogging\TypeAnalysis.cs" />
-    <Compile Include="Diagnostics\Tracing\Winmeta.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FastIO.cs" />
     <Compile Include="FMData.cs" />
-    <Compile Include="Internal\IO\File.cs" />
-    <Compile Include="Internal\IO\File.Unix.cs" />
-    <Compile Include="Internal\IO\File.Windows.cs" />
-    <Compile Include="Internal\Padding.cs" />
-    <Compile Include="Internal\Runtime\CompilerServices\Unsafe.cs" />
-    <Compile Include="Internal\Win32\RegistryKey.cs" />
+    <Compile Include="Interop\Interop.Libraries.cs" />
     <Compile Include="Methods.cs" />
     <Compile Include="Scanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleHelpers\FileEncoding.cs" />
-    <Compile Include="SysIoComp\Interop\Interop.zlib.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\Crc32Helper.ZLib.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\BlockType.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\CopyEncoder.cs" />
@@ -187,12 +128,12 @@
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\MatchState.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputBuffer.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputWindow.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\GZipStream.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibNative.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibNative.ZStream.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\Interop\Interop.zlib.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\PositionPreservingWriteOnlyStreamWrapper.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\PositionPreservingWriteOnlyStreamWrapper.netcoreapp.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchive.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.netcoreapp.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.Windows.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveMode.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipBlocks.cs" />
@@ -200,19 +141,8 @@
     <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.netcoreapp.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipHelper.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipVersion.cs" />
-    <Compile Include="SysIo\Error.cs" />
-    <Compile Include="SysIo\Stream.cs" />
-    <Compile Include="SysIo\StreamHelpers.CopyValidation.cs" />
-    <Compile Include="SysThreadingTasks\ConcurrentExclusiveSchedulerPair.cs" />
-    <Compile Include="SysThreadingTasks\Sources\IValueTaskSource.cs" />
-    <Compile Include="SysThreadingTasks\Sources\ManualResetValueTaskSourceCore.cs" />
-    <Compile Include="SysThreadingTasks\TaskCanceledException.cs" />
-    <Compile Include="SysThreadingTasks\TaskCompletionSource.cs" />
-    <Compile Include="SysThreadingTasks\TaskExtensions.cs" />
-    <Compile Include="SysThreadingTasks\TaskSchedulerException.cs" />
+    <Compile Include="SysThreadingTasks\Extensions\ThrowHelper.cs" />
     <Compile Include="SysThreadingTasks\TaskToApm.cs" />
-    <Compile Include="SysThreadingTasks\ValueTask.cs" />
-    <Compile Include="Sys\IAsyncDisposable.cs" />
     <Compile Include="ZipArchiveFast.cs" />
   </ItemGroup>
   <ItemGroup>
