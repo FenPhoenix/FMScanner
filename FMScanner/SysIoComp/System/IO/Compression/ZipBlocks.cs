@@ -4,6 +4,8 @@
 
 using System.Collections.Generic;
 using System.Diagnostics;
+using System;
+using System.IO;
 
 namespace SysIOComp
 {
@@ -212,10 +214,10 @@ namespace SysIOComp
                     if (readStartDiskNumber) zip64Block._startDiskNumber = reader.ReadInt32();
 
                     // original values are unsigned, so implies value is too big to fit in signed integer
-                    if (zip64Block._uncompressedSize < 0) throw new InvalidDataException(SR.FieldTooBigUncompressedSize);
-                    if (zip64Block._compressedSize < 0) throw new InvalidDataException(SR.FieldTooBigCompressedSize);
-                    if (zip64Block._localHeaderOffset < 0) throw new InvalidDataException(SR.FieldTooBigLocalHeaderOffset);
-                    if (zip64Block._startDiskNumber < 0) throw new InvalidDataException(SR.FieldTooBigStartDiskNumber);
+                    if (zip64Block._uncompressedSize < 0) throw new InvalidDataException("SR.FieldTooBigUncompressedSize");
+                    if (zip64Block._compressedSize < 0) throw new InvalidDataException("SR.FieldTooBigCompressedSize");
+                    if (zip64Block._localHeaderOffset < 0) throw new InvalidDataException("SR.FieldTooBigLocalHeaderOffset");
+                    if (zip64Block._startDiskNumber < 0) throw new InvalidDataException("SR.FieldTooBigStartDiskNumber");
 
                     return true;
                 }

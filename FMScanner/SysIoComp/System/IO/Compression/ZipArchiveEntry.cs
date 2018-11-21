@@ -6,6 +6,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System;
+using System.IO;
+using System.IO.Compression;
 
 namespace SysIOComp
 {
@@ -130,7 +133,7 @@ namespace SysIOComp
             _compressionLevel = null;
 
             if (_storedEntryNameBytes.Length > ushort.MaxValue)
-                throw new ArgumentException(SR.EntryNamesTooLong);
+                throw new ArgumentException("SR.EntryNamesTooLong");
 
             // grab the stream if we're in create mode
             if (_archive.Mode == ZipArchiveMode.Create)
@@ -156,7 +159,7 @@ namespace SysIOComp
             get
             {
                 if (_everOpenedForWrite)
-                    throw new InvalidOperationException(SR.LengthAfterWrite);
+                    throw new InvalidOperationException("SR.LengthAfterWrite");
                 return _compressedSize;
             }
         }
@@ -223,11 +226,11 @@ namespace SysIOComp
             {
                 ThrowIfInvalidArchive();
                 if (_archive.Mode == ZipArchiveMode.Read)
-                    throw new NotSupportedException(SR.ReadOnlyArchive);
+                    throw new NotSupportedException("SR.ReadOnlyArchive");
                 if (_archive.Mode == ZipArchiveMode.Create && _everOpenedForWrite)
-                    throw new IOException(SR.FrozenAfterWrite);
+                    throw new IOException("SR.FrozenAfterWrite");
                 if (value.DateTime.Year < ZipHelper.ValidZipDate_YearMin || value.DateTime.Year > ZipHelper.ValidZipDate_YearMax)
-                    throw new ArgumentOutOfRangeException(nameof(value), SR.DateTimeOutOfRange);
+                    throw new ArgumentOutOfRangeException(nameof(value), "SR.DateTimeOutOfRange");
 
                 _lastModified = value;
             }
@@ -242,7 +245,7 @@ namespace SysIOComp
             get
             {
                 if (_everOpenedForWrite)
-                    throw new InvalidOperationException(SR.LengthAfterWrite);
+                    throw new InvalidOperationException("SR.LengthAfterWrite");
                 return _uncompressedSize;
             }
         }
@@ -264,10 +267,10 @@ namespace SysIOComp
                 return;
 
             if (_currentlyOpenForWrite)
-                throw new IOException(SR.DeleteOpenEntry);
+                throw new IOException("SR.DeleteOpenEntry");
 
             if (_archive.Mode != ZipArchiveMode.Update)
-                throw new NotSupportedException(SR.DeleteOnlyInUpdate);
+                throw new NotSupportedException("SR.DeleteOnlyInUpdate");
 
             _archive.ThrowIfDisposed();
 
@@ -326,7 +329,7 @@ namespace SysIOComp
                     // by calling this, we are using local header _storedEntryNameBytes.Length and extraFieldLength
                     // to find start of data, but still using central directory size information
                     if (!ZipLocalFileHeader.TrySkipBlock(_archive.ArchiveReader))
-                        throw new InvalidDataException(SR.LocalFileHeaderCorrupt);
+                        throw new InvalidDataException("SR.LocalFileHeaderCorrupt");
                     _storedOffsetOfCompressedData = _archive.ArchiveStream.Position;
                 }
                 return _storedOffsetOfCompressedData.Value;
@@ -658,7 +661,7 @@ namespace SysIOComp
         private Stream OpenInWriteMode()
         {
             if (_everOpenedForWrite)
-                throw new IOException(SR.CreateModeWriteOnceAndOneEntryAtATime);
+                throw new IOException("SR.CreateModeWriteOnceAndOneEntryAtATime");
 
             // we assume that if another entry grabbed the archive stream, that it set this entry's _everOpenedForWrite property to true by calling WriteLocalFileHeaderIfNeeed
             _archive.DebugAssertIsStillArchiveStreamOwner(this);
@@ -679,7 +682,7 @@ namespace SysIOComp
         private Stream OpenInUpdateMode()
         {
             if (_currentlyOpenForWrite)
-                throw new IOException(SR.UpdateModeOneStream);
+                throw new IOException("SR.UpdateModeOneStream");
 
             ThrowIfNotOpenable(needToUncompress: true, needToLoadIntoMemory: true);
 
@@ -713,10 +716,10 @@ namespace SysIOComp
                         {
                             case CompressionMethodValues.BZip2:
                             case CompressionMethodValues.LZMA:
-                                message = SR.Format(SR.UnsupportedCompressionMethod, CompressionMethod.ToString());
+                                message = "SR.Format(SR.UnsupportedCompressionMethod, CompressionMethod.ToString())";
                                 break;
                             default:
-                                message = SR.UnsupportedCompression;
+                                message = "SR.UnsupportedCompression";
                                 break;
                         }
                         return false;
@@ -724,24 +727,24 @@ namespace SysIOComp
                 }
                 if (_diskNumberStart != _archive.NumberOfThisDisk)
                 {
-                    message = SR.SplitSpanned;
+                    message = "SR.SplitSpanned";
                     return false;
                 }
                 if (_offsetOfLocalHeader > _archive.ArchiveStream.Length)
                 {
-                    message = SR.LocalFileHeaderCorrupt;
+                    message = "SR.LocalFileHeaderCorrupt";
                     return false;
                 }
                 _archive.ArchiveStream.Seek(_offsetOfLocalHeader, SeekOrigin.Begin);
                 if (!ZipLocalFileHeader.TrySkipBlock(_archive.ArchiveReader))
                 {
-                    message = SR.LocalFileHeaderCorrupt;
+                    message = "SR.LocalFileHeaderCorrupt";
                     return false;
                 }
                 // when this property gets called, some duplicated work
                 if (OffsetOfCompressedData + _compressedSize > _archive.ArchiveStream.Length)
                 {
-                    message = SR.LocalFileHeaderCorrupt;
+                    message = "SR.LocalFileHeaderCorrupt";
                     return false;
                 }
                 // This limitation originally existed because a) it is unreasonable to load > 4GB into memory
@@ -754,7 +757,7 @@ namespace SysIOComp
                     {
                         if (!s_allowLargeZipArchiveEntriesInUpdateMode)
                         {
-                            message = SR.EntryTooLarge;
+                            message = "SR.EntryTooLarge";
                             return false;
                         }
                     }
@@ -1044,7 +1047,7 @@ namespace SysIOComp
         private void ThrowIfInvalidArchive()
         {
             if (_archive == null)
-                throw new InvalidOperationException(SR.DeletedEntry);
+                throw new InvalidOperationException("SR.DeletedEntry");
             _archive.ThrowIfDisposed();
         }
 
@@ -1103,7 +1106,7 @@ namespace SysIOComp
                 get
                 {
                     ThrowIfDisposed();
-                    throw new NotSupportedException(SR.SeekingNotSupported);
+                    throw new NotSupportedException("SR.SeekingNotSupported");
                 }
             }
             public override long Position
@@ -1116,7 +1119,7 @@ namespace SysIOComp
                 set
                 {
                     ThrowIfDisposed();
-                    throw new NotSupportedException(SR.SeekingNotSupported);
+                    throw new NotSupportedException("SR.SeekingNotSupported");
                 }
             }
 
@@ -1127,25 +1130,25 @@ namespace SysIOComp
             private void ThrowIfDisposed()
             {
                 if (_isDisposed)
-                    throw new ObjectDisposedException(GetType().ToString(), SR.HiddenStreamName);
+                    throw new ObjectDisposedException(GetType().ToString(), "SR.HiddenStreamName");
             }
 
             public override int Read(byte[] buffer, int offset, int count)
             {
                 ThrowIfDisposed();
-                throw new NotSupportedException(SR.ReadingNotSupported);
+                throw new NotSupportedException("SR.ReadingNotSupported");
             }
 
             public override long Seek(long offset, SeekOrigin origin)
             {
                 ThrowIfDisposed();
-                throw new NotSupportedException(SR.SeekingNotSupported);
+                throw new NotSupportedException("SR.SeekingNotSupported");
             }
 
             public override void SetLength(long value)
             {
                 ThrowIfDisposed();
-                throw new NotSupportedException(SR.SetLengthRequiresSeekingAndWriting);
+                throw new NotSupportedException("SR.SetLengthRequiresSeekingAndWriting");
             }
 
             // careful: assumes that write is the only way to write to the stream, if writebyte/beginwrite are implemented
@@ -1156,11 +1159,11 @@ namespace SysIOComp
                 if (buffer == null)
                     throw new ArgumentNullException(nameof(buffer));
                 if (offset < 0)
-                    throw new ArgumentOutOfRangeException(nameof(offset), SR.ArgumentNeedNonNegative);
+                    throw new ArgumentOutOfRangeException(nameof(offset), "SR.ArgumentNeedNonNegative");
                 if (count < 0)
-                    throw new ArgumentOutOfRangeException(nameof(count), SR.ArgumentNeedNonNegative);
+                    throw new ArgumentOutOfRangeException(nameof(count), "SR.ArgumentNeedNonNegative");
                 if ((buffer.Length - offset) < count)
-                    throw new ArgumentException(SR.OffsetLengthInvalid);
+                    throw new ArgumentException("SR.OffsetLengthInvalid");
 
                 ThrowIfDisposed();
                 Debug.Assert(CanWrite);

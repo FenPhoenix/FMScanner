@@ -4,6 +4,8 @@
 
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
+using System;
 
 namespace SysIOComp
 {
@@ -28,7 +30,7 @@ namespace SysIOComp
         public override long Position
         {
             get { return _position; }
-            set { throw new NotSupportedException(SR.NotSupported); }
+            set { throw new NotSupportedException("SR.NotSupported"); }
         }
         public override void Write(byte[] buffer, int offset, int count)
         {
@@ -84,22 +86,22 @@ namespace SysIOComp
 
         public override long Length
         {
-            get { throw new NotSupportedException(SR.NotSupported); }
+            get { throw new NotSupportedException("SR.NotSupported"); }
         }
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
 
         public override void SetLength(long value)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
     }
 }

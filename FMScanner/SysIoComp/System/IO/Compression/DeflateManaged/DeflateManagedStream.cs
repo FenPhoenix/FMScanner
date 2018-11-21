@@ -6,6 +6,10 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using System.IO;
+using System;
+using System.IO.Compression;
+using FMScanner.SysThreadingTasks;
 
 namespace SysIOComp
 {
@@ -32,7 +36,7 @@ namespace SysIOComp
             if (stream == null)
                 throw new ArgumentNullException(nameof(stream));
             if (!stream.CanRead)
-                throw new ArgumentException(SR.NotSupported_UnreadableStream, nameof(stream));
+                throw new ArgumentException("SR.NotSupported_UnreadableStream, nameof(stream)");
 
             InitializeInflater(stream, false, null, method);
         }
@@ -45,7 +49,7 @@ namespace SysIOComp
             Debug.Assert(stream != null);
             Debug.Assert(method == ZipArchiveEntry.CompressionMethodValues.Deflate || method == ZipArchiveEntry.CompressionMethodValues.Deflate64);
             if (!stream.CanRead)
-                throw new ArgumentException(SR.NotSupported_UnreadableStream, nameof(stream));
+                throw new ArgumentException("SR.NotSupported_UnreadableStream, nameof(stream)");
 
             _inflater = new InflaterManaged(reader, method == ZipArchiveEntry.CompressionMethodValues.Deflate64 ? true : false);
 
@@ -93,13 +97,13 @@ namespace SysIOComp
 
         public override long Length
         {
-            get { throw new NotSupportedException(SR.NotSupported); }
+            get { throw new NotSupportedException("SR.NotSupported"); }
         }
 
         public override long Position
         {
-            get { throw new NotSupportedException(SR.NotSupported); }
-            set { throw new NotSupportedException(SR.NotSupported); }
+            get { throw new NotSupportedException("SR.NotSupported"); }
+            set { throw new NotSupportedException("SR.NotSupported"); }
         }
 
         public override void Flush()
@@ -117,12 +121,12 @@ namespace SysIOComp
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
 
         public override void SetLength(long value)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
 
         public override int Read(byte[] array, int offset, int count)
@@ -162,7 +166,7 @@ namespace SysIOComp
                 {
                     // The stream is either malicious or poorly implemented and returned a number of
                     // bytes larger than the buffer supplied to it.
-                    throw new InvalidDataException(SR.GenericInvalidData);
+                    throw new InvalidDataException("SR.GenericInvalidData");
                 }
 
                 _inflater.SetInput(_buffer, 0, bytes);
@@ -183,7 +187,7 @@ namespace SysIOComp
                 throw new ArgumentOutOfRangeException(nameof(count));
 
             if (array.Length - offset < count)
-                throw new ArgumentException(SR.InvalidArgumentOffsetCount);
+                throw new ArgumentException("SR.InvalidArgumentOffsetCount");
         }
 
         private void EnsureNotDisposed()
@@ -194,7 +198,7 @@ namespace SysIOComp
 
         private static void ThrowStreamClosedException()
         {
-            throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
+            throw new ObjectDisposedException(null, "SR.ObjectDisposed_StreamClosed");
         }
 
         private void EnsureDecompressionMode()
@@ -205,7 +209,7 @@ namespace SysIOComp
 
         private static void ThrowCannotReadFromDeflateManagedStreamException()
         {
-            throw new InvalidOperationException(SR.CannotReadFromDeflateStream);
+            throw new InvalidOperationException("SR.CannotReadFromDeflateStream");
         }
 
         private void EnsureCompressionMode()
@@ -216,7 +220,7 @@ namespace SysIOComp
 
         private static void ThrowCannotWriteToDeflateManagedStreamException()
         {
-            throw new InvalidOperationException(SR.CannotWriteToDeflateStream);
+            throw new InvalidOperationException("SR.CannotWriteToDeflateStream");
         }
 
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback asyncCallback, object asyncState) =>
@@ -231,7 +235,7 @@ namespace SysIOComp
 
             // We use this checking order for compat to earlier versions:
             if (_asyncOperations != 0)
-                throw new InvalidOperationException(SR.InvalidBeginCall);
+                throw new InvalidOperationException("SR.InvalidBeginCall");
 
             ValidateParameters(array, offset, count);
             EnsureNotDisposed();
@@ -265,7 +269,7 @@ namespace SysIOComp
                 readTask = _stream.ReadAsync(_buffer, 0, _buffer.Length, cancellationToken);
                 if (readTask == null)
                 {
-                    throw new InvalidOperationException(SR.NotSupported_UnreadableStream);
+                    throw new InvalidOperationException("SR.NotSupported_UnreadableStream");
                 }
 
                 return ReadAsyncCore(readTask, array, offset, count, cancellationToken);
@@ -298,7 +302,7 @@ namespace SysIOComp
                     {
                         // The stream is either malicious or poorly implemented and returned a number of
                         // bytes larger than the buffer supplied to it.
-                        throw new InvalidDataException(SR.GenericInvalidData);
+                        throw new InvalidDataException("SR.GenericInvalidData");
                     }
 
                     cancellationToken.ThrowIfCancellationRequested();
@@ -314,7 +318,7 @@ namespace SysIOComp
                         readTask = _stream.ReadAsync(_buffer, 0, _buffer.Length, cancellationToken);
                         if (readTask == null)
                         {
-                            throw new InvalidOperationException(SR.NotSupported_UnreadableStream);
+                            throw new InvalidOperationException("SR.NotSupported_UnreadableStream");
                         }
                     }
                     else
@@ -488,7 +492,7 @@ namespace SysIOComp
 
             // We use this checking order for compat to earlier versions:
             if (_asyncOperations != 0)
-                throw new InvalidOperationException(SR.InvalidBeginCall);
+                throw new InvalidOperationException("SR.InvalidBeginCall");
 
             ValidateParameters(array, offset, count);
             EnsureNotDisposed();

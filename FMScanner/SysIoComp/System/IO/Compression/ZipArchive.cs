@@ -9,6 +9,9 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
+using System.IO;
+using System.IO.Compression;
+using System;
 
 namespace SysIOComp
 {
@@ -137,7 +140,7 @@ namespace SysIOComp
             get
             {
                 if (_mode == ZipArchiveMode.Create)
-                    throw new NotSupportedException(SR.EntriesInCreateMode);
+                    throw new NotSupportedException("SR.EntriesInCreateMode");
 
                 ThrowIfDisposed();
 
@@ -247,7 +250,7 @@ namespace SysIOComp
                 throw new ArgumentNullException(nameof(entryName));
 
             if (_mode == ZipArchiveMode.Create)
-                throw new NotSupportedException(SR.EntriesInCreateMode);
+                throw new NotSupportedException("SR.EntriesInCreateMode");
 
             EnsureCentralDirectoryRead();
             ZipArchiveEntry result;
@@ -293,7 +296,7 @@ namespace SysIOComp
 #endif // FEATURE_UTF7
                         ))
                 {
-                    throw new ArgumentException(SR.EntryNameEncodingNotSupported, nameof(EntryNameEncoding));
+                    throw new ArgumentException("SR.EntryNameEncodingNotSupported, nameof(EntryNameEncoding)");
                 }
 
                 _entryNameEncoding = value;
@@ -306,10 +309,10 @@ namespace SysIOComp
                 throw new ArgumentNullException(nameof(entryName));
 
             if (string.IsNullOrEmpty(entryName))
-                throw new ArgumentException(SR.CannotBeEmpty, nameof(entryName));
+                throw new ArgumentException("SR.CannotBeEmpty, nameof(entryName)");
 
             if (_mode == ZipArchiveMode.Read)
-                throw new NotSupportedException(SR.CreateInReadMode);
+                throw new NotSupportedException("SR.CreateInReadMode");
 
             ThrowIfDisposed();
 
@@ -334,7 +337,7 @@ namespace SysIOComp
                 }
                 else
                 {
-                    throw new IOException(SR.CreateModeCreateEntryWhileOpen);
+                    throw new IOException("SR.CreateModeCreateEntryWhileOpen");
                 }
             }
 
@@ -415,11 +418,11 @@ namespace SysIOComp
                 {
                     case ZipArchiveMode.Create:
                         if (!stream.CanWrite)
-                            throw new ArgumentException(SR.CreateModeCapabilities);
+                            throw new ArgumentException("SR.CreateModeCapabilities");
                         break;
                     case ZipArchiveMode.Read:
                         if (!stream.CanRead)
-                            throw new ArgumentException(SR.ReadModeCapabilities);
+                            throw new ArgumentException("SR.ReadModeCapabilities");
                         if (!stream.CanSeek)
                         {
                             _backingStream = stream;
@@ -430,7 +433,7 @@ namespace SysIOComp
                         break;
                     case ZipArchiveMode.Update:
                         if (!stream.CanRead || !stream.CanWrite || !stream.CanSeek)
-                            throw new ArgumentException(SR.UpdateModeCapabilities);
+                            throw new ArgumentException("SR.UpdateModeCapabilities");
                         break;
                     default:
                         // still have to throw this, because stream constructor doesn't do mode argument checks
@@ -514,11 +517,11 @@ namespace SysIOComp
                 }
 
                 if (numberOfEntries != _expectedNumberOfEntries)
-                    throw new InvalidDataException(SR.NumEntriesWrong);
+                    throw new InvalidDataException("SR.NumEntriesWrong");
             }
             catch (EndOfStreamException ex)
             {
-                throw new InvalidDataException(SR.Format(SR.CentralDirectoryInvalid, ex));
+                throw new InvalidDataException("SR.Format(SR.CentralDirectoryInvalid, ex)");
             }
         }
 
@@ -533,7 +536,7 @@ namespace SysIOComp
                 // this seeks to the start of the end of central directory record
                 _archiveStream.Seek(-ZipEndOfCentralDirectoryBlock.SizeOfBlockWithoutSignature, SeekOrigin.End);
                 if (!ZipHelper.SeekBackwardsToSignature(_archiveStream, ZipEndOfCentralDirectoryBlock.SignatureConstant))
-                    throw new InvalidDataException(SR.EOCDNotFound);
+                    throw new InvalidDataException("SR.EOCDNotFound");
 
                 long eocdStart = _archiveStream.Position;
 
@@ -543,12 +546,12 @@ namespace SysIOComp
                 Debug.Assert(eocdProper); // we just found this using the signature finder, so it should be okay
 
                 if (eocd.NumberOfThisDisk != eocd.NumberOfTheDiskWithTheStartOfTheCentralDirectory)
-                    throw new InvalidDataException(SR.SplitSpanned);
+                    throw new InvalidDataException("SR.SplitSpanned");
 
                 _numberOfThisDisk = eocd.NumberOfThisDisk;
                 _centralDirectoryStart = eocd.OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber;
                 if (eocd.NumberOfEntriesInTheCentralDirectory != eocd.NumberOfEntriesInTheCentralDirectoryOnThisDisk)
-                    throw new InvalidDataException(SR.SplitSpanned);
+                    throw new InvalidDataException("SR.SplitSpanned");
                 _expectedNumberOfEntries = eocd.NumberOfEntriesInTheCentralDirectory;
 
                 // only bother saving the comment if we are in update mode
@@ -574,7 +577,7 @@ namespace SysIOComp
                         Debug.Assert(zip64eocdLocatorProper); // we just found this using the signature finder, so it should be okay
 
                         if (locator.OffsetOfZip64EOCD > long.MaxValue)
-                            throw new InvalidDataException(SR.FieldTooBigOffsetToZip64EOCD);
+                            throw new InvalidDataException("SR.FieldTooBigOffsetToZip64EOCD");
                         long zip64EOCDOffset = (long)locator.OffsetOfZip64EOCD;
 
                         _archiveStream.Seek(zip64EOCDOffset, SeekOrigin.Begin);
@@ -582,16 +585,16 @@ namespace SysIOComp
                         // read Zip64EOCD
                         Zip64EndOfCentralDirectoryRecord record;
                         if (!Zip64EndOfCentralDirectoryRecord.TryReadBlock(_archiveReader, out record))
-                            throw new InvalidDataException(SR.Zip64EOCDNotWhereExpected);
+                            throw new InvalidDataException("SR.Zip64EOCDNotWhereExpected");
 
                         _numberOfThisDisk = record.NumberOfThisDisk;
 
                         if (record.NumberOfEntriesTotal > long.MaxValue)
-                            throw new InvalidDataException(SR.FieldTooBigNumEntries);
+                            throw new InvalidDataException("SR.FieldTooBigNumEntries");
                         if (record.OffsetOfCentralDirectory > long.MaxValue)
-                            throw new InvalidDataException(SR.FieldTooBigOffsetToCD);
+                            throw new InvalidDataException("SR.FieldTooBigOffsetToCD");
                         if (record.NumberOfEntriesTotal != record.NumberOfEntriesOnThisDisk)
-                            throw new InvalidDataException(SR.SplitSpanned);
+                            throw new InvalidDataException("SR.SplitSpanned");
 
                         _expectedNumberOfEntries = (long)record.NumberOfEntriesTotal;
                         _centralDirectoryStart = (long)record.OffsetOfCentralDirectory;
@@ -600,16 +603,16 @@ namespace SysIOComp
 
                 if (_centralDirectoryStart > _archiveStream.Length)
                 {
-                    throw new InvalidDataException(SR.FieldTooBigOffsetToCD);
+                    throw new InvalidDataException("SR.FieldTooBigOffsetToCD");
                 }
             }
             catch (EndOfStreamException ex)
             {
-                throw new InvalidDataException(SR.CDCorrupt, ex);
+                throw new InvalidDataException("SR.CDCorrupt", ex);
             }
             catch (IOException ex)
             {
-                throw new InvalidDataException(SR.CDCorrupt, ex);
+                throw new InvalidDataException("SR.CDCorrupt", ex);
             }
         }
 
