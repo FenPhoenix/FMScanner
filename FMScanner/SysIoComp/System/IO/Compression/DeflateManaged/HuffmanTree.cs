@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     // Strictly speaking this class is not a HuffmanTree, this class is
     // a lookup table combined with a HuffmanTree. The idea is to speed up

@@ -2,13 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System.IO;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     public partial class DeflateStream : Stream
     {
@@ -61,7 +62,7 @@ namespace System.IO.Compression
                     break;
 
                 default:
-                    throw new ArgumentException(SR.ArgumentOutOfRange_Enum, nameof(mode));
+                    throw new ArgumentException("SR.ArgumentOutOfRange_Enum, nameof(mode)");
             }
         }
 
@@ -83,7 +84,7 @@ namespace System.IO.Compression
         {
             Debug.Assert(stream != null);
             if (!stream.CanRead)
-                throw new ArgumentException(SR.NotSupported_UnreadableStream, nameof(stream));
+                throw new ArgumentException("SR.NotSupported_UnreadableStream, nameof(stream)");
 
             _inflater = new Inflater(windowBits);
 
@@ -99,7 +100,7 @@ namespace System.IO.Compression
         {
             Debug.Assert(stream != null);
             if (!stream.CanWrite)
-                throw new ArgumentException(SR.NotSupported_UnwritableStream, nameof(stream));
+                throw new ArgumentException("SR.NotSupported_UnwritableStream, nameof(stream)");
 
             _deflater = new Deflater(compressionLevel, windowBits);
 
@@ -155,13 +156,13 @@ namespace System.IO.Compression
 
         public override long Length
         {
-            get { throw new NotSupportedException(SR.NotSupported); }
+            get { throw new NotSupportedException("SR.NotSupported"); }
         }
 
         public override long Position
         {
-            get { throw new NotSupportedException(SR.NotSupported); }
-            set { throw new NotSupportedException(SR.NotSupported); }
+            get { throw new NotSupportedException("SR.NotSupported"); }
+            set { throw new NotSupportedException("SR.NotSupported"); }
         }
 
         public override void Flush()
@@ -211,12 +212,12 @@ namespace System.IO.Compression
 
         public override long Seek(long offset, SeekOrigin origin)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
 
         public override void SetLength(long value)
         {
-            throw new NotSupportedException(SR.NotSupported);
+            throw new NotSupportedException("SR.NotSupported");
         }
 
         public override int ReadByte()
@@ -288,7 +289,7 @@ namespace System.IO.Compression
                     {
                         // The stream is either malicious or poorly implemented and returned a number of
                         // bytes larger than the buffer supplied to it.
-                        throw new InvalidDataException(SR.GenericInvalidData);
+                        throw new InvalidDataException("SR.GenericInvalidData");
                     }
 
                      _inflater.SetInput(_buffer, 0, bytes);
@@ -310,7 +311,7 @@ namespace System.IO.Compression
                 throw new ArgumentOutOfRangeException(nameof(count));
 
             if (array.Length - offset < count)
-                throw new ArgumentException(SR.InvalidArgumentOffsetCount);
+                throw new ArgumentException("SR.InvalidArgumentOffsetCount");
         }
 
         private void EnsureNotDisposed()
@@ -321,7 +322,7 @@ namespace System.IO.Compression
 
         private static void ThrowStreamClosedException()
         {
-            throw new ObjectDisposedException(null, SR.ObjectDisposed_StreamClosed);
+            throw new ObjectDisposedException(null, "SR.ObjectDisposed_StreamClosed");
         }
 
         private void EnsureDecompressionMode()
@@ -332,7 +333,7 @@ namespace System.IO.Compression
 
         private static void ThrowCannotReadFromDeflateStreamException()
         {
-            throw new InvalidOperationException(SR.CannotReadFromDeflateStream);
+            throw new InvalidOperationException("SR.CannotReadFromDeflateStream");
         }
 
         private void EnsureCompressionMode()
@@ -343,7 +344,7 @@ namespace System.IO.Compression
 
         private static void ThrowCannotWriteToDeflateStreamException()
         {
-            throw new InvalidOperationException(SR.CannotWriteToDeflateStream);
+            throw new InvalidOperationException("SR.CannotWriteToDeflateStream");
         }
 
         public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback asyncCallback, object asyncState) =>
@@ -455,7 +456,7 @@ namespace System.IO.Compression
                         {
                             // The stream is either malicious or poorly implemented and returned a number of
                             // bytes larger than the buffer supplied to it.
-                            throw new InvalidDataException(SR.GenericInvalidData);
+                            throw new System.IO.InvalidDataException("SR.GenericInvalidData");
                         }
 
                         cancellationToken.ThrowIfCancellationRequested();

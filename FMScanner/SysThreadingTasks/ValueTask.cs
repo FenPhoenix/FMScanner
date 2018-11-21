@@ -2,17 +2,20 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Threading.Tasks.Sources;
+using FMScanner.SysThreadingTasks.Sources;
+using System.Threading.Tasks;
+using System.Threading;
 
 #if !netstandard
 using Internal.Runtime.CompilerServices;
 #endif
 
-namespace System.Threading.Tasks
+namespace FMScanner.SysThreadingTasks
 {
     // TYPE SAFETY WARNING:
     // This code uses Unsafe.As to cast _obj.  This is done in order to minimize the costs associated with

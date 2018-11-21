@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     internal sealed partial class WrappedStream : Stream
     {

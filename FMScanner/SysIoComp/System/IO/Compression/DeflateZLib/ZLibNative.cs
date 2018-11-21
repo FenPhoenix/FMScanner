@@ -5,7 +5,7 @@
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     /// <summary>
     /// This class provides declaration for constants and PInvokes as well as some basic tools for exposing the

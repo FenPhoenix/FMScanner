@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     /// <summary>
     /// This class maintains a window for decompressed output.

@@ -4,7 +4,7 @@
 
 using System.Runtime.Serialization;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     /// <summary>
     /// This is the exception that is thrown when a ZLib returns an error code indicating an unrecoverable error.

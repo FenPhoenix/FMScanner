@@ -6,7 +6,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     /// <summary>
     /// Provides a wrapper around the ZLib decompression API.

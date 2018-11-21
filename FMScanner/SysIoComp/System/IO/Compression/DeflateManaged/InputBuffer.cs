@@ -4,7 +4,7 @@
 
 using System.Diagnostics;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     // This class can be used to read bits from an byte array quickly.
     // Normally we get bits from 'bitBuffer' field and bitsInBuffer stores

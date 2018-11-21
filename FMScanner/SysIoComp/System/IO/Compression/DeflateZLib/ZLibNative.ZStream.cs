@@ -4,7 +4,7 @@
 
 using System.Runtime.InteropServices;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     internal static partial class ZLibNative
     {

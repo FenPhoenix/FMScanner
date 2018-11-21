@@ -10,7 +10,7 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Text;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     public class ZipArchive : IDisposable
     {

@@ -9,7 +9,7 @@ using System.Security;
 using ZErrorCode = System.IO.Compression.ZLibNative.ErrorCode;
 using ZFlushCode = System.IO.Compression.ZLibNative.FlushCode;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     /// <summary>
     /// Provides a wrapper around the ZLib compression API.

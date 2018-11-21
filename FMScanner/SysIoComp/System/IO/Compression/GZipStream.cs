@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     public class GZipStream : Stream
     {

@@ -6,7 +6,7 @@
 
 using System.Diagnostics;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     internal sealed class DeflaterManaged : IDisposable
     {

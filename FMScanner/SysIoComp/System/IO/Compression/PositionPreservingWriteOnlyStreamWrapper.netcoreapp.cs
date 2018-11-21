@@ -5,7 +5,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace System.IO.Compression
+namespace SysIOComp
 {
     internal sealed partial class PositionPreservingWriteOnlyStreamWrapper : Stream
     {
