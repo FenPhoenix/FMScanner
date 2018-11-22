@@ -135,7 +135,6 @@
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchive.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.Windows.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveMode.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipBlocks.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.netcoreapp.cs" />

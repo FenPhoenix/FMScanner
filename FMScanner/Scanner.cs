@@ -260,7 +260,7 @@ namespace FMScanner
                     ArchiveStream = new FileStream(ArchivePath, FileMode.Open, FileAccess.Read);
                     try
                     {
-                        Archive = new SysIOComp.ZipArchive(ArchiveStream, SysIOComp.ZipArchiveMode.Read);
+                        Archive = new SysIOComp.ZipArchive(ArchiveStream);
                     }
                     catch (InvalidDataException)
                     {
