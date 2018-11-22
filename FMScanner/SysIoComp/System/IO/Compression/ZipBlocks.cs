@@ -349,11 +349,17 @@ namespace SysIOComp
                     relativeOffsetInZip64, diskNumberStartInZip64);
             }
 
-            // There are zip files that have malformed ExtraField blocks in which GetJustZip64Block() silently bails out without reading all the way to the end
-            // of the ExtraField block. Thus we must force the stream's position to the proper place.
-            reader.BaseStream.AdvanceToPosition(endExtraFields);
+            // There are zip files that have malformed ExtraField blocks in which GetJustZip64Block() silently
+            // bails out without reading all the way to the end of the ExtraField block. Thus we must force the
+            // stream's position to the proper place.
 
-            reader.BaseStream.Position += header.FileCommentLength;
+            // Fen's note: Original did a seek here, which for some reason is like 300x slower than a read, and
+            // also inexplicably causes ReadUInt32() to be 4x as slow and/or occur 4x as often(?!)
+            // Buffer alignments...? I dunno. Anyway. Speed.
+            // Also maybe not a good idea to use something that's faster when I don't know why it's faster.
+            // But my results are the same as the old method, so herpaderp.
+            reader.BaseStream.AdvanceToPosition(endExtraFields + header.FileCommentLength);
+
             header.FileComment = null;
 
             header.UncompressedSize = zip64.UncompressedSize ?? uncompressedSizeSmall;
