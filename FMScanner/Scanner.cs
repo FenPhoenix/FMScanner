@@ -13,6 +13,7 @@ using System.Windows.Forms;
 using System.Xml;
 using MadMilkman.Ini;
 using SevenZip;
+using SysIOComp;
 using static System.IO.Path;
 using static System.StringComparison;
 using static FMScanner.Methods;
@@ -1051,7 +1052,10 @@ namespace FMScanner
                     if (FmIsZip)
                     {
                         fileName = readmeEntry.Name;
-                        lastModifiedDate = readmeEntry.LastWriteTime.DateTime;
+                        //lastModifiedDate = readmeEntry.LastWriteTime.DateTime;
+                        lastModifiedDate =
+                            new DateTimeOffset(ZipHelperPublic.DosTimeToDateTime(readmeEntry.LastWriteTime))
+                                .DateTime;
                     }
                     else
                     {

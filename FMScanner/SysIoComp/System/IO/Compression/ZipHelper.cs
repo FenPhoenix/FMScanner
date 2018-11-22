@@ -5,9 +5,43 @@
 using System.Diagnostics;
 using System;
 using System.IO;
+using FMScanner;
 
 namespace SysIOComp
 {
+    public static class ZipHelperPublic
+    {
+        // will silently return InvalidDateIndicator if the uint is not a valid Dos DateTime
+        public static DateTime DosTimeToDateTime(uint dateTime)
+        {
+            // DosTime format 32 bits
+            // Year: 7 bits, 0 is 1980
+            // Month: 4 bits
+            // Day: 5 bits
+            // Hour: 5 bits
+            // Minute: 6 bits
+            // Second: 5 bits
+
+            // do the bit shift as unsigned because the fields are unsigned, but
+            // we can safely convert to int, because they won't be too big
+            int year = (int)(ValidZipYears.Min + (dateTime >> 25));
+            int month = (int)((dateTime >> 21) & 0xF);
+            int day = (int)((dateTime >> 16) & 0x1F);
+            int hour = (int)((dateTime >> 11) & 0x1F);
+            int minute = (int)((dateTime >> 5) & 0x3F);
+            int second = (int)((dateTime & 0x001F) * 2); // only 5 bits for second, so we only have a granularity of 2 sec.
+
+            try
+            {
+                return new DateTime(year, month, day, hour, minute, second);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return new DateTime(ValidZipYears.Min, 1, 1, 0, 0, 0);
+            }
+        }
+    }
+
     internal static class ZipHelper
     {
         internal const uint Mask32Bit = 0xFFFFFFFF;
@@ -52,40 +86,6 @@ namespace SysIOComp
 
                 totalBytesRead += bytesRead;
                 bytesLeftToRead -= bytesRead;
-            }
-        }
-
-        // will silently return InvalidDateIndicator if the uint is not a valid Dos DateTime
-        internal static DateTime DosTimeToDateTime(uint dateTime)
-        {
-            // DosTime format 32 bits
-            // Year: 7 bits, 0 is ValidZipDate_YearMin, unsigned (ValidZipDate_YearMin = 1980)
-            // Month: 4 bits
-            // Day: 5 bits
-            // Hour: 5
-            // Minute: 6 bits
-            // Second: 5 bits
-
-            // do the bit shift as unsigned because the fields are unsigned, but
-            // we can safely convert to int, because they won't be too big
-            int year = (int)(ValidZipDate_YearMin + (dateTime >> 25));
-            int month = (int)((dateTime >> 21) & 0xF);
-            int day = (int)((dateTime >> 16) & 0x1F);
-            int hour = (int)((dateTime >> 11) & 0x1F);
-            int minute = (int)((dateTime >> 5) & 0x3F);
-            int second = (int)((dateTime & 0x001F) * 2); // only 5 bits for second, so we only have a granularity of 2 sec.
-
-            try
-            {
-                return new DateTime(year, month, day, hour, minute, second, 0);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return s_invalidDateIndicator;
-            }
-            catch (ArgumentException)
-            {
-                return s_invalidDateIndicator;
             }
         }
 

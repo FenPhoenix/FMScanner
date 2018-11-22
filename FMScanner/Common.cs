@@ -5,6 +5,12 @@ using System.Text.RegularExpressions;
 
 namespace FMScanner
 {
+    internal static class ValidZipYears
+    {
+        internal const int Min = 1980;
+        internal const int Max = 2107;
+    }
+
     internal static class FMDirs
     {
         internal const string Books = "books";

@@ -32,7 +32,12 @@ namespace SysIOComp
         private ZipVersionNeededValues _versionToExtract;
         private BitFlagValues _generalPurposeBitFlag;
         private CompressionMethodValues _storedCompressionMethod;
-        private DateTimeOffset _lastModified;
+
+        //private DateTimeOffset _lastModified;
+        // Keep the last modified time as a simple uint for speed, and let the caller convert it if it wants to.
+        // Conversion to a DateTimeOffset is very expensive and I almost never actually do anything with it.
+        private uint _lastModified;
+
         private long _compressedSize;
         private long _uncompressedSize;
         private long _offsetOfLocalHeader;
@@ -66,7 +71,7 @@ namespace SysIOComp
             _versionToExtract = (ZipVersionNeededValues)cd.VersionNeededToExtract;
             _generalPurposeBitFlag = (BitFlagValues)cd.GeneralPurposeBitFlag;
             CompressionMethod = (CompressionMethodValues)cd.CompressionMethod;
-            _lastModified = new DateTimeOffset(ZipHelper.DosTimeToDateTime(cd.LastModified));
+            _lastModified = cd.LastModified; //new DateTimeOffset(ZipHelper.DosTimeToDateTime(cd.LastModified));
             _compressedSize = cd.CompressedSize;
             _uncompressedSize = cd.UncompressedSize;
             _externalFileAttr = cd.ExternalFileAttributes;
@@ -112,7 +117,8 @@ namespace SysIOComp
             _versionToExtract = ZipVersionNeededValues.Default; // this must happen before following two assignment
             _generalPurposeBitFlag = 0;
             CompressionMethod = CompressionMethodValues.Deflate;
-            _lastModified = DateTimeOffset.Now;
+            // BUG: Set this to Jan 1 1980 once you find out the constant value for that
+            _lastModified = 0; //DateTimeOffset.Now;
 
             _compressedSize = 0; // we don't know these yet
             _uncompressedSize = 0;
@@ -219,7 +225,7 @@ namespace SysIOComp
         /// <exception cref="ArgumentOutOfRangeException">An attempt was made to set this property to a value that cannot be represented in the
         /// Zip timestamp format. The earliest date/time that can be represented is 1980 January 1 0:00:00 (midnight), and the last date/time
         /// that can be represented is 2107 December 31 23:59:58 (one second before midnight).</exception>
-        public DateTimeOffset LastWriteTime
+        public uint LastWriteTime
         {
             get
             {
@@ -232,8 +238,9 @@ namespace SysIOComp
                     throw new NotSupportedException("SR.ReadOnlyArchive");
                 if (_archive.Mode == ZipArchiveMode.Create && _everOpenedForWrite)
                     throw new IOException("SR.FrozenAfterWrite");
-                if (value.DateTime.Year < ZipHelper.ValidZipDate_YearMin || value.DateTime.Year > ZipHelper.ValidZipDate_YearMax)
-                    throw new ArgumentOutOfRangeException(nameof(value), "SR.DateTimeOutOfRange");
+                // BUG: Commented out temporarily
+                //if (value.DateTime.Year < ZipHelper.ValidZipDate_YearMin || value.DateTime.Year > ZipHelper.ValidZipDate_YearMax)
+                //    throw new ArgumentOutOfRangeException(nameof(value), "SR.DateTimeOutOfRange");
 
                 _lastModified = value;
             }
@@ -403,9 +410,16 @@ namespace SysIOComp
             Encoding readEntryNameEncoding;
             if ((_generalPurposeBitFlag & BitFlagValues.UnicodeFileName) == 0)
             {
+                #region Original corefx
+                //readEntryNameEncoding = _archive == null ?
+                //    Encoding.UTF8 :
+                //    _archive.EntryNameEncoding ?? Encoding.UTF8;
+                #endregion
+
+                // This is what .NET Framework 4.7.2 seems to do (at least I get the same result with this)
                 readEntryNameEncoding = _archive == null ?
                     Encoding.UTF8 :
-                    _archive.EntryNameEncoding ?? Encoding.UTF8;
+                    _archive.EntryNameEncoding ?? Encoding.Default;
             }
             else
             {
@@ -522,7 +536,8 @@ namespace SysIOComp
             writer.Write((ushort)_versionToExtract);                            // Minimum version needed to extract        (2 bytes)
             writer.Write((ushort)_generalPurposeBitFlag);                       // General Purpose bit flag                 (2 bytes)
             writer.Write((ushort)CompressionMethod);                            // The Compression method                   (2 bytes)
-            writer.Write(ZipHelper.DateTimeToDosTime(_lastModified.DateTime));  // File last modification time and date     (4 bytes)
+            // BUG: Commented out temporarily
+            //writer.Write(ZipHelper.DateTimeToDosTime(_lastModified.DateTime));  // File last modification time and date     (4 bytes)
             writer.Write(_crc32);                                               // CRC-32                                   (4 bytes)
             writer.Write(compressedSizeTruncated);                              // Compressed Size                          (4 bytes)
             writer.Write(uncompressedSizeTruncated);                            // Uncompressed Size                        (4 bytes)
@@ -858,7 +873,8 @@ namespace SysIOComp
             writer.Write((ushort)_versionToExtract);
             writer.Write((ushort)_generalPurposeBitFlag);
             writer.Write((ushort)CompressionMethod);
-            writer.Write(ZipHelper.DateTimeToDosTime(_lastModified.DateTime)); // uint
+            // BUG: Commented out temporarily
+            //writer.Write(ZipHelper.DateTimeToDosTime(_lastModified.DateTime)); // uint
             writer.Write(_crc32); // uint
             writer.Write(compressedSizeTruncated); // uint
             writer.Write(uncompressedSizeTruncated); // uint
