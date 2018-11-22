@@ -5,12 +5,15 @@
 using System.Diagnostics;
 using System;
 using System.IO;
-using FMScanner;
 
 namespace SysIOComp
 {
+    // TODO: This duplicate-but-public thing is silly, make it better
     public static class ZipHelperPublic
     {
+        internal const int ValidZipDate_YearMin = 1980;
+        internal const int ValidZipDate_YearMax = 2107;
+
         // will silently return InvalidDateIndicator if the uint is not a valid Dos DateTime
         public static DateTime DosTimeToDateTime(uint dateTime)
         {
@@ -24,7 +27,7 @@ namespace SysIOComp
 
             // do the bit shift as unsigned because the fields are unsigned, but
             // we can safely convert to int, because they won't be too big
-            int year = (int)(ValidZipYears.Min + (dateTime >> 25));
+            int year = (int)(ValidZipDate_YearMin + (dateTime >> 25));
             int month = (int)((dateTime >> 21) & 0xF);
             int day = (int)((dateTime >> 16) & 0x1F);
             int hour = (int)((dateTime >> 11) & 0x1F);
@@ -37,7 +40,7 @@ namespace SysIOComp
             }
             catch (ArgumentOutOfRangeException)
             {
-                return new DateTime(ValidZipYears.Min, 1, 1, 0, 0, 0);
+                return new DateTime(ValidZipDate_YearMin, 1, 1, 0, 0, 0);
             }
         }
     }

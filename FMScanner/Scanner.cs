@@ -1052,7 +1052,6 @@ namespace FMScanner
                     if (FmIsZip)
                     {
                         fileName = readmeEntry.Name;
-                        //lastModifiedDate = readmeEntry.LastWriteTime.DateTime;
                         lastModifiedDate =
                             new DateTimeOffset(ZipHelperPublic.DosTimeToDateTime(readmeEntry.LastWriteTime))
                                 .DateTime;
