@@ -132,11 +132,27 @@ namespace SysIOComp
 
                 if (len > 0)
                 {
-                    code[i] = FastEncoderStatics.BitReverse(nextCode[len], len);
+                    code[i] = BitReverse(nextCode[len], len);
                     nextCode[len]++;
                 }
             }
             return code;
+        }
+
+        // Reverse 'length' of the bits in code
+        public static uint BitReverse(uint code, int length)
+        {
+            uint newCode = 0;
+
+            Debug.Assert(length > 0 && length <= 16, "Invalid len");
+            do
+            {
+                newCode |= (code & 1);
+                newCode <<= 1;
+                code >>= 1;
+            } while (--length > 0);
+
+            return newCode >> 1;
         }
 
         private void CreateTable()
@@ -182,7 +198,7 @@ namespace SysIOComp
                         int increment = 1 << len;
                         if (start >= increment)
                         {
-                            throw new InvalidDataException("SR.InvalidHuffmanData");
+                            throw new InvalidDataException(SR.InvalidHuffmanData);
                         }
 
                         // Note the bits in the table are reverted.
@@ -224,7 +240,7 @@ namespace SysIOComp
                             if (value > 0)
                             {
                                 // prevent an IndexOutOfRangeException from array[index]
-                                throw new InvalidDataException("SR.InvalidHuffmanData");
+                                throw new InvalidDataException(SR.InvalidHuffmanData);
                             }
 
                             Debug.Assert(value < 0, "CreateTable: Only negative numbers are used for tree pointers!");
@@ -289,7 +305,7 @@ namespace SysIOComp
             // huffman code lengths must be at least 1 bit long
             if (codeLength <= 0)
             {
-                throw new InvalidDataException("SR.InvalidHuffmanData");
+                throw new InvalidDataException(SR.InvalidHuffmanData);
             }
 
             //

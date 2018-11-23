@@ -170,7 +170,7 @@ namespace SysIOComp
                     // by calling this, we are using local header _storedEntryNameBytes.Length and extraFieldLength
                     // to find start of data, but still using central directory size information
                     if (!ZipLocalFileHeader.TrySkipBlock(Archive.ArchiveReader))
-                        throw new InvalidDataException("SR.LocalFileHeaderCorrupt");
+                        throw new InvalidDataException(SR.LocalFileHeaderCorrupt);
                     _storedOffsetOfCompressedData = Archive.ArchiveStream.Position;
                 }
                 return _storedOffsetOfCompressedData.Value;
@@ -250,7 +250,7 @@ namespace SysIOComp
                     uncompressedStream = new DeflateStream(compressedStreamToRead, CompressionMode.Decompress);
                     break;
                 case CompressionMethodValues.Deflate64:
-                    uncompressedStream = new DeflateManagedStream(compressedStreamToRead, CompressionMethodValues.Deflate64);
+                    uncompressedStream = new Deflate64ManagedStream(compressedStreamToRead);
                     break;
                 case CompressionMethodValues.Stored:
                 default:
@@ -285,10 +285,10 @@ namespace SysIOComp
                 {
                     case CompressionMethodValues.BZip2:
                     case CompressionMethodValues.LZMA:
-                        message = "SR.Format(SR.UnsupportedCompressionMethod, CompressionMethod.ToString())";
+                        message = SR.Format(SR.UnsupportedCompressionMethod, CompressionMethod.ToString());
                         break;
                     default:
-                        message = "SR.UnsupportedCompression";
+                        message = SR.UnsupportedCompression;
                         break;
                 }
 
@@ -297,27 +297,27 @@ namespace SysIOComp
 
             if (_diskNumberStart != Archive.NumberOfThisDisk)
             {
-                message = "SR.SplitSpanned";
+                message = SR.SplitSpanned;
                 return false;
             }
 
             if (_offsetOfLocalHeader > Archive.ArchiveStream.Length)
             {
-                message = "SR.LocalFileHeaderCorrupt";
+                message = SR.LocalFileHeaderCorrupt;
                 return false;
             }
 
             Archive.ArchiveStream.Seek(_offsetOfLocalHeader, SeekOrigin.Begin);
             if (!ZipLocalFileHeader.TrySkipBlock(Archive.ArchiveReader))
             {
-                message = "SR.LocalFileHeaderCorrupt";
+                message = SR.LocalFileHeaderCorrupt;
                 return false;
             }
 
             // when this property gets called, some duplicated work
             if (OffsetOfCompressedData + CompressedLength > Archive.ArchiveStream.Length)
             {
-                message = "SR.LocalFileHeaderCorrupt";
+                message = SR.LocalFileHeaderCorrupt;
                 return false;
             }
 
@@ -333,7 +333,7 @@ namespace SysIOComp
         private void ThrowIfInvalidArchive()
         {
             if (Archive == null)
-                throw new InvalidOperationException("SR.DeletedEntry");
+                throw new InvalidOperationException(SR.DeletedEntry);
             Archive.ThrowIfDisposed();
         }
 

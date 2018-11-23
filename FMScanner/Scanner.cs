@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
-//using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -51,8 +50,6 @@ namespace FMScanner
 
         #region Disposable
 
-        private FileStream ArchiveStream { get; set; }
-        //private ZipArchive Archive { get; set; }
         private SysIOComp.ZipArchive Archive { get; set; }
 
         #endregion
@@ -176,7 +173,6 @@ namespace FMScanner
                     var fm = missions[i];
                     FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
 
-                    ArchiveStream?.Dispose();
                     Archive?.Dispose();
 
                     if (FmIsZip)
@@ -257,10 +253,9 @@ namespace FMScanner
 
                 if (ArchivePath.EndsWithI(".zip"))
                 {
-                    ArchiveStream = new FileStream(ArchivePath, FileMode.Open, FileAccess.Read);
                     try
                     {
-                        Archive = new SysIOComp.ZipArchive(ArchiveStream);
+                        Archive = new SysIOComp.ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read));
                     }
                     catch (InvalidDataException)
                     {
@@ -1053,7 +1048,7 @@ namespace FMScanner
                     {
                         fileName = readmeEntry.Name;
                         lastModifiedDate =
-                            new DateTimeOffset(ZipHelperPublic.DosTimeToDateTime(readmeEntry.LastWriteTime))
+                            new DateTimeOffset(ZipHelpers.DosTimeToDateTime(readmeEntry.LastWriteTime))
                                 .DateTime;
                     }
                     else
@@ -2193,7 +2188,6 @@ namespace FMScanner
 
         public void Dispose()
         {
-            ArchiveStream?.Dispose();
             Archive?.Dispose();
         }
     }

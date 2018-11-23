@@ -7,7 +7,7 @@ namespace SysIOComp
     // Do not rearrange the enum values.
     internal enum InflaterState
     {
-        ReadingHeader = 0,           // Only applies to GZIP
+        ReadingHeader = 0,               // Only applies to GZIP
 
         ReadingBFinal = 2,               // About to read bfinal bit
         ReadingBType = 3,                // About to read blockType bits

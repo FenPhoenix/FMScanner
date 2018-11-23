@@ -8,7 +8,7 @@ using System.IO;
 
 namespace SysIOComp
 {
-    internal sealed class InflaterManaged
+    internal sealed class Inflater64Managed
     {
         // const tables used in decoding:
 
@@ -42,7 +42,7 @@ namespace SysIOComp
         private HuffmanTree _distanceTree;
 
         private InflaterState _state;
-        private bool _hasFormatReader;
+        private readonly bool _hasFormatReader;
         private int _bfinal;
         private BlockType _blockType;
 
@@ -64,19 +64,17 @@ namespace SysIOComp
 
         private readonly byte[] _codeList; // temporary array to store the code length for literal/Length and distance
         private readonly byte[] _codeLengthTreeCodeLength;
-        private readonly bool _deflate64;
         private HuffmanTree _codeLengthTree;
 
-        private IFileFormatReader _formatReader; // class to decode header and footer (e.g. gzip)
+        private readonly IFileFormatReader _formatReader; // class to decode header and footer (e.g. gzip)
 
-        internal InflaterManaged(IFileFormatReader reader, bool deflate64)
+        internal Inflater64Managed(IFileFormatReader reader)
         {
             _output = new OutputWindow();
             _input = new InputBuffer();
 
             _codeList = new byte[HuffmanTree.MaxLiteralTreeElements + HuffmanTree.MaxDistTreeElements];
             _codeLengthTreeCodeLength = new byte[HuffmanTree.NumberOfCodeLengthTreeElements];
-            _deflate64 = deflate64;
             if (reader != null)
             {
                 _formatReader = reader;
@@ -92,8 +90,10 @@ namespace SysIOComp
                 InflaterState.ReadingBFinal;    // start by reading BFinal bit
         }
 
-        public void SetInput(byte[] inputBytes, int offset, int length) =>
+        public void SetInput(byte[] inputBytes, int offset, int length)
+        {
             _input.SetInput(inputBytes, offset, length); // append the bytes
+        }
 
         public bool Finished() => _state == InflaterState.Done || _state == InflaterState.VerifyingFooter;
 
@@ -228,7 +228,7 @@ namespace SysIOComp
                 }
                 else
                 {
-                    throw new InvalidDataException("SR.UnknownBlockType");
+                    throw new InvalidDataException(SR.UnknownBlockType);
                 }
             }
 
@@ -254,7 +254,7 @@ namespace SysIOComp
             }
             else
             {
-                throw new InvalidDataException("SR.UnknownBlockType");
+                throw new InvalidDataException(SR.UnknownBlockType);
             }
 
             //
@@ -270,7 +270,6 @@ namespace SysIOComp
             }
             return result;
         }
-
 
         // Format of Non-compressed blocks (BTYPE=00):
         //
@@ -316,7 +315,7 @@ namespace SysIOComp
                             // make sure complement matches
                             if ((ushort)_blockLength != (ushort)(~blockLengthComplement))
                             {
-                                throw new InvalidDataException("SR.InvalidBlockLength");
+                                throw new InvalidDataException(SR.InvalidBlockLength);
                             }
                         }
 
@@ -349,7 +348,7 @@ namespace SysIOComp
 
                     default:
                         Debug.Fail("check why we are here!");
-                        throw new InvalidDataException("SR.UnknownState");
+                        throw new InvalidDataException(SR.UnknownState);
                 }
             }
         }
@@ -401,17 +400,11 @@ namespace SysIOComp
                                 symbol += 3;   // match length = 3,4,5,6,7,8,9,10
                                 _extraBits = 0;
                             }
-                            else if (!_deflate64 && symbol == 28)
-                            {
-                                // extra bits for code 285 is 0
-                                symbol = 258;             // code 285 means length 258
-                                _extraBits = 0;
-                            }
                             else
                             {
                                 if (symbol < 0 || symbol >= s_extraLengthBits.Length)
                                 {
-                                    throw new InvalidDataException("SR.GenericInvalidData");
+                                    throw new InvalidDataException(SR.GenericInvalidData);
                                 }
                                 _extraBits = s_extraLengthBits[symbol];
                                 Debug.Assert(_extraBits != 0, "We handle other cases separately!");
@@ -433,7 +426,7 @@ namespace SysIOComp
 
                             if (_length < 0 || _length >= s_lengthBase.Length)
                             {
-                                throw new InvalidDataException("SR.GenericInvalidData");
+                                throw new InvalidDataException(SR.GenericInvalidData);
                             }
                             _length = s_lengthBase[_length] + bits;
                         }
@@ -490,13 +483,12 @@ namespace SysIOComp
 
                     default:
                         Debug.Fail("check why we are here!");
-                        throw new InvalidDataException("SR.UnknownState");
+                        throw new InvalidDataException(SR.UnknownState);
                 }
             }
 
             return true;
         }
-
 
         // Format of the dynamic block header:
         //      5 Bits: HLIT, # of Literal/Length codes - 257 (257 - 286)
@@ -687,7 +679,7 @@ namespace SysIOComp
 
                 default:
                     Debug.Fail("check why we are here!");
-                    throw new InvalidDataException("SR.UnknownState");
+                    throw new InvalidDataException(SR.UnknownState);
             }
 
             byte[] literalTreeCodeLength = new byte[HuffmanTree.MaxLiteralTreeElements];

@@ -9,7 +9,7 @@ using System.IO;
 namespace SysIOComp
 {
     // TODO: This duplicate-but-public thing is silly, make it better
-    public static class ZipHelperPublic
+    public static class ZipHelpers
     {
         internal const int ValidZipDate_YearMin = 1980;
         internal const int ValidZipDate_YearMax = 2107;
@@ -79,7 +79,7 @@ namespace SysIOComp
             while (bytesLeftToRead > 0)
             {
                 int bytesRead = stream.Read(buffer, totalBytesRead, bytesLeftToRead);
-                if (bytesRead == 0) throw new IOException("SR.UnexpectedEndOfStream");
+                if (bytesRead == 0) throw new IOException(SR.UnexpectedEndOfStream);
 
                 totalBytesRead += bytesRead;
                 bytesLeftToRead -= bytesRead;
@@ -139,7 +139,7 @@ namespace SysIOComp
                 const int throwAwayBufferSize = 64;
                 int numBytesToSkip = (numBytesLeft > throwAwayBufferSize) ? throwAwayBufferSize : (int)numBytesLeft;
                 int numBytesActuallySkipped = stream.Read(new byte[throwAwayBufferSize], 0, numBytesToSkip);
-                if (numBytesActuallySkipped == 0) throw new IOException("SR.UnexpectedEndOfStream");
+                if (numBytesActuallySkipped == 0) throw new IOException(SR.UnexpectedEndOfStream);
                 numBytesLeft -= numBytesActuallySkipped;
             }
         }

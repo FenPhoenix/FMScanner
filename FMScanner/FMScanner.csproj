@@ -105,48 +105,28 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="FastIO.cs" />
     <Compile Include="FMData.cs" />
-    <Compile Include="Interop\Interop.Libraries.cs" />
     <Compile Include="Methods.cs" />
     <Compile Include="Scanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleHelpers\FileEncoding.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\Crc32Helper.ZLib.cs" />
+    <Compile Include="SysIoComp\SR.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\BlockType.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\CopyEncoder.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\DeflateInput.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\DeflateManagedStream.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\DeflaterManaged.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FastEncoder.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FastEncoderStatus.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FastEncoderWindow.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\Deflate64ManagedStream.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FileFormats.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\HuffmanTree.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InflaterManaged.cs" />
+    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\Inflater64Managed.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InflaterState.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InputBuffer.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\Match.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\MatchState.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputBuffer.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputWindow.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibNative.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateZLib\ZLibNative.ZStream.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\Interop\Interop.zlib.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\PositionPreservingWriteOnlyStreamWrapper.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchive.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipBlocks.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipHelper.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipVersion.cs" />
-    <Compile Include="SysThreadingTasks\Extensions\ThrowHelper.cs" />
-    <Compile Include="SysThreadingTasks\TaskToApm.cs" />
-    <Compile Include="ZipArchiveFast.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="SysIoComp\Resources\Strings.resx" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
