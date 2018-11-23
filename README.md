@@ -1,7 +1,5 @@
 # FMScanner
 
-_NOTE: This code is released under the Unlicense except portions which are otherwise specified. The SimpleHelpers.FileEncoding code is released under the MIT license (because it's not mine)._
-
 A fast, thorough, accurate scanner for Thief 1 and Thief 2 fan missions.
 
 Detects the following:
@@ -159,3 +157,7 @@ private void CancelFMScan()
     }
 }
 ```
+
+## License
+
+FMScanner is licensed under the CC0 license, but contains portions that are licensed differently (because they're based on others' work). Each differently-licensed component is cleanly separated into its own folder with a LICENSE file in it. The license for each component is also specified at the top of each source file belonging to it. I apologize that legalities can be a pain, but I've done what I can to make it clear. Hope it helps.
