@@ -134,10 +134,8 @@
     <Compile Include="SysIoComp\System\IO\Compression\PositionPreservingWriteOnlyStreamWrapper.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchive.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.Windows.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipBlocks.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.netcoreapp.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipHelper.cs" />
     <Compile Include="SysIoComp\System\IO\Compression\ZipVersion.cs" />
     <Compile Include="SysThreadingTasks\Extensions\ThrowHelper.cs" />

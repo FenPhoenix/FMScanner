@@ -52,11 +52,6 @@ namespace SysIOComp
 
         private const int BackwardsSeekingBufferSize = 32;
 
-        internal const int ValidZipDate_YearMin = 1980;
-        internal const int ValidZipDate_YearMax = 2107;
-
-        private static readonly DateTime s_invalidDateIndicator = new DateTime(ValidZipDate_YearMin, 1, 1, 0, 0, 0);
-
         internal static bool RequiresUnicode(string test)
         {
             Debug.Assert(test != null);
@@ -66,8 +61,7 @@ namespace SysIOComp
                 // The Zip Format uses code page 437 when the Unicode bit is not set. This format
                 // is the same as ASCII for characters 32-126 but differs otherwise. If we can fit
                 // the string into CP437 then we treat ASCII as acceptable.
-                if (c > 126 || c < 32)
-                    return true;
+                if (c > 126 || c < 32) return true;
             }
 
             return false;
@@ -90,21 +84,6 @@ namespace SysIOComp
                 totalBytesRead += bytesRead;
                 bytesLeftToRead -= bytesRead;
             }
-        }
-
-        // assume date time has passed IsConvertibleToDosTime
-        internal static uint DateTimeToDosTime(DateTime dateTime)
-        {
-            // DateTime must be Convertible to DosTime:
-            Debug.Assert(ValidZipDate_YearMin <= dateTime.Year && dateTime.Year <= ValidZipDate_YearMax);
-
-            int ret = ((dateTime.Year - ValidZipDate_YearMin) & 0x7F);
-            ret = (ret << 4) + dateTime.Month;
-            ret = (ret << 5) + dateTime.Day;
-            ret = (ret << 5) + dateTime.Hour;
-            ret = (ret << 6) + dateTime.Minute;
-            ret = (ret << 5) + (dateTime.Second / 2); // only 5 bits for second, so we only have a granularity of 2 sec.
-            return (uint)ret;
         }
 
         // assumes all bytes of signatureToFind are non zero, looks backwards from current position in stream,
@@ -160,8 +139,7 @@ namespace SysIOComp
                 const int throwAwayBufferSize = 64;
                 int numBytesToSkip = (numBytesLeft > throwAwayBufferSize) ? throwAwayBufferSize : (int)numBytesLeft;
                 int numBytesActuallySkipped = stream.Read(new byte[throwAwayBufferSize], 0, numBytesToSkip);
-                if (numBytesActuallySkipped == 0)
-                    throw new IOException("SR.UnexpectedEndOfStream");
+                if (numBytesActuallySkipped == 0) throw new IOException("SR.UnexpectedEndOfStream");
                 numBytesLeft -= numBytesActuallySkipped;
             }
         }

@@ -25,7 +25,7 @@ namespace SysIOComp
         private long? _storedOffsetOfCompressedData;
         private MemoryStream _storedUncompressedData;
         private uint _externalFileAttr;
-        private string _storedEntryName;
+        private string _storedEntryFullName;
 
         // Initializes, attaches it to archive
         internal ZipArchiveEntry(ZipArchive archive, ZipCentralDirectoryFileHeader cd)
@@ -38,15 +38,15 @@ namespace SysIOComp
             _versionToExtract = (ZipVersionNeededValues)cd.VersionNeededToExtract;
             _generalPurposeBitFlag = (BitFlagValues)cd.GeneralPurposeBitFlag;
             CompressionMethod = (CompressionMethodValues)cd.CompressionMethod;
-            
+
             // Leave this as a uint and let the caller convert it if it wants (perf optimization)
             LastWriteTime = cd.LastModified;
-            
+
             CompressedLength = cd.CompressedSize;
             Length = cd.UncompressedSize;
             _externalFileAttr = cd.ExternalFileAttributes;
             _offsetOfLocalHeader = cd.RelativeOffsetOfLocalHeader;
-            
+
             // we don't know this yet: should be _offsetOfLocalHeader + 30 + _storedEntryNameBytes.Length + extrafieldlength
             // but entryname/extra length could be different in LH
             _storedOffsetOfCompressedData = null;
@@ -82,31 +82,6 @@ namespace SysIOComp
         }
 
         /// <summary>
-        /// The relative path of the entry as stored in the Zip archive. Note that Zip archives allow any string to be the path of the entry, including invalid and absolute paths.
-        /// </summary>
-        public string FullName
-        {
-            get => _storedEntryName;
-
-            private set
-            {
-                if (value == null)
-                    throw new ArgumentNullException(nameof(FullName));
-
-                EncodeEntryName(value, out var isUTF8);
-                _storedEntryName = value;
-
-                if (isUTF8)
-                    _generalPurposeBitFlag |= BitFlagValues.UnicodeFileName;
-                else
-                    _generalPurposeBitFlag &= ~BitFlagValues.UnicodeFileName;
-
-                if (ParseFileName(value, _versionMadeByPlatform) == "")
-                    VersionToExtractAtLeast(ZipVersionNeededValues.ExplicitDirectory);
-            }
-        }
-
-        /// <summary>
         /// The last write time of the entry as stored in the Zip archive. When setting this property, the DateTime will be converted to the
         /// Zip timestamp format, which supports a resolution of two seconds. If the data in the last write time field is not a valid Zip timestamp,
         /// an indicator value of 1980 January 1 at midnight will be returned.
@@ -122,12 +97,44 @@ namespace SysIOComp
         /// The uncompressed size of the entry. This property is not valid in Create mode, and it is only valid in Update mode if the entry has not been opened.
         /// </summary>
         /// <exception cref="InvalidOperationException">This property is not available because the entry has been written to or modified.</exception>
-        public long Length { get; private set; }
+        public long Length { get; }
 
         /// <summary>
         /// The filename of the entry. This is equivalent to the substring of Fullname that follows the final directory separator character.
         /// </summary>
-        public string Name => ParseFileName(FullName, _versionMadeByPlatform);
+        //public string Name => ParseFileName(FullName, _versionMadeByPlatform);
+        public string Name { get; private set; }
+
+        /// <summary>
+        /// The relative path of the entry as stored in the Zip archive. Note that Zip archives allow any string to be the path of the entry, including invalid and absolute paths.
+        /// </summary>
+        public string FullName
+        {
+            get => _storedEntryFullName;
+
+            private set
+            {
+                if (value == null) throw new ArgumentNullException(nameof(FullName));
+
+                EncodeEntryName(value, out var isUTF8);
+                _storedEntryFullName = value;
+
+                if (isUTF8)
+                {
+                    _generalPurposeBitFlag |= BitFlagValues.UnicodeFileName;
+                }
+                else
+                {
+                    _generalPurposeBitFlag &= ~BitFlagValues.UnicodeFileName;
+                }
+
+                Name = ParseFileName(value, _versionMadeByPlatform);
+                if (Name == "")
+                {
+                    VersionToExtractAtLeast(ZipVersionNeededValues.ExplicitDirectory);
+                }
+            }
+        }
 
         /// <summary>
         /// Opens the entry. If the archive that the entry belongs to was opened in Read mode, the returned stream will be readable, and it may or may not be seekable. If Create mode, the returned stream will be writable and not seekable. If Update mode, the returned stream will be readable, writable, seekable, and support SetLength.
@@ -140,22 +147,18 @@ namespace SysIOComp
         {
             ThrowIfInvalidArchive();
 
-            return OpenInReadMode(checkOpenable: true);
+            return OpenInReadMode();
         }
 
         /// <summary>
         /// Returns the FullName of the entry.
         /// </summary>
         /// <returns>FullName of the entry</returns>
-        public override string ToString()
-        {
-            return FullName;
-        }
+        public override string ToString() => FullName;
 
         // Only allow opening ZipArchives with large ZipArchiveEntries in update mode when running in a 64-bit process.
         // This is for compatibility with old behavior that threw an exception for all process bitnesses, because this
         // will not work in a 32-bit process.
-        private static readonly bool s_allowLargeZipArchiveEntriesInUpdateMode = IntPtr.Size > 4;
 
         private long OffsetOfCompressedData
         {
@@ -174,54 +177,21 @@ namespace SysIOComp
             }
         }
 
-        private MemoryStream UncompressedData
-        {
-            get
-            {
-                if (_storedUncompressedData == null)
-                {
-                    // this means we have never opened it before
-
-                    // if _uncompressedSize > int.MaxValue, it's still okay, because MemoryStream will just
-                    // grow as data is copied into it
-                    _storedUncompressedData = new MemoryStream((int)Length);
-                    
-                    using (Stream decompressor = OpenInReadMode(false))
-                    {
-                        try
-                        {
-                            decompressor.CopyTo(_storedUncompressedData);
-                        }
-                        catch (InvalidDataException)
-                        {
-                            // this is the case where the archive say the entry is deflate, but deflateStream
-                            // throws an InvalidDataException. This property should only be getting accessed in
-                            // Update mode, so we want to make sure _storedUncompressedData stays null so
-                            // that later when we dispose the archive, this entry loads the compressedBytes, and
-                            // copies them straight over
-                            _storedUncompressedData.Dispose();
-                            _storedUncompressedData = null;
-                            throw;
-                        }
-                    }
-
-                    // if they start modifying it, we should make sure it will get deflated
-                    CompressionMethod = CompressionMethodValues.Deflate;
-                }
-
-                return _storedUncompressedData;
-            }
-        }
-
         private CompressionMethodValues CompressionMethod
         {
-            get { return _storedCompressionMethod; }
+            get => _storedCompressionMethod;
             set
             {
-                if (value == CompressionMethodValues.Deflate)
-                    VersionToExtractAtLeast(ZipVersionNeededValues.Deflate);
-                else if (value == CompressionMethodValues.Deflate64)
-                    VersionToExtractAtLeast(ZipVersionNeededValues.Deflate64);
+                switch (value)
+                {
+                    case CompressionMethodValues.Deflate:
+                        VersionToExtractAtLeast(ZipVersionNeededValues.Deflate);
+                        break;
+                    case CompressionMethodValues.Deflate64:
+                        VersionToExtractAtLeast(ZipVersionNeededValues.Deflate64);
+                        break;
+                }
+
                 _storedCompressionMethod = value;
             }
         }
@@ -266,16 +236,14 @@ namespace SysIOComp
             return writeEntryNameEncoding.GetBytes(entryName);
         }
 
-        internal void ThrowIfNotOpenable(bool needToUncompress, bool needToLoadIntoMemory)
+        internal void ThrowIfNotOpenable()
         {
-            string message;
-            if (!IsOpenable(needToUncompress, needToLoadIntoMemory, out message))
-                throw new InvalidDataException(message);
+            if (!IsOpenable(out var message)) throw new InvalidDataException(message);
         }
 
         private Stream GetDataDecompressor(Stream compressedStreamToRead)
         {
-            Stream uncompressedStream = null;
+            Stream uncompressedStream;
             switch (CompressionMethod)
             {
                 case CompressionMethodValues.Deflate:
@@ -297,38 +265,34 @@ namespace SysIOComp
             return uncompressedStream;
         }
 
-        private Stream OpenInReadMode(bool checkOpenable)
+        private Stream OpenInReadMode()
         {
-            if (checkOpenable)
-                ThrowIfNotOpenable(needToUncompress: true, needToLoadIntoMemory: false);
+            ThrowIfNotOpenable();
 
             Stream compressedStream = new SubReadStream(Archive.ArchiveStream, OffsetOfCompressedData, CompressedLength);
             return GetDataDecompressor(compressedStream);
         }
 
-        private bool IsOpenable(bool needToUncompress, bool needToLoadIntoMemory, out string message)
+        private bool IsOpenable(out string message)
         {
             message = null;
 
-            if (needToUncompress)
+            if (CompressionMethod != CompressionMethodValues.Stored &&
+                CompressionMethod != CompressionMethodValues.Deflate &&
+                CompressionMethod != CompressionMethodValues.Deflate64)
             {
-                if (CompressionMethod != CompressionMethodValues.Stored &&
-                    CompressionMethod != CompressionMethodValues.Deflate &&
-                    CompressionMethod != CompressionMethodValues.Deflate64)
+                switch (CompressionMethod)
                 {
-                    switch (CompressionMethod)
-                    {
-                        case CompressionMethodValues.BZip2:
-                        case CompressionMethodValues.LZMA:
-                            message = "SR.Format(SR.UnsupportedCompressionMethod, CompressionMethod.ToString())";
-                            break;
-                        default:
-                            message = "SR.UnsupportedCompression";
-                            break;
-                    }
-
-                    return false;
+                    case CompressionMethodValues.BZip2:
+                    case CompressionMethodValues.LZMA:
+                        message = "SR.Format(SR.UnsupportedCompressionMethod, CompressionMethod.ToString())";
+                        break;
+                    default:
+                        message = "SR.UnsupportedCompression";
+                        break;
                 }
+
+                return false;
             }
 
             if (_diskNumberStart != Archive.NumberOfThisDisk)
@@ -357,35 +321,13 @@ namespace SysIOComp
                 return false;
             }
 
-            // This limitation originally existed because a) it is unreasonable to load > 4GB into memory
-            // but also because the stream reading functions make it hard.  This has been updated to handle
-            // this scenario in a 64-bit process using multiple buffers, delivered first as an OOB for
-            // compatibility.
-            if (needToLoadIntoMemory)
-            {
-                if (CompressedLength > int.MaxValue)
-                {
-                    if (!s_allowLargeZipArchiveEntriesInUpdateMode)
-                    {
-                        message = "SR.EntryTooLarge";
-                        return false;
-                    }
-                }
-            }
-
             return true;
         }
 
         private void VersionToExtractAtLeast(ZipVersionNeededValues value)
         {
-            if (_versionToExtract < value)
-            {
-                _versionToExtract = value;
-            }
-            if (_versionMadeBySpecification < value)
-            {
-                _versionMadeBySpecification = value;
-            }
+            if (_versionToExtract < value) _versionToExtract = value;
+            if (_versionMadeBySpecification < value) _versionMadeBySpecification = value;
         }
 
         private void ThrowIfInvalidArchive()
@@ -420,6 +362,20 @@ namespace SysIOComp
                 if (path[i] == '/')
                     return path.Substring(i + 1);
             return path;
+        }
+
+        /// <summary>
+        /// To get the file name of a ZipArchiveEntry, we should be parsing the FullName based
+        /// on the path specifications and requirements of the OS that ZipArchive was created on.
+        /// This method takes in a FullName and the platform of the ZipArchiveEntry and returns
+        /// the platform-correct file name.
+        /// </summary>
+        /// <remarks>This method ensures no validation on the paths. Invalid characters are allowed.</remarks>
+        internal static string ParseFileName(string path, ZipVersionMadeByPlatform madeByPlatform)
+        {
+            return madeByPlatform == ZipVersionMadeByPlatform.Windows
+                ? GetFileName_Windows(path)
+                : GetFileName_Unix(path);
         }
 
         [Flags]
