@@ -8,12 +8,13 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
+using FastZipReader.DeflateManaged;
 
-namespace SysIOComp
+namespace FastZipReader
 {
     // The disposable fields that this class owns get disposed when the ZipArchive it belongs to gets disposed
     [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
-    public partial class ZipArchiveEntry
+    internal class ZipArchiveEntry
     {
         private readonly int _diskNumberStart;
         private readonly ZipVersionMadeByPlatform _versionMadeByPlatform;
@@ -23,7 +24,6 @@ namespace SysIOComp
         private CompressionMethodValues _storedCompressionMethod;
         private readonly long _offsetOfLocalHeader;
         private long? _storedOffsetOfCompressedData;
-        private MemoryStream _storedUncompressedData;
         private uint _externalFileAttr;
         private string _storedEntryFullName;
 
@@ -52,26 +52,24 @@ namespace SysIOComp
             _storedOffsetOfCompressedData = null;
             Crc32 = cd.Crc32;
 
-            _storedUncompressedData = null;
-
             FullName = DecodeEntryName(cd.Filename);
         }
 
         /// <summary>
         /// The ZipArchive that this entry belongs to. If this entry has been deleted, this will return null.
         /// </summary>
-        public ZipArchive Archive { get; }
+        internal ZipArchive Archive { get; }
 
         [CLSCompliant(false)]
-        public uint Crc32 { get; }
+        internal uint Crc32 { get; }
 
         /// <summary>
         /// The compressed size of the entry. If the archive that the entry belongs to is in Create mode, attempts to get this property will always throw an exception. If the archive that the entry belongs to is in update mode, this property will only be valid if the entry has not been opened.
         /// </summary>
         /// <exception cref="InvalidOperationException">This property is not available because the entry has been written to or modified.</exception>
-        public long CompressedLength { get; }
+        internal long CompressedLength { get; }
 
-        public int ExternalAttributes
+        internal int ExternalAttributes
         {
             get => (int)_externalFileAttr;
             set
@@ -91,24 +89,24 @@ namespace SysIOComp
         /// <exception cref="ArgumentOutOfRangeException">An attempt was made to set this property to a value that cannot be represented in the
         /// Zip timestamp format. The earliest date/time that can be represented is 1980 January 1 0:00:00 (midnight), and the last date/time
         /// that can be represented is 2107 December 31 23:59:58 (one second before midnight).</exception>
-        public uint LastWriteTime { get; private set; }
+        internal uint LastWriteTime { get; }
 
         /// <summary>
         /// The uncompressed size of the entry. This property is not valid in Create mode, and it is only valid in Update mode if the entry has not been opened.
         /// </summary>
         /// <exception cref="InvalidOperationException">This property is not available because the entry has been written to or modified.</exception>
-        public long Length { get; }
+        internal long Length { get; }
 
         /// <summary>
         /// The filename of the entry. This is equivalent to the substring of Fullname that follows the final directory separator character.
         /// </summary>
-        //public string Name => ParseFileName(FullName, _versionMadeByPlatform);
-        public string Name { get; private set; }
+        //internal string Name => ParseFileName(FullName, _versionMadeByPlatform);
+        internal string Name { get; private set; }
 
         /// <summary>
         /// The relative path of the entry as stored in the Zip archive. Note that Zip archives allow any string to be the path of the entry, including invalid and absolute paths.
         /// </summary>
-        public string FullName
+        internal string FullName
         {
             get => _storedEntryFullName;
 
@@ -116,7 +114,7 @@ namespace SysIOComp
             {
                 if (value == null) throw new ArgumentNullException(nameof(FullName));
 
-                EncodeEntryName(value, out var isUTF8);
+                var isUTF8 = EncodeEntryName(value);
                 _storedEntryFullName = value;
 
                 if (isUTF8)
@@ -143,7 +141,7 @@ namespace SysIOComp
         /// <exception cref="IOException">The entry is already currently open for writing. -or- The entry has been deleted from the archive. -or- The archive that this entry belongs to was opened in ZipArchiveMode.Create, and this entry has already been written to once.</exception>
         /// <exception cref="InvalidDataException">The entry is missing from the archive or is corrupt and cannot be read. -or- The entry has been compressed using a compression method that is not supported.</exception>
         /// <exception cref="ObjectDisposedException">The ZipArchive that this entry belongs to has been disposed.</exception>
-        public Stream Open()
+        internal Stream Open()
         {
             ThrowIfInvalidArchive();
 
@@ -222,18 +220,16 @@ namespace SysIOComp
             return readEntryNameEncoding.GetString(entryNameBytes);
         }
 
-        private byte[] EncodeEntryName(string entryName, out bool isUTF8)
+        private bool EncodeEntryName(string entryName)
         {
             Debug.Assert(entryName != null);
 
-            Encoding writeEntryNameEncoding;
-            if (Archive != null && Archive.EntryNameEncoding != null)
-                writeEntryNameEncoding = Archive.EntryNameEncoding;
-            else
-                writeEntryNameEncoding = ZipHelper.RequiresUnicode(entryName) ? Encoding.UTF8 : Encoding.ASCII;
+            var writeEntryNameEncoding =
+                Archive?.EntryNameEncoding ?? (ZipHelper.RequiresUnicode(entryName)
+                    ? Encoding.UTF8
+                    : Encoding.ASCII);
 
-            isUTF8 = writeEntryNameEncoding.Equals(Encoding.UTF8);
-            return writeEntryNameEncoding.GetBytes(entryName);
+            return writeEntryNameEncoding.Equals(Encoding.UTF8);
         }
 
         internal void ThrowIfNotOpenable()

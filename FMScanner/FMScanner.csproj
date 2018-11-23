@@ -104,31 +104,33 @@
     <Compile Include="Common.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FastIO.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\BlockType.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\Deflate64ManagedStream.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\FileFormats.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\HuffmanTree.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\Inflater64Managed.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\InflaterState.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\InputBuffer.cs" />
+    <Compile Include="FastZipReader\DeflateManaged\OutputWindow.cs" />
+    <Compile Include="FastZipReader\SR.cs" />
+    <Compile Include="FastZipReader\ZipArchive.cs" />
+    <Compile Include="FastZipReader\ZipArchiveEntry.cs" />
+    <Compile Include="FastZipReader\ZipBlocks.cs" />
+    <Compile Include="FastZipReader\ZipCustomStreams.cs" />
+    <Compile Include="FastZipReader\ZipHelper.cs" />
+    <Compile Include="FastZipReader\ZipVersion.cs" />
     <Compile Include="FMData.cs" />
     <Compile Include="Methods.cs" />
     <Compile Include="Scanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimpleHelpers\FileEncoding.cs" />
-    <Compile Include="SysIoComp\SR.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\BlockType.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\Deflate64ManagedStream.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\FileFormats.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\HuffmanTree.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\Inflater64Managed.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InflaterState.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\InputBuffer.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\DeflateManaged\OutputWindow.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipArchive.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipArchiveEntry.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipBlocks.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipCustomStreams.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipHelper.cs" />
-    <Compile Include="SysIoComp\System\IO\Compression\ZipVersion.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="FastZipReader\DeflateManaged\LICENSE" />
+    <None Include="FastZipReader\LICENSE" />
     <None Include="packages.config" />
+    <None Include="SimpleHelpers\LICENSE" />
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\7z.Libs.18.05\build\net\7z.Libs.targets" Condition="Exists('..\packages\7z.Libs.18.05\build\net\7z.Libs.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

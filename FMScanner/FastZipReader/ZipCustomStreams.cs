@@ -6,7 +6,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace SysIOComp
+namespace FastZipReader
 {
     internal sealed class SubReadStream : Stream
     {
@@ -17,7 +17,7 @@ namespace SysIOComp
         private bool _canRead;
         private bool _isDisposed;
 
-        public SubReadStream(Stream superStream, long startPosition, long maxLength)
+        internal SubReadStream(Stream superStream, long startPosition, long maxLength)
         {
             _startInSuperStream = startPosition;
             _positionInSuperStream = startPosition;

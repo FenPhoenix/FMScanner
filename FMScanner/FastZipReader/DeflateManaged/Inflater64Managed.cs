@@ -6,7 +6,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace SysIOComp
+namespace FastZipReader.DeflateManaged
 {
     internal sealed class Inflater64Managed
     {
@@ -90,16 +90,16 @@ namespace SysIOComp
                 InflaterState.ReadingBFinal;    // start by reading BFinal bit
         }
 
-        public void SetInput(byte[] inputBytes, int offset, int length)
+        internal void SetInput(byte[] inputBytes, int offset, int length)
         {
             _input.SetInput(inputBytes, offset, length); // append the bytes
         }
 
-        public bool Finished() => _state == InflaterState.Done || _state == InflaterState.VerifyingFooter;
+        internal bool Finished() => _state == InflaterState.Done || _state == InflaterState.VerifyingFooter;
 
-        public int AvailableOutput => _output.AvailableBytes;
+        internal int AvailableOutput => _output.AvailableBytes;
 
-        public int Inflate(byte[] bytes, int offset, int length)
+        internal int Inflate(byte[] bytes, int offset, int length)
         {
             // copy bytes from output to outputbytes if we have available bytes
             // if buffer is not filled up. keep decoding until no input are available
@@ -164,7 +164,7 @@ namespace SysIOComp
         private bool Decode()
         {
             bool eob = false;
-            bool result = false;
+            bool result;
 
             if (Finished())
             {
@@ -309,8 +309,8 @@ namespace SysIOComp
                         _blockLengthBuffer[_state - InflaterState.UncompressedByte1] = (byte)bits;
                         if (_state == InflaterState.UncompressedByte4)
                         {
-                            _blockLength = _blockLengthBuffer[0] + ((int)_blockLengthBuffer[1]) * 256;
-                            int blockLengthComplement = _blockLengthBuffer[2] + ((int)_blockLengthBuffer[3]) * 256;
+                            _blockLength = _blockLengthBuffer[0] + _blockLengthBuffer[1] * 256;
+                            int blockLengthComplement = _blockLengthBuffer[2] + _blockLengthBuffer[3] * 256;
 
                             // make sure complement matches
                             if ((ushort)_blockLength != (ushort)(~blockLengthComplement))
@@ -701,6 +701,6 @@ namespace SysIOComp
             return true;
         }
 
-        public void Dispose() { }
+        internal void Dispose() { }
     }
 }

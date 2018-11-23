@@ -5,7 +5,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace SysIOComp
+namespace FastZipReader.DeflateManaged
 {
     // Strictly speaking this class is not a HuffmanTree, this class is
     // a lookup table combined with a HuffmanTree. The idea is to speed up
@@ -34,18 +34,15 @@ namespace SysIOComp
         private readonly short[] _left;
         private readonly short[] _right;
         private readonly byte[] _codeLengthArray;
-#if DEBUG
-        private uint[] _codeArrayDebug;
-#endif
 
         private readonly int _tableMask;
 
         // huffman tree for static block
-        public static HuffmanTree StaticLiteralLengthTree { get; } = new HuffmanTree(GetStaticLiteralTreeLength());
+        internal static HuffmanTree StaticLiteralLengthTree { get; } = new HuffmanTree(GetStaticLiteralTreeLength());
 
-        public static HuffmanTree StaticDistanceTree { get; } = new HuffmanTree(GetStaticDistanceTreeLength());
+        internal static HuffmanTree StaticDistanceTree { get; } = new HuffmanTree(GetStaticDistanceTreeLength());
 
-        public HuffmanTree(byte[] codeLengths)
+        internal HuffmanTree(byte[] codeLengths)
         {
             Debug.Assert(
                 codeLengths.Length == MaxLiteralTreeElements ||
@@ -140,7 +137,7 @@ namespace SysIOComp
         }
 
         // Reverse 'length' of the bits in code
-        public static uint BitReverse(uint code, int length)
+        internal static uint BitReverse(uint code, int length)
         {
             uint newCode = 0;
 
@@ -158,9 +155,6 @@ namespace SysIOComp
         private void CreateTable()
         {
             uint[] codeArray = CalculateHuffmanCode();
-#if DEBUG
-            _codeArrayDebug = codeArray;
-#endif
 
             short avail = (short)_codeLengthArray.Length;
 
@@ -214,10 +208,10 @@ namespace SysIOComp
                         // For any code which has length longer than num_elements,
                         // build a binary tree.
 
-                        int overflowBits = len - _tableBits; // the nodes we need to respent the data.
+                        int overflowBits = len - _tableBits; // the nodes we need to represent the data.
                         int codeBitMask = 1 << _tableBits; // mask to get current bit (the bits can't fit in the table)
 
-                        // the left, right table is used to repesent the
+                        // the left, right table is used to represent the
                         // the rest bits. When we got the first part (number bits.) and look at
                         // tbe table, we will need to follow the tree to find the real character.
                         // This is in place to avoid bloating the table if there are
@@ -270,9 +264,9 @@ namespace SysIOComp
         //
         // This function will try to get enough bits from input and
         // try to decode the bits.
-        // If there are no enought bits in the input, this function will return -1.
+        // If there are no enough bits in the input, this function will return -1.
         //
-        public int GetNextSymbol(InputBuffer input)
+        internal int GetNextSymbol(InputBuffer input)
         {
             // Try to load 16 bits into input buffer if possible and get the bitBuffer value.
             // If there aren't 16 bits available we will return all we have in the

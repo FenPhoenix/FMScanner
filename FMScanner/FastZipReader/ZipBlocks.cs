@@ -5,21 +5,21 @@
 using System.Collections.Generic;
 using System.IO;
 
-namespace SysIOComp
+namespace FastZipReader
 {
     // All blocks.TryReadBlock do a check to see if signature is correct. Generic extra field is slightly different
     // all of the TryReadBlocks will throw if there are not enough bytes in the stream
 
     internal struct ZipGenericExtraField
     {
-        public ushort Tag { get; private set; }
+        internal ushort Tag { get; private set; }
         // returns size of data, not of the entire block
-        public ushort Size { get; private set; }
-        public byte[] Data { get; private set; }
+        internal ushort Size { get; private set; }
+        internal byte[] Data { get; private set; }
 
         // shouldn't ever read the byte at position endExtraField
         // assumes we are positioned at the beginning of an extra field subfield
-        public static bool TryReadBlock(BinaryReader reader, long endExtraField, out ZipGenericExtraField field)
+        internal static bool TryReadBlock(BinaryReader reader, long endExtraField, out ZipGenericExtraField field)
         {
             field = new ZipGenericExtraField();
 
@@ -50,25 +50,25 @@ namespace SysIOComp
         private long? _compressedSize;
         private long? _localHeaderOffset;
 
-        public long? UncompressedSize
+        internal long? UncompressedSize
         {
             get => _uncompressedSize;
             set { _uncompressedSize = value; UpdateSize(); }
         }
 
-        public long? CompressedSize
+        internal long? CompressedSize
         {
             get => _compressedSize;
             set { _compressedSize = value; UpdateSize(); }
         }
 
-        public long? LocalHeaderOffset
+        internal long? LocalHeaderOffset
         {
             get => _localHeaderOffset;
             set { _localHeaderOffset = value; UpdateSize(); }
         }
 
-        public int? StartDiskNumber { get; private set; }
+        internal int? StartDiskNumber { get; private set; }
 
         private void UpdateSize()
         {
@@ -93,7 +93,7 @@ namespace SysIOComp
         //
         // If there are more than one Zip64 extra fields, we take the first one that has the expected size
         //
-        public static Zip64ExtraField GetJustZip64Block(Stream extraFieldStream,
+        internal static Zip64ExtraField GetJustZip64Block(Stream extraFieldStream,
             bool readUncompressedSize, bool readCompressedSize,
             bool readLocalHeaderOffset, bool readStartDiskNumber)
         {
@@ -181,14 +181,14 @@ namespace SysIOComp
 
     internal struct Zip64EndOfCentralDirectoryLocator
     {
-        public const uint SignatureConstant = 0x07064B50;
-        public const int SizeOfBlockWithoutSignature = 16;
+        internal const uint SignatureConstant = 0x07064B50;
+        internal const int SizeOfBlockWithoutSignature = 16;
 
-        public uint NumberOfDiskWithZip64EOCD;
-        public ulong OffsetOfZip64EOCD;
-        public uint TotalNumberOfDisks;
+        internal uint NumberOfDiskWithZip64EOCD;
+        internal ulong OffsetOfZip64EOCD;
+        internal uint TotalNumberOfDisks;
 
-        public static bool TryReadBlock(BinaryReader reader, out Zip64EndOfCentralDirectoryLocator zip64EOCDLocator)
+        internal static bool TryReadBlock(BinaryReader reader, out Zip64EndOfCentralDirectoryLocator zip64EOCDLocator)
         {
             zip64EOCDLocator = new Zip64EndOfCentralDirectoryLocator();
 
@@ -207,17 +207,17 @@ namespace SysIOComp
         private const uint SignatureConstant = 0x06064B50;
         private const ulong NormalSize = 0x2C; // the size of the data excluding the size/signature fields if no extra data included
 
-        public ulong SizeOfThisRecord;
-        public ushort VersionMadeBy;
-        public ushort VersionNeededToExtract;
-        public uint NumberOfThisDisk;
-        public uint NumberOfDiskWithStartOfCD;
-        public ulong NumberOfEntriesOnThisDisk;
-        public ulong NumberOfEntriesTotal;
-        public ulong SizeOfCentralDirectory;
-        public ulong OffsetOfCentralDirectory;
+        internal ulong SizeOfThisRecord;
+        internal ushort VersionMadeBy;
+        internal ushort VersionNeededToExtract;
+        internal uint NumberOfThisDisk;
+        internal uint NumberOfDiskWithStartOfCD;
+        internal ulong NumberOfEntriesOnThisDisk;
+        internal ulong NumberOfEntriesTotal;
+        internal ulong SizeOfCentralDirectory;
+        internal ulong OffsetOfCentralDirectory;
 
-        public static bool TryReadBlock(BinaryReader reader, out Zip64EndOfCentralDirectoryRecord zip64EOCDRecord)
+        internal static bool TryReadBlock(BinaryReader reader, out Zip64EndOfCentralDirectoryRecord zip64EOCDRecord)
         {
             zip64EOCDRecord = new Zip64EndOfCentralDirectoryRecord();
 
@@ -235,31 +235,14 @@ namespace SysIOComp
 
             return true;
         }
-
-        public static void WriteBlock(Stream stream, long numberOfEntries, long startOfCentralDirectory, long sizeOfCentralDirectory)
-        {
-            BinaryWriter writer = new BinaryWriter(stream);
-
-            // write Zip 64 EOCD record
-            writer.Write(SignatureConstant);
-            writer.Write(NormalSize);
-            writer.Write((ushort)ZipVersionNeededValues.Zip64); // version needed is 45 for zip 64 support
-            writer.Write((ushort)ZipVersionNeededValues.Zip64); // version made by: high byte is 0 for MS DOS, low byte is version needed
-            writer.Write((uint)0); // number of this disk is 0
-            writer.Write((uint)0); // number of disk with start of central directory is 0
-            writer.Write(numberOfEntries); // number of entries on this disk
-            writer.Write(numberOfEntries); // number of entries total
-            writer.Write(sizeOfCentralDirectory);
-            writer.Write(startOfCentralDirectory);
-        }
     }
 
     internal readonly struct ZipLocalFileHeader
     {
-        public const uint SignatureConstant = 0x04034B50;
+        internal const uint SignatureConstant = 0x04034B50;
 
         // will not throw end of stream exception
-        public static bool TrySkipBlock(BinaryReader reader)
+        internal static bool TrySkipBlock(BinaryReader reader)
         {
             const int offsetToFilenameLength = 22; // from the point after the signature
 
@@ -284,31 +267,31 @@ namespace SysIOComp
 
     internal struct ZipCentralDirectoryFileHeader
     {
-        public const uint SignatureConstant = 0x02014B50;
-        public byte VersionMadeByCompatibility;
-        public byte VersionMadeBySpecification;
-        public ushort VersionNeededToExtract;
-        public ushort GeneralPurposeBitFlag;
-        public ushort CompressionMethod;
-        public uint LastModified;
-        public uint Crc32;
-        public long CompressedSize;
-        public long UncompressedSize;
-        public ushort FilenameLength;
-        public ushort ExtraFieldLength;
-        public ushort FileCommentLength;
-        public int DiskNumberStart;
-        public ushort InternalFileAttributes;
-        public uint ExternalFileAttributes;
-        public long RelativeOffsetOfLocalHeader;
+        internal const uint SignatureConstant = 0x02014B50;
+        internal byte VersionMadeByCompatibility;
+        internal byte VersionMadeBySpecification;
+        internal ushort VersionNeededToExtract;
+        internal ushort GeneralPurposeBitFlag;
+        internal ushort CompressionMethod;
+        internal uint LastModified;
+        internal uint Crc32;
+        internal long CompressedSize;
+        internal long UncompressedSize;
+        internal ushort FilenameLength;
+        internal ushort ExtraFieldLength;
+        internal ushort FileCommentLength;
+        internal int DiskNumberStart;
+        internal ushort InternalFileAttributes;
+        internal uint ExternalFileAttributes;
+        internal long RelativeOffsetOfLocalHeader;
 
-        public byte[] Filename;
-        public byte[] FileComment;
-        public List<ZipGenericExtraField> ExtraFields;
+        internal byte[] Filename;
+        internal byte[] FileComment;
+        internal List<ZipGenericExtraField> ExtraFields;
 
         // if saveExtraFieldsAndComments is false, FileComment and ExtraFields will be null
         // in either case, the zip64 extra field info will be incorporated into other fields
-        public static bool TryReadBlock(BinaryReader reader, out ZipCentralDirectoryFileHeader header)
+        internal static bool TryReadBlock(BinaryReader reader, out ZipCentralDirectoryFileHeader header)
         {
             header = new ZipCentralDirectoryFileHeader();
 
@@ -373,18 +356,18 @@ namespace SysIOComp
 
     internal struct ZipEndOfCentralDirectoryBlock
     {
-        public const uint SignatureConstant = 0x06054B50;
-        public const int SizeOfBlockWithoutSignature = 18;
-        public uint Signature;
-        public ushort NumberOfThisDisk;
-        public ushort NumberOfTheDiskWithTheStartOfTheCentralDirectory;
-        public ushort NumberOfEntriesInTheCentralDirectoryOnThisDisk;
-        public ushort NumberOfEntriesInTheCentralDirectory;
-        public uint SizeOfCentralDirectory;
-        public uint OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber;
-        public byte[] ArchiveComment;
+        internal const uint SignatureConstant = 0x06054B50;
+        internal const int SizeOfBlockWithoutSignature = 18;
+        internal uint Signature;
+        internal ushort NumberOfThisDisk;
+        internal ushort NumberOfTheDiskWithTheStartOfTheCentralDirectory;
+        internal ushort NumberOfEntriesInTheCentralDirectoryOnThisDisk;
+        internal ushort NumberOfEntriesInTheCentralDirectory;
+        internal uint SizeOfCentralDirectory;
+        internal uint OffsetOfStartOfCentralDirectoryWithRespectToTheStartingDiskNumber;
+        internal byte[] ArchiveComment;
 
-        public static bool TryReadBlock(BinaryReader reader, out ZipEndOfCentralDirectoryBlock eocdBlock)
+        internal static bool TryReadBlock(BinaryReader reader, out ZipEndOfCentralDirectoryBlock eocdBlock)
         {
             eocdBlock = new ZipEndOfCentralDirectoryBlock();
             if (reader.ReadUInt32() != SignatureConstant) return false;

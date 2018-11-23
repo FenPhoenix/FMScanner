@@ -11,9 +11,9 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace SysIOComp
+namespace FastZipReader
 {
-    public class ZipArchive : IDisposable
+    internal class ZipArchive : IDisposable
     {
         private List<ZipArchiveEntry> _entries;
         private ReadOnlyCollection<ZipArchiveEntry> _entriesCollection;
@@ -72,7 +72,7 @@ namespace SysIOComp
         }
 
 #if DEBUG_FORCE_ZIP64
-        public bool _forceZip64;
+        internal bool _forceZip64;
 #endif
 
         /// <summary>
@@ -82,7 +82,7 @@ namespace SysIOComp
         /// <exception cref="ArgumentNullException">The stream is null.</exception>
         /// <exception cref="InvalidDataException">The contents of the stream could not be interpreted as a Zip archive.</exception>
         /// <param name="stream">The stream containing the archive to be read.</param>
-        public ZipArchive(Stream stream) : this(stream, leaveOpen: false, entryNameEncoding: null) { }
+        internal ZipArchive(Stream stream) : this(stream, leaveOpen: false, entryNameEncoding: null) { }
 
         /// <summary>
         /// Initializes a new instance of ZipArchive on the given stream, specifying whether to leave the stream open.
@@ -92,7 +92,7 @@ namespace SysIOComp
         /// <exception cref="InvalidDataException">The contents of the stream could not be interpreted as a Zip file.</exception>
         /// <param name="stream">The input or output stream.</param>
         /// <param name="leaveOpen">true to leave the stream open upon disposing the ZipArchive, otherwise false.</param>
-        public ZipArchive(Stream stream, bool leaveOpen) : this(stream, leaveOpen, entryNameEncoding: null) { }
+        internal ZipArchive(Stream stream, bool leaveOpen) : this(stream, leaveOpen, entryNameEncoding: null) { }
 
         /// <summary>
         /// Initializes a new instance of ZipArchive on the given stream, specifying whether to leave the stream open.
@@ -126,7 +126,7 @@ namespace SysIOComp
         ///     otherwise an <see cref="ArgumentException"/> is thrown.</para>
         /// </param>
         /// <exception cref="ArgumentException">If a Unicode encoding other than UTF-8 is specified for the <code>entryNameEncoding</code>.</exception>
-        public ZipArchive(Stream stream, bool leaveOpen, Encoding entryNameEncoding)
+        internal ZipArchive(Stream stream, bool leaveOpen, Encoding entryNameEncoding)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
@@ -179,7 +179,7 @@ namespace SysIOComp
         /// <exception cref="NotSupportedException">The ZipArchive does not support reading.</exception>
         /// <exception cref="ObjectDisposedException">The ZipArchive has already been closed.</exception>
         /// <exception cref="InvalidDataException">The Zip archive is corrupt and the entries cannot be retrieved.</exception>
-        public ReadOnlyCollection<ZipArchiveEntry> Entries
+        internal ReadOnlyCollection<ZipArchiveEntry> Entries
         {
             get
             {
@@ -200,7 +200,7 @@ namespace SysIOComp
         /// <exception cref="InvalidDataException">The Zip archive is corrupt and the entries cannot be retrieved.</exception>
         /// <param name="entryName">A path relative to the root of the archive, identifying the desired entry.</param>
         /// <returns>A wrapper for the file entry in the archive. If no entry in the archive exists with the specified name, null will be returned.</returns>
-        public ZipArchiveEntry GetEntry(string entryName)
+        internal ZipArchiveEntry GetEntry(string entryName)
         {
             if (entryName == null)
                 throw new ArgumentNullException(nameof(entryName));
@@ -301,8 +301,8 @@ namespace SysIOComp
                     {
                         // use locator to get to Zip64EOCD
                         Zip64EndOfCentralDirectoryLocator locator;
-                        bool zip64eocdLocatorProper = Zip64EndOfCentralDirectoryLocator.TryReadBlock(ArchiveReader, out locator);
-                        Debug.Assert(zip64eocdLocatorProper); // we just found this using the signature finder, so it should be okay
+                        bool zip64EOCDLocatorProper = Zip64EndOfCentralDirectoryLocator.TryReadBlock(ArchiveReader, out locator);
+                        Debug.Assert(zip64EOCDLocatorProper); // we just found this using the signature finder, so it should be okay
 
                         if (locator.OffsetOfZip64EOCD > long.MaxValue)
                             throw new InvalidDataException(SR.FieldTooBigOffsetToZip64EOCD);

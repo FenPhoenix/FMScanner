@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Diagnostics;
 using System;
+using System.Diagnostics;
 
-namespace SysIOComp
+namespace FastZipReader.DeflateManaged
 {
     /// <summary>
     /// This class maintains a window for decompressed output.
@@ -26,7 +26,7 @@ namespace SysIOComp
         private int _end;       // this is the position to where we should write next byte
 
         /// <summary>Add a byte to output window.</summary>
-        public void Write(byte b)
+        internal void Write(byte b)
         {
             Debug.Assert(AvailableBytes < WindowSize, "Can't add byte when window is full!");
             _window[_end++] = b;
@@ -34,9 +34,9 @@ namespace SysIOComp
             ++AvailableBytes;
         }
 
-        public void WriteLengthDistance(int length, int distance)
+        internal void WriteLengthDistance(int length, int distance)
         {
-            Debug.Assert((AvailableBytes + length) <= WindowSize, "No Enough space");
+            Debug.Assert(AvailableBytes + length <= WindowSize, "No Enough space");
             
             // move backwards distance bytes in the output stream,
             // and copy length bytes from this position to the output stream.
@@ -79,7 +79,7 @@ namespace SysIOComp
         /// Copy up to length of bytes from input directly.
         /// This is used for uncompressed block.
         /// </summary>
-        public int CopyFrom(InputBuffer input, int length)
+        internal int CopyFrom(InputBuffer input, int length)
         {
             length = Math.Min(Math.Min(length, WindowSize - AvailableBytes), input.AvailableBytes);
             int copied;
@@ -108,30 +108,30 @@ namespace SysIOComp
         }
 
         /// <summary>Free space in output window.</summary>
-        public int FreeBytes => WindowSize - AvailableBytes;
+        internal int FreeBytes => WindowSize - AvailableBytes;
 
         /// <summary>Bytes not consumed in output window.</summary>
-        public int AvailableBytes { get; private set; }
+        internal int AvailableBytes { get; private set; }
 
         /// <summary>Copy the decompressed bytes to output array.</summary>
-        public int CopyTo(byte[] output, int offset, int length)
+        internal int CopyTo(byte[] output, int offset, int length)
         {
-            int copy_end;
+            int copyEnd;
 
             if (length > AvailableBytes)
             {
                 // we can copy all the decompressed bytes out
-                copy_end = _end;
+                copyEnd = _end;
                 length = AvailableBytes;
             }
             else
             {
-                copy_end = (_end - AvailableBytes + length) & WindowMask; // copy length of bytes
+                copyEnd = (_end - AvailableBytes + length) & WindowMask; // copy length of bytes
             }
 
             int copied = length;
 
-            int tailLen = length - copy_end;
+            int tailLen = length - copyEnd;
             if (tailLen > 0)
             {
                 // this means we need to copy two parts separately
@@ -139,9 +139,9 @@ namespace SysIOComp
                 Array.Copy(_window, WindowSize - tailLen,
                                   output, offset, tailLen);
                 offset += tailLen;
-                length = copy_end;
+                length = copyEnd;
             }
-            Array.Copy(_window, copy_end - length, output, offset, length);
+            Array.Copy(_window, copyEnd - length, output, offset, length);
             AvailableBytes -= copied;
             Debug.Assert(AvailableBytes >= 0, "check this function and find why we copied more bytes than we have");
             return copied;

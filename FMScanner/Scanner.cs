@@ -12,7 +12,7 @@ using System.Windows.Forms;
 using System.Xml;
 using MadMilkman.Ini;
 using SevenZip;
-using SysIOComp;
+using FastZipReader;
 using static System.IO.Path;
 using static System.StringComparison;
 using static FMScanner.Methods;
@@ -50,7 +50,7 @@ namespace FMScanner
 
         #region Disposable
 
-        private SysIOComp.ZipArchive Archive { get; set; }
+        private ZipArchive Archive { get; set; }
 
         #endregion
 
@@ -255,7 +255,7 @@ namespace FMScanner
                 {
                     try
                     {
-                        Archive = new SysIOComp.ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read));
+                        Archive = new ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read));
                     }
                     catch (InvalidDataException)
                     {
@@ -1025,7 +1025,7 @@ namespace FMScanner
             // Maybe could combine these checks, but this works for now
             foreach (var readmeFile in readmes)
             {
-                SysIOComp.ZipArchiveEntry readmeEntry = null;
+                ZipArchiveEntry readmeEntry = null;
 
                 if (FmIsZip) readmeEntry = Archive.Entries[readmeFile.Index];
 
@@ -1933,8 +1933,8 @@ namespace FMScanner
 
             #region Setup
 
-            SysIOComp.ZipArchiveEntry gamFileZipEntry = null;
-            SysIOComp.ZipArchiveEntry misFileZipEntry = null;
+            ZipArchiveEntry gamFileZipEntry = null;
+            ZipArchiveEntry misFileZipEntry = null;
 
             string misFileOnDisk = null;
 

@@ -6,16 +6,16 @@ using System.Diagnostics;
 using System;
 using System.IO;
 
-namespace SysIOComp
+namespace FastZipReader
 {
-    // TODO: This duplicate-but-public thing is silly, make it better
-    public static class ZipHelpers
+    // TODO: This duplicate-but-internal thing is silly, make it better
+    internal static class ZipHelpers
     {
         internal const int ValidZipDate_YearMin = 1980;
         internal const int ValidZipDate_YearMax = 2107;
 
         // will silently return InvalidDateIndicator if the uint is not a valid Dos DateTime
-        public static DateTime DosTimeToDateTime(uint dateTime)
+        internal static DateTime DosTimeToDateTime(uint dateTime)
         {
             // DosTime format 32 bits
             // Year: 7 bits, 0 is 1980
@@ -106,7 +106,7 @@ namespace SysIOComp
 
                 while (bufferPointer >= 0 && !signatureFound)
                 {
-                    currentSignature = (currentSignature << 8) | ((uint)buffer[bufferPointer]);
+                    currentSignature = (currentSignature << 8) | buffer[bufferPointer];
                     if (currentSignature == signatureToFind)
                     {
                         signatureFound = true;
@@ -137,7 +137,7 @@ namespace SysIOComp
             while (numBytesLeft != 0)
             {
                 const int throwAwayBufferSize = 64;
-                int numBytesToSkip = (numBytesLeft > throwAwayBufferSize) ? throwAwayBufferSize : (int)numBytesLeft;
+                int numBytesToSkip = numBytesLeft > throwAwayBufferSize ? throwAwayBufferSize : (int)numBytesLeft;
                 int numBytesActuallySkipped = stream.Read(new byte[throwAwayBufferSize], 0, numBytesToSkip);
                 if (numBytesActuallySkipped == 0) throw new IOException(SR.UnexpectedEndOfStream);
                 numBytesLeft -= numBytesActuallySkipped;
