@@ -38,6 +38,10 @@ namespace FMScanner.FastZipReader
             {
                 return new DateTime(year, month, day, hour, minute, second);
             }
+            // Note: This is where my mischievous little "'System.ArgumentOutOfRangeException' in mscorlib.dll"
+            // is coming from. Turns out the perf penalty was inconsequential even when this was being done for
+            // every single entry, but now that I'm only doing it for a handful per FM, it's not worth worrying
+            // about at all.
             catch (ArgumentOutOfRangeException)
             {
                 return new DateTime(ValidZipDate_YearMin, 1, 1, 0, 0, 0);
