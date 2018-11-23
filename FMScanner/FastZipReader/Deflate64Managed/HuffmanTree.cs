@@ -5,7 +5,7 @@
 using System.Diagnostics;
 using System.IO;
 
-namespace FastZipReader.DeflateManaged
+namespace FMScanner.FastZipReader.Deflate64Managed
 {
     // Strictly speaking this class is not a HuffmanTree, this class is
     // a lookup table combined with a HuffmanTree. The idea is to speed up

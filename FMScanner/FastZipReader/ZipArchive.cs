@@ -11,7 +11,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 
-namespace FastZipReader
+namespace FMScanner.FastZipReader
 {
     internal class ZipArchive : IDisposable
     {

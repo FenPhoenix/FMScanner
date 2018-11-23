@@ -5,7 +5,7 @@
 using System;
 using System.Diagnostics;
 
-namespace FastZipReader.DeflateManaged
+namespace FMScanner.FastZipReader.Deflate64Managed
 {
     // This class can be used to read bits from an byte array quickly.
     // Normally we get bits from 'bitBuffer' field and bitsInBuffer stores

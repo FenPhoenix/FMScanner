@@ -6,7 +6,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace FastZipReader
+namespace FMScanner.FastZipReader
 {
     internal sealed class SubReadStream : Stream
     {

@@ -8,7 +8,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace FastZipReader.DeflateManaged
+namespace FMScanner.FastZipReader.Deflate64Managed
 {
     internal sealed class Deflate64ManagedStream : Stream
     {

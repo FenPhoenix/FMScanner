@@ -6,8 +6,15 @@ using System;
 using System.Diagnostics;
 using System.IO;
 
-namespace FastZipReader.DeflateManaged
+namespace FMScanner.FastZipReader.Deflate64Managed
 {
+    internal enum BlockType
+    {
+        Uncompressed = 0,
+        Static = 1,
+        Dynamic = 2
+    }
+
     internal sealed class Inflater64Managed
     {
         // const tables used in decoding:
@@ -41,7 +48,7 @@ namespace FastZipReader.DeflateManaged
         private HuffmanTree _literalLengthTree;
         private HuffmanTree _distanceTree;
 
-        private InflaterState _state;
+        private Inflater64State _state;
         private readonly bool _hasFormatReader;
         private int _bfinal;
         private BlockType _blockType;
@@ -86,8 +93,8 @@ namespace FastZipReader.DeflateManaged
         private void Reset()
         {
             _state = _hasFormatReader ?
-                InflaterState.ReadingHeader :   // start by reading Header info
-                InflaterState.ReadingBFinal;    // start by reading BFinal bit
+                Inflater64State.ReadingHeader :   // start by reading Header info
+                Inflater64State.ReadingBFinal;    // start by reading BFinal bit
         }
 
         internal void SetInput(byte[] inputBytes, int offset, int length)
@@ -95,7 +102,7 @@ namespace FastZipReader.DeflateManaged
             _input.SetInput(inputBytes, offset, length); // append the bytes
         }
 
-        internal bool Finished() => _state == InflaterState.Done || _state == InflaterState.VerifyingFooter;
+        internal bool Finished() => _state == Inflater64State.Done || _state == Inflater64State.VerifyingFooter;
 
         internal int AvailableOutput => _output.AvailableBytes;
 
@@ -127,7 +134,7 @@ namespace FastZipReader.DeflateManaged
                 // Decode will return false when more input is needed
             } while (!Finished() && Decode());
 
-            if (_state == InflaterState.VerifyingFooter)
+            if (_state == Inflater64State.VerifyingFooter)
             {  // finished reading CRC
                 // In this case finished is true and output window has all the data.
                 // But some data in output window might not be copied out.
@@ -173,25 +180,25 @@ namespace FastZipReader.DeflateManaged
 
             if (_hasFormatReader)
             {
-                if (_state == InflaterState.ReadingHeader)
+                if (_state == Inflater64State.ReadingHeader)
                 {
                     if (!_formatReader.ReadHeader(_input))
                     {
                         return false;
                     }
-                    _state = InflaterState.ReadingBFinal;
+                    _state = Inflater64State.ReadingBFinal;
                 }
-                else if (_state == InflaterState.StartReadingFooter || _state == InflaterState.ReadingFooter)
+                else if (_state == Inflater64State.StartReadingFooter || _state == Inflater64State.ReadingFooter)
                 {
                     if (!_formatReader.ReadFooter(_input))
                         return false;
 
-                    _state = InflaterState.VerifyingFooter;
+                    _state = Inflater64State.VerifyingFooter;
                     return true;
                 }
             }
 
-            if (_state == InflaterState.ReadingBFinal)
+            if (_state == Inflater64State.ReadingBFinal)
             {
                 // reading bfinal bit
                 // Need 1 bit
@@ -199,32 +206,32 @@ namespace FastZipReader.DeflateManaged
                     return false;
 
                 _bfinal = _input.GetBits(1);
-                _state = InflaterState.ReadingBType;
+                _state = Inflater64State.ReadingBType;
             }
 
-            if (_state == InflaterState.ReadingBType)
+            if (_state == Inflater64State.ReadingBType)
             {
                 // Need 2 bits
                 if (!_input.EnsureBitsAvailable(2))
                 {
-                    _state = InflaterState.ReadingBType;
+                    _state = Inflater64State.ReadingBType;
                     return false;
                 }
 
                 _blockType = (BlockType)_input.GetBits(2);
                 if (_blockType == BlockType.Dynamic)
                 {
-                    _state = InflaterState.ReadingNumLitCodes;
+                    _state = Inflater64State.ReadingNumLitCodes;
                 }
                 else if (_blockType == BlockType.Static)
                 {
                     _literalLengthTree = HuffmanTree.StaticLiteralLengthTree;
                     _distanceTree = HuffmanTree.StaticDistanceTree;
-                    _state = InflaterState.DecodeTop;
+                    _state = Inflater64State.DecodeTop;
                 }
                 else if (_blockType == BlockType.Uncompressed)
                 {
-                    _state = InflaterState.UncompressedAligning;
+                    _state = Inflater64State.UncompressedAligning;
                 }
                 else
                 {
@@ -234,7 +241,7 @@ namespace FastZipReader.DeflateManaged
 
             if (_blockType == BlockType.Dynamic)
             {
-                if (_state < InflaterState.DecodeTop)
+                if (_state < Inflater64State.DecodeTop)
                 {
                     // we are reading the header
                     result = DecodeDynamicBlockHeader();
@@ -264,9 +271,9 @@ namespace FastZipReader.DeflateManaged
             if (eob && (_bfinal != 0))
             {
                 if (_hasFormatReader)
-                    _state = InflaterState.StartReadingFooter;
+                    _state = Inflater64State.StartReadingFooter;
                 else
-                    _state = InflaterState.Done;
+                    _state = Inflater64State.Done;
             }
             return result;
         }
@@ -290,24 +297,24 @@ namespace FastZipReader.DeflateManaged
             {
                 switch (_state)
                 {
-                    case InflaterState.UncompressedAligning: // initial state when calling this function
+                    case Inflater64State.UncompressedAligning: // initial state when calling this function
                                                              // we must skip to a byte boundary
                         _input.SkipToByteBoundary();
-                        _state = InflaterState.UncompressedByte1;
-                        goto case InflaterState.UncompressedByte1;
+                        _state = Inflater64State.UncompressedByte1;
+                        goto case Inflater64State.UncompressedByte1;
 
-                    case InflaterState.UncompressedByte1:   // decoding block length
-                    case InflaterState.UncompressedByte2:
-                    case InflaterState.UncompressedByte3:
-                    case InflaterState.UncompressedByte4:
+                    case Inflater64State.UncompressedByte1:   // decoding block length
+                    case Inflater64State.UncompressedByte2:
+                    case Inflater64State.UncompressedByte3:
+                    case Inflater64State.UncompressedByte4:
                         int bits = _input.GetBits(8);
                         if (bits < 0)
                         {
                             return false;
                         }
 
-                        _blockLengthBuffer[_state - InflaterState.UncompressedByte1] = (byte)bits;
-                        if (_state == InflaterState.UncompressedByte4)
+                        _blockLengthBuffer[_state - Inflater64State.UncompressedByte1] = (byte)bits;
+                        if (_state == Inflater64State.UncompressedByte4)
                         {
                             _blockLength = _blockLengthBuffer[0] + _blockLengthBuffer[1] * 256;
                             int blockLengthComplement = _blockLengthBuffer[2] + _blockLengthBuffer[3] * 256;
@@ -322,7 +329,7 @@ namespace FastZipReader.DeflateManaged
                         _state += 1;
                         break;
 
-                    case InflaterState.DecodingUncompressed: // copying block data
+                    case Inflater64State.DecodingUncompressed: // copying block data
 
                         // Directly copy bytes from input to output.
                         int bytesCopied = _output.CopyFrom(_input, _blockLength);
@@ -331,7 +338,7 @@ namespace FastZipReader.DeflateManaged
                         if (_blockLength == 0)
                         {
                             // Done with this block, need to re-init bit buffer for next block
-                            _state = InflaterState.ReadingBFinal;
+                            _state = Inflater64State.ReadingBFinal;
                             end_of_block = true;
                             return true;
                         }
@@ -366,7 +373,7 @@ namespace FastZipReader.DeflateManaged
                 int symbol;
                 switch (_state)
                 {
-                    case InflaterState.DecodeTop:
+                    case Inflater64State.DecodeTop:
                         // decode an element from the literal tree
 
                         // TODO: optimize this!!!
@@ -388,7 +395,7 @@ namespace FastZipReader.DeflateManaged
                             // end of block
                             end_of_block_code_seen = true;
                             // Reset state
-                            _state = InflaterState.ReadingBFinal;
+                            _state = Inflater64State.ReadingBFinal;
                             return true;
                         }
                         else
@@ -410,14 +417,14 @@ namespace FastZipReader.DeflateManaged
                                 Debug.Assert(_extraBits != 0, "We handle other cases separately!");
                             }
                             _length = symbol;
-                            goto case InflaterState.HaveInitialLength;
+                            goto case Inflater64State.HaveInitialLength;
                         }
                         break;
 
-                    case InflaterState.HaveInitialLength:
+                    case Inflater64State.HaveInitialLength:
                         if (_extraBits > 0)
                         {
-                            _state = InflaterState.HaveInitialLength;
+                            _state = Inflater64State.HaveInitialLength;
                             int bits = _input.GetBits(_extraBits);
                             if (bits < 0)
                             {
@@ -430,10 +437,10 @@ namespace FastZipReader.DeflateManaged
                             }
                             _length = s_lengthBase[_length] + bits;
                         }
-                        _state = InflaterState.HaveFullLength;
-                        goto case InflaterState.HaveFullLength;
+                        _state = Inflater64State.HaveFullLength;
+                        goto case Inflater64State.HaveFullLength;
 
-                    case InflaterState.HaveFullLength:
+                    case Inflater64State.HaveFullLength:
                         if (_blockType == BlockType.Dynamic)
                         {
                             _distanceCode = _distanceTree.GetNextSymbol(_input);
@@ -454,10 +461,10 @@ namespace FastZipReader.DeflateManaged
                             return false;
                         }
 
-                        _state = InflaterState.HaveDistCode;
-                        goto case InflaterState.HaveDistCode;
+                        _state = Inflater64State.HaveDistCode;
+                        goto case Inflater64State.HaveDistCode;
 
-                    case InflaterState.HaveDistCode:
+                    case Inflater64State.HaveDistCode:
                         // To avoid a table lookup we note that for distanceCode > 3,
                         // extra_bits = (distanceCode-2) >> 1
                         int offset;
@@ -478,7 +485,7 @@ namespace FastZipReader.DeflateManaged
 
                         _output.WriteLengthDistance(_length, offset);
                         freeBytes -= _length;
-                        _state = InflaterState.DecodeTop;
+                        _state = Inflater64State.DecodeTop;
                         break;
 
                     default:
@@ -517,27 +524,27 @@ namespace FastZipReader.DeflateManaged
         {
             switch (_state)
             {
-                case InflaterState.ReadingNumLitCodes:
+                case Inflater64State.ReadingNumLitCodes:
                     _literalLengthCodeCount = _input.GetBits(5);
                     if (_literalLengthCodeCount < 0)
                     {
                         return false;
                     }
                     _literalLengthCodeCount += 257;
-                    _state = InflaterState.ReadingNumDistCodes;
-                    goto case InflaterState.ReadingNumDistCodes;
+                    _state = Inflater64State.ReadingNumDistCodes;
+                    goto case Inflater64State.ReadingNumDistCodes;
 
-                case InflaterState.ReadingNumDistCodes:
+                case Inflater64State.ReadingNumDistCodes:
                     _distanceCodeCount = _input.GetBits(5);
                     if (_distanceCodeCount < 0)
                     {
                         return false;
                     }
                     _distanceCodeCount += 1;
-                    _state = InflaterState.ReadingNumCodeLengthCodes;
-                    goto case InflaterState.ReadingNumCodeLengthCodes;
+                    _state = Inflater64State.ReadingNumCodeLengthCodes;
+                    goto case Inflater64State.ReadingNumCodeLengthCodes;
 
-                case InflaterState.ReadingNumCodeLengthCodes:
+                case Inflater64State.ReadingNumCodeLengthCodes:
                     _codeLengthCodeCount = _input.GetBits(4);
                     if (_codeLengthCodeCount < 0)
                     {
@@ -545,10 +552,10 @@ namespace FastZipReader.DeflateManaged
                     }
                     _codeLengthCodeCount += 4;
                     _loopCounter = 0;
-                    _state = InflaterState.ReadingCodeLengthCodes;
-                    goto case InflaterState.ReadingCodeLengthCodes;
+                    _state = Inflater64State.ReadingCodeLengthCodes;
+                    goto case Inflater64State.ReadingCodeLengthCodes;
 
-                case InflaterState.ReadingCodeLengthCodes:
+                case Inflater64State.ReadingCodeLengthCodes:
                     while (_loopCounter < _codeLengthCodeCount)
                     {
                         int bits = _input.GetBits(3);
@@ -570,14 +577,14 @@ namespace FastZipReader.DeflateManaged
                     _codeArraySize = _literalLengthCodeCount + _distanceCodeCount;
                     _loopCounter = 0; // reset loop count
 
-                    _state = InflaterState.ReadingTreeCodesBefore;
-                    goto case InflaterState.ReadingTreeCodesBefore;
+                    _state = Inflater64State.ReadingTreeCodesBefore;
+                    goto case Inflater64State.ReadingTreeCodesBefore;
 
-                case InflaterState.ReadingTreeCodesBefore:
-                case InflaterState.ReadingTreeCodesAfter:
+                case Inflater64State.ReadingTreeCodesBefore:
+                case Inflater64State.ReadingTreeCodesAfter:
                     while (_loopCounter < _codeArraySize)
                     {
-                        if (_state == InflaterState.ReadingTreeCodesBefore)
+                        if (_state == Inflater64State.ReadingTreeCodesBefore)
                         {
                             if ((_lengthCode = _codeLengthTree.GetNextSymbol(_input)) < 0)
                             {
@@ -608,7 +615,7 @@ namespace FastZipReader.DeflateManaged
                             {
                                 if (!_input.EnsureBitsAvailable(2))
                                 {
-                                    _state = InflaterState.ReadingTreeCodesAfter;
+                                    _state = Inflater64State.ReadingTreeCodesAfter;
                                     return false;
                                 }
 
@@ -635,7 +642,7 @@ namespace FastZipReader.DeflateManaged
                             {
                                 if (!_input.EnsureBitsAvailable(3))
                                 {
-                                    _state = InflaterState.ReadingTreeCodesAfter;
+                                    _state = Inflater64State.ReadingTreeCodesAfter;
                                     return false;
                                 }
 
@@ -656,7 +663,7 @@ namespace FastZipReader.DeflateManaged
                                 // code == 18
                                 if (!_input.EnsureBitsAvailable(7))
                                 {
-                                    _state = InflaterState.ReadingTreeCodesAfter;
+                                    _state = Inflater64State.ReadingTreeCodesAfter;
                                     return false;
                                 }
 
@@ -673,7 +680,7 @@ namespace FastZipReader.DeflateManaged
                                 }
                             }
                         }
-                        _state = InflaterState.ReadingTreeCodesBefore; // we want to read the next code.
+                        _state = Inflater64State.ReadingTreeCodesBefore; // we want to read the next code.
                     }
                     break;
 
@@ -697,7 +704,7 @@ namespace FastZipReader.DeflateManaged
 
             _literalLengthTree = new HuffmanTree(literalTreeCodeLength);
             _distanceTree = new HuffmanTree(distanceTreeCodeLength);
-            _state = InflaterState.DecodeTop;
+            _state = Inflater64State.DecodeTop;
             return true;
         }
 

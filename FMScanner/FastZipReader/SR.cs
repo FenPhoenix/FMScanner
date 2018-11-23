@@ -4,7 +4,7 @@
 
 using System.Runtime.CompilerServices;
 
-namespace FastZipReader
+namespace FMScanner.FastZipReader
 {
     internal static class SR
     {

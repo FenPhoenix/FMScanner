@@ -2,10 +2,10 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-namespace FastZipReader.DeflateManaged
+namespace FMScanner.FastZipReader.Deflate64Managed
 {
     // Do not rearrange the enum values.
-    internal enum InflaterState
+    internal enum Inflater64State
     {
         ReadingHeader = 0,               // Only applies to GZIP
 

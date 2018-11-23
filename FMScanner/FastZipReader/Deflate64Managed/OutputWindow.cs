@@ -5,7 +5,7 @@
 using System;
 using System.Diagnostics;
 
-namespace FastZipReader.DeflateManaged
+namespace FMScanner.FastZipReader.Deflate64Managed
 {
     /// <summary>
     /// This class maintains a window for decompressed output.

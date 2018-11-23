@@ -8,9 +8,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Compression;
 using System.Text;
-using FastZipReader.DeflateManaged;
+using FMScanner.FastZipReader.Deflate64Managed;
 
-namespace FastZipReader
+namespace FMScanner.FastZipReader
 {
     // The disposable fields that this class owns get disposed when the ZipArchive it belongs to gets disposed
     [SuppressMessage("Microsoft.Design", "CA1001:TypesThatOwnDisposableFieldsShouldBeDisposable")]
