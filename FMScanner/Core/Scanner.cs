@@ -10,6 +10,7 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
 If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
+//#define ScanSynchronous
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -106,7 +107,7 @@ namespace FMScanner
         }
 
         // Debug - scan on UI thread so breaks will actually break where they're supposed to
-#if DEBUG
+#if DEBUG || ScanSynchronous
         public List<ScannedFMData>
             Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
                 IProgress<ProgressReport> progress, CancellationToken cancellationToken)
