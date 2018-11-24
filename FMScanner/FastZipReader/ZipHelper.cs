@@ -61,21 +61,6 @@ namespace FMScanner.FastZipReader
 
         private const int BackwardsSeekingBufferSize = 32;
 
-        internal static bool RequiresUnicode(string test)
-        {
-            Debug.Assert(test != null);
-
-            foreach (char c in test)
-            {
-                // The Zip Format uses code page 437 when the Unicode bit is not set. This format
-                // is the same as ASCII for characters 32-126 but differs otherwise. If we can fit
-                // the string into CP437 then we treat ASCII as acceptable.
-                if (c > 126 || c < 32) return true;
-            }
-
-            return false;
-        }
-
         /// <summary>
         /// Reads exactly bytesToRead out of stream, unless it is out of bytes
         /// </summary>
