@@ -71,10 +71,6 @@ namespace FMScanner.FastZipReader
             }
         }
 
-#if DEBUG_FORCE_ZIP64
-        internal bool _forceZip64;
-#endif
-
         /// <summary>
         /// Initializes a new instance of ZipArchive on the given stream for reading.
         /// </summary>

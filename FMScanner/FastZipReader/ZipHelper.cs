@@ -14,8 +14,13 @@ namespace FMScanner.FastZipReader
         internal const int ValidZipDate_YearMin = 1980;
         internal const int ValidZipDate_YearMax = 2107;
 
-        // will silently return InvalidDateIndicator if the uint is not a valid Dos DateTime
-        internal static DateTime DosTimeToDateTime(uint dateTime)
+        /// <summary>
+        /// Converts a Zip timestamp to a DateTime object. If <paramref name="zipDateTime"/> is not a
+        /// valid Zip timestamp, an indicator value of 1980 January 1 at midnight will be returned.
+        /// </summary>
+        /// <param name="zipDateTime"></param>
+        /// <returns></returns>
+        internal static DateTime ZipTimeToDateTime(uint zipDateTime)
         {
             // DosTime format 32 bits
             // Year: 7 bits, 0 is 1980
@@ -27,12 +32,12 @@ namespace FMScanner.FastZipReader
 
             // do the bit shift as unsigned because the fields are unsigned, but
             // we can safely convert to int, because they won't be too big
-            int year = (int)(ValidZipDate_YearMin + (dateTime >> 25));
-            int month = (int)((dateTime >> 21) & 0xF);
-            int day = (int)((dateTime >> 16) & 0x1F);
-            int hour = (int)((dateTime >> 11) & 0x1F);
-            int minute = (int)((dateTime >> 5) & 0x3F);
-            int second = (int)((dateTime & 0x001F) * 2); // only 5 bits for second, so we only have a granularity of 2 sec.
+            int year = (int)(ValidZipDate_YearMin + (zipDateTime >> 25));
+            int month = (int)((zipDateTime >> 21) & 0xF);
+            int day = (int)((zipDateTime >> 16) & 0x1F);
+            int hour = (int)((zipDateTime >> 11) & 0x1F);
+            int minute = (int)((zipDateTime >> 5) & 0x3F);
+            int second = (int)((zipDateTime & 0x001F) * 2); // only 5 bits for second, so we only have a granularity of 2 sec.
 
             try
             {
