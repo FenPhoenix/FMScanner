@@ -22,27 +22,30 @@ namespace FMScanner
         #region ReadAllLines / ReadAllText
 
         /// <summary>
-        /// Reads all the lines in a stream, auto-detecting its encoding. Ensures non-ASCII characters
-        /// show up correctly.
+        /// Reads all the lines in a stream, auto-detecting its encoding. Ensures non-ASCII characters show up
+        /// correctly.
         /// </summary>
         /// <param name="stream">The stream to read.</param>
         /// <param name="length">The length of the stream in bytes.</param>
+        /// <param name="streamIsSeekable">If true, the stream is used directly rather than copied, and is left
+        /// open.</param>
         /// <returns></returns>
-        internal static string[] ReadAllLinesE(Stream stream, long length)
+        internal static string[] ReadAllLinesE(Stream stream, long length, bool streamIsSeekable = false)
         {
             var lines = new List<string>();
 
-            // Detecting the encoding of a stream reads it forward some amount, and I can't seek backwards in an
-            // archive stream, so I have to copy it to a seekable MemoryStream. Blah.
-            using (var memStream = new MemoryStream((int)length))
+            // Quick hack
+            if (streamIsSeekable)
             {
-                stream.CopyTo(memStream);
-                stream.Dispose();
-                memStream.Position = 0;
-                var enc = FileEncoding.DetectFileEncoding(memStream);
-                memStream.Position = 0;
+                stream.Position = 0;
 
-                using (var sr = new StreamReader(memStream, enc ?? Encoding.GetEncoding(1252), false))
+                var enc = FileEncoding.DetectFileEncoding(stream);
+
+                stream.Position = 0;
+
+                // Code page 1252 = Western European (using instead of Encoding.Default)
+                using (var sr = new StreamReader(stream, enc ?? Encoding.GetEncoding(1252), false, 1024,
+                    leaveOpen: true))
                 {
                     string line;
                     while ((line = sr.ReadLine()) != null)
@@ -51,13 +54,35 @@ namespace FMScanner
                     }
                 }
             }
+            else
+            {
+                // Detecting the encoding of a stream reads it forward some amount, and I can't seek backwards in an
+                // archive stream, so I have to copy it to a seekable MemoryStream. Blah.
+                using (var memStream = new MemoryStream((int)length))
+                {
+                    stream.CopyTo(memStream);
+                    stream.Dispose();
+                    memStream.Position = 0;
+                    var enc = FileEncoding.DetectFileEncoding(memStream);
+                    memStream.Position = 0;
+
+                    using (var sr = new StreamReader(memStream, enc ?? Encoding.GetEncoding(1252), false))
+                    {
+                        string line;
+                        while ((line = sr.ReadLine()) != null)
+                        {
+                            lines.Add(line);
+                        }
+                    }
+                }
+            }
 
             return lines.ToArray();
         }
 
         /// <summary>
-        /// Reads all the lines in a file, auto-detecting its encoding. Ensures non-ASCII characters
-        /// show up correctly.
+        /// Reads all the lines in a file, auto-detecting its encoding. Ensures non-ASCII characters show up
+        /// correctly.
         /// </summary>
         /// <param name="file">The file to read.</param>
         /// <returns></returns>
@@ -69,13 +94,13 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Reads all the text in a stream, auto-detecting its encoding. Ensures non-ASCII characters
-        /// show up correctly.
+        /// Reads all the text in a stream, auto-detecting its encoding. Ensures non-ASCII characters show up
+        /// correctly.
         /// </summary>
         /// <param name="stream">The stream to read.</param>
         /// <param name="length">The length of the stream in bytes.</param>
         /// <param name="streamIsSeekable">If true, the stream is used directly rather than copied, and is left
-        /// open. Hacky param for one specific case.</param>
+        /// open.</param>
         /// <returns></returns>
         internal static string ReadAllTextE(Stream stream, long length, bool streamIsSeekable = false)
         {
@@ -119,8 +144,8 @@ namespace FMScanner
         }
 
         /// <summary>
-        /// Reads all the text in a file, auto-detecting its encoding. Ensures non-ASCII characters
-        /// show up correctly.
+        /// Reads all the text in a file, auto-detecting its encoding. Ensures non-ASCII characters show up
+        /// correctly.
         /// </summary>
         /// <param name="file">The file to read.</param>
         /// <returns></returns>

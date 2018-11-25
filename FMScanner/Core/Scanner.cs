@@ -24,7 +24,6 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using FMScanner.FastZipReader;
-using MadMilkman.Ini;
 using SevenZip;
 using static System.IO.Path;
 using static System.StringComparison;
@@ -831,8 +830,6 @@ namespace FMScanner
             var ret = (Title: (string)null, Author: (string)null, Description: (string)null,
                 LastUpdateDate: (string)null);
 
-            var ini = new IniFile();
-
             FMIniData fmIni;
 
             using (var fmIniStream = new MemoryStream())
@@ -858,49 +855,24 @@ namespace FMScanner
                     fmIniFileOnDisk = Path.Combine(FmWorkingPath, file.Name);
                 }
 
-                var iniText = FmIsZip
-                    ? ReadAllTextE(fmIniStream, fmIniLength, streamIsSeekable: true)
-                    : ReadAllTextE(fmIniFileOnDisk);
+                var iniLines = FmIsZip
+                    ? ReadAllLinesE(fmIniStream, fmIniLength, streamIsSeekable: true)
+                    : ReadAllLinesE(fmIniFileOnDisk);
 
-                if (string.IsNullOrEmpty(iniText)) return (null, null, null, null);
+                if (iniLines == null || iniLines.Length == 0) return (null, null, null, null);
 
-                using (var sr = new StringReader(iniText))
-                {
-                    ini.Load(sr);
-                }
-
-                fmIni = ini.Sections[0].Deserialize<FMIniData>();
+                fmIni = Ini.DeserializeFmIniLines(iniLines);
 
                 #endregion
 
-                #region Description
+                #region Descr
 
-                // Description is supposed to be one line with \n for line breaks, but people just aren't
-                // consistent with the format :[
-                if (!string.IsNullOrEmpty(fmIni.Descr) && fmIni.Descr[0] == '\"')
-                {
-                    // Read the whole file again. To avoid this I'd have to write my own parser. If I find more
-                    // than just the one file with this multiline-quoted format, maybe I will.
-                    if (FmIsZip) fmIniStream.Position = 0;
-                    var iniAllText =
-                        FmIsZip
-                            ? ReadAllTextE(fmIniStream, fmIniLength)
-                            : ReadAllTextE(fmIniFileOnDisk);
+                // Descr can be multiline. You're supposed to use \n for linebreaks. Most of the time people do
+                // that. That's always nice when people do that. It's so much nicer than when they break an ini
+                // value into multiple actual lines for some reason. God help us if any more keys get added to
+                // the spec and some wise guy puts one of those keys after a multiline Descr.
 
-                    // TODO: Theeeeeeoretically incorrect. Doesn't look at start of line (or start of file).
-                    var descr = iniAllText.Substring(iniAllText.IndexOf("Descr=", Ordinal) + 6);
-
-                    // Remove starting quote char
-                    descr = descr.Substring(1);
-
-                    // Match an actual quote char (not \")
-                    var match = Regex.Match(descr, @"[^\\](?<EndQuote>"")");
-                    if (match.Success)
-                    {
-                        fmIni.Descr = descr.Substring(0, match.Groups["EndQuote"].Index);
-                    }
-                }
-                else if (!fmIni.Descr.IsEmpty())
+                if (!string.IsNullOrEmpty(fmIni.Descr))
                 {
                     fmIni.Descr = fmIni.Descr
                         .Replace(@"\t", "\t")
@@ -908,6 +880,19 @@ namespace FMScanner
                         .Replace(@"\r", "\r\n")
                         .Replace(@"\n", "\r\n")
                         .Replace(@"\""", "\"");
+
+                    // Remove surrounding quotes
+                    if (fmIni.Descr[0] == '\"' && fmIni.Descr[fmIni.Descr.Length - 1] == '\"' &&
+                        fmIni.Descr.CountChars('\"') == 2)
+                    {
+                        fmIni.Descr = fmIni.Descr.Trim('\"');
+                    }
+                    fmIni.Descr = fmIni.Descr.RemoveUnpairedLeadingOrTrailingQuotes();
+
+                    // Normalize to just LF for now. Otherwise it just doesn't work right for reasons confusing
+                    // and senseless. It can easily be converted later.
+                    fmIni.Descr = fmIni.Descr.Replace("\r\n", "\n");
+                    if (string.IsNullOrWhiteSpace(fmIni.Descr)) fmIni.Descr = null;
                 }
 
                 #endregion
@@ -918,10 +903,10 @@ namespace FMScanner
             // TODO: Get other info from tags: genre, length, whatever
             if (ScanOptions.ScanAuthor)
             {
-                var tags = ini.Sections[0].Keys["Tags"];
+                var tags = fmIni.Tags;
                 if (tags != null)
                 {
-                    var tagsList = tags.Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                    var tagsList = tags.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
                     var authors = tagsList.Where(x => x.StartsWithI("author:"));
 
@@ -1165,10 +1150,9 @@ namespace FMScanner
 
             foreach (var titlesFileLocation in titlesStrDirs)
             {
-                var titlesFile =
-                    FmIsZip
-                        ? stringsDirFiles.FirstOrDefault(x => x.Name.EqualsI(titlesFileLocation))
-                        : new NameAndIndex { Name = Path.Combine(FmWorkingPath, titlesFileLocation) };
+                var titlesFile = FmIsZip
+                    ? stringsDirFiles.FirstOrDefault(x => x.Name.EqualsI(titlesFileLocation))
+                    : new NameAndIndex { Name = Path.Combine(FmWorkingPath, titlesFileLocation) };
 
                 if (titlesFile == null || !FmIsZip && !File.Exists(titlesFile.Name)) continue;
 
@@ -1450,18 +1434,7 @@ namespace FMScanner
             // Remove surrounding quotes
             if (ret[0] == '\"' && ret[ret.Length - 1] == '\"') ret = ret.Trim('\"');
 
-            // Remove unpaired leading or trailing quotes
-            if (ret.CountChars('\"') == 1)
-            {
-                if (ret[0] == '\"')
-                {
-                    ret = ret.Substring(1);
-                }
-                else if (ret[ret.Length - 1] == '\"')
-                {
-                    ret = ret.Substring(0, ret.Length - 1);
-                }
-            }
+            ret = ret.RemoveUnpairedLeadingOrTrailingQuotes();
 
             // Remove duplicate spaces
             ret = Regex.Replace(ret, @"\s{2,}", " ");
@@ -1905,10 +1878,9 @@ namespace FMScanner
                 {
                     foreach (var gam in gamFiles)
                     {
-                        gamSizeList.Add((gam.Name, gam.Index,
-                            FmIsZip
-                                ? Archive.Entries[gam.Index].Length
-                                : new FileInfo(Path.Combine(FmWorkingPath, gam.Name)).Length));
+                        gamSizeList.Add((gam.Name, gam.Index, FmIsZip
+                            ? Archive.Entries[gam.Index].Length
+                            : new FileInfo(Path.Combine(FmWorkingPath, gam.Name)).Length));
                     }
 
                     var gamToUse = gamSizeList.OrderBy(x => x.Size).First();
@@ -1931,10 +1903,9 @@ namespace FMScanner
             {
                 foreach (var mis in usedMisFiles)
                 {
-                    misSizeList.Add((mis.Name, mis.Index,
-                        FmIsZip
-                            ? Archive.Entries[mis.Index].Length
-                            : new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length));
+                    misSizeList.Add((mis.Name, mis.Index, FmIsZip
+                        ? Archive.Entries[mis.Index].Length
+                        : new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length));
                 }
 
                 var misToUse = misSizeList.OrderBy(x => x.Size).First();

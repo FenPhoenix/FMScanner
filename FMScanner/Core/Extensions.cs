@@ -345,6 +345,22 @@ namespace FMScanner
             return value;
         }
 
+        internal static string RemoveUnpairedLeadingOrTrailingQuotes(this string value)
+        {
+            if (value.CountChars('\"') != 1) return value;
+
+            if (value[0] == '\"')
+            {
+                value = value.Substring(1);
+            }
+            else if (value[value.Length - 1] == '\"')
+            {
+                value = value.Substring(0, value.Length - 1);
+            }
+
+            return value;
+        }
+
         /// <summary>
         /// Just removes the extension from a filename, without the rather large overhead of
         /// Path.GetFileNameWithoutExtension().
