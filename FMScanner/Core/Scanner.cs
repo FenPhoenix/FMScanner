@@ -647,17 +647,17 @@ namespace FMScanner
 
                     foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
                     {
-                        stringsDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
+                        stringsDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
                     }
 
                     foreach (var f in EnumFiles(FMDirs.Intrface, "*", SearchOption.AllDirectories))
                     {
-                        intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
+                        intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
                     }
 
                     foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
                     {
-                        booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
+                        booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
                     }
 
                     // TODO: Maybe extract this again, but then I have to extract MapFileExists() too
