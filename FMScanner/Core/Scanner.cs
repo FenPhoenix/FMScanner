@@ -559,9 +559,9 @@ namespace FMScanner
                         if (ScanOptions.ScanCustomResources)
                         {
                             if (fmd.HasAutomap == null &&
-                                     fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                                     fn.CountChars(dsc) >= 2 &&
-                                     fn.EndsWithI("ra.bin"))
+                                fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                                fn.CountChars(dsc) >= 2 &&
+                                fn.EndsWithI("ra.bin"))
                             {
                                 fmd.HasAutomap = true;
                                 // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
@@ -660,10 +660,67 @@ namespace FMScanner
                         booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length + 1) });
                     }
 
-                    // Call this here just so both calls are in one place
+                    // TODO: Maybe extract this again, but then I have to extract MapFileExists() too
                     if (ScanOptions.ScanCustomResources)
                     {
-                        CheckForCustomResources_FmIsDir(fmd, baseDirFiles);
+                        // TODO: I already have baseDirFiles; see if this EnumerateDirectories can be removed
+                        // Even a janky scan through baseDirFiles would probably be faster than hitting the disk
+                        var baseDirFolders = (
+                            from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
+                                SearchOption.TopDirectoryOnly)
+                            select f.Substring(f.LastIndexOf(dsc) + 1)).ToArray();
+
+                        foreach (var f in intrfaceDirFiles)
+                        {
+                            if (fmd.HasAutomap == null &&
+                                f.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                                f.Name.CountChars(dsc) >= 2 &&
+                                f.Name.EndsWithI("ra.bin"))
+                            {
+                                fmd.HasAutomap = true;
+                                // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
+                                fmd.HasMap = true;
+                                break;
+                            }
+                            if (fmd.HasMap == null && MapFileExists(f.Name)) fmd.HasMap = true;
+                        }
+                        if (fmd.HasMap == null) fmd.HasMap = false;
+                        if (fmd.HasAutomap == null) fmd.HasAutomap = false;
+
+                        fmd.HasCustomMotions =
+                            baseDirFolders.ContainsI(FMDirs.Motions) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Motions),
+                                MotionFilePatterns);
+
+                        fmd.HasMovies =
+                            baseDirFolders.ContainsI(FMDirs.Movies) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
+
+                        fmd.HasCustomTextures =
+                            baseDirFolders.ContainsI(FMDirs.Fam) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Fam),
+                                ImageFilePatterns);
+
+                        fmd.HasCustomObjects =
+                            baseDirFolders.ContainsI(FMDirs.Obj) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Obj), "*.bin");
+
+                        fmd.HasCustomCreatures =
+                            baseDirFolders.ContainsI(FMDirs.Mesh) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Mesh), "*.bin");
+
+                        fmd.HasCustomScripts =
+                            baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
+                            (baseDirFolders.ContainsI(FMDirs.Scripts) &&
+                             FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
+
+                        fmd.HasCustomSounds =
+                            baseDirFolders.ContainsI(FMDirs.Snd) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
+
+                        fmd.HasCustomSubtitles =
+                            baseDirFolders.ContainsI(FMDirs.Subtitles) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
                     }
                 }
             }
@@ -751,63 +808,6 @@ namespace FMScanner
             #endregion
 
             return true;
-        }
-
-        private void CheckForCustomResources_FmIsDir(ScannedFMData scannedFMData, List<NameAndIndex> baseDirFiles)
-        {
-            Debug.Assert(!FmIsZip, nameof(CheckForCustomResources_FmIsDir) +
-                                   ": FmIsZip should be false, but is true.");
-
-            var baseDirFolders = (
-                from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
-                    SearchOption.TopDirectoryOnly)
-                select DirName(f)).ToArray();
-
-            scannedFMData.HasMap =
-                baseDirFolders.ContainsI(FMDirs.Intrface) &&
-                FastIO.FilesExistSearchAllSkipTop(Combine(FmWorkingPath, FMDirs.Intrface), "page0*.*");
-
-            scannedFMData.HasAutomap =
-                baseDirFolders.ContainsI(FMDirs.Intrface) &&
-                FastIO.FilesExistSearchAllSkipTop(Combine(FmWorkingPath, FMDirs.Intrface), "*ra.bin");
-
-            // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
-            if (scannedFMData.HasAutomap == true) scannedFMData.HasMap = true;
-
-            scannedFMData.HasCustomMotions =
-                baseDirFolders.ContainsI(FMDirs.Motions) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Motions),
-                    MotionFilePatterns);
-
-            scannedFMData.HasMovies =
-                baseDirFolders.ContainsI(FMDirs.Movies) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
-
-            scannedFMData.HasCustomTextures =
-                baseDirFolders.ContainsI(FMDirs.Fam) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Fam),
-                    ImageFilePatterns);
-
-            scannedFMData.HasCustomObjects =
-                baseDirFolders.ContainsI(FMDirs.Obj) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Obj), "*.bin");
-
-            scannedFMData.HasCustomCreatures =
-                baseDirFolders.ContainsI(FMDirs.Mesh) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Mesh), "*.bin");
-
-            scannedFMData.HasCustomScripts =
-                baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
-                (baseDirFolders.ContainsI(FMDirs.Scripts) &&
-                 FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
-
-            scannedFMData.HasCustomSounds =
-                baseDirFolders.ContainsI(FMDirs.Snd) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
-
-            scannedFMData.HasCustomSubtitles =
-                baseDirFolders.ContainsI(FMDirs.Subtitles) &&
-                FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
         }
 
         private (string Title, string Author, string Version)
@@ -1762,50 +1762,22 @@ namespace FMScanner
         {
             var langs = new List<string>();
 
-            // Some code dupe, but I feel better about this overall than intertwining them more tightly
             for (var dirIndex = 0; dirIndex < 3; dirIndex++)
             {
-                if (FmIsZip)
+                var dirFiles =
+                    dirIndex == 0 ? booksDirFiles : dirIndex == 1 ? intrfaceDirFiles : stringsDirFiles;
+
+                for (var langIndex = 0; langIndex < Languages.Length; langIndex++)
                 {
-                    var dirFiles =
-                        dirIndex == 0 ? booksDirFiles : dirIndex == 1 ? intrfaceDirFiles : stringsDirFiles;
-
-                    for (var langIndex = 0; langIndex < Languages.Length; langIndex++)
+                    var lang = Languages[langIndex];
+                    for (var dfIndex = 0; dfIndex < dirFiles.Count; dfIndex++)
                     {
-                        var lang = Languages[langIndex];
-                        for (var dfIndex = 0; dfIndex < dirFiles.Count; dfIndex++)
+                        var df = dirFiles[dfIndex];
+                        if (df.Name.HasFileExtension() &&
+                            (df.Name.ContainsI(dsc + lang + dsc) ||
+                             df.Name.ContainsI(dsc + lang + " Language" + dsc)))
                         {
-                            var df = dirFiles[dfIndex];
-                            if (df.Name.HasFileExtension() &&
-                                (df.Name.ContainsI('/' + lang + '/') ||
-                                 df.Name.ContainsI('/' + lang + " Language/")))
-                            {
-                                langs.Add(lang);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    var langDir = LanguageDirs[dirIndex];
-
-                    if (!Directory.Exists(Path.Combine(FmWorkingPath, langDir))) continue;
-
-                    var dirFiles = Directory.EnumerateFiles(Path.Combine(FmWorkingPath, langDir), "*",
-                        SearchOption.AllDirectories).ToArray();
-
-                    for (var langIndex = 0; langIndex < Languages.Length; langIndex++)
-                    {
-                        var lang = Languages[langIndex];
-                        for (var dfIndex = 0; dfIndex < dirFiles.Length; dfIndex++)
-                        {
-                            var df = dirFiles[dfIndex];
-                            if (df.LastIndexOf('.') > df.LastIndexOf('\\') &&
-                                (df.ContainsI('\\' + lang + '\\') ||
-                                 df.ContainsI('\\' + lang + @" Language\")))
-                            {
-                                langs.Add(lang);
-                            }
+                            langs.Add(lang);
                         }
                     }
                 }
@@ -2173,24 +2145,8 @@ namespace FMScanner
             return new List<string>();
         }
 
-        private string DirName(string path)
-        {
-            if (FmIsZip)
-            {
-                path = path.Trim('/');
-                return !path.Contains('/') ? path : path.Substring(path.LastIndexOf('/') + 1);
-            }
-            else
-            {
-                return new DirectoryInfo(Path.Combine(FmWorkingPath, path)).Name;
-            }
-        }
-
         #endregion
 
-        public void Dispose()
-        {
-            Archive?.Dispose();
-        }
+        public void Dispose() => Archive?.Dispose();
     }
 }
