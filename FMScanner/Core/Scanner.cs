@@ -1000,67 +1000,64 @@ namespace FMScanner
             // Note: .wri files look like they may be just plain text with garbage at the top. Shrug.
             // Treat 'em like plaintext and see how it goes.
 
-            var readmes =
-                (from fd in baseDirFiles
-                 where new[] { ".txt", ".rtf", ".wri" }.Any(x => fd.Name.EndsWithI(x)) ||
-                    fd.Name.ExtIsHtml()
-                 select fd).ToList();
-
-            // Maybe could combine these checks, but this works for now
-            foreach (var readmeFile in readmes)
+            foreach (var f in baseDirFiles)
             {
+                if (!f.Name.EndsWithI(".txt") &&
+                    !f.Name.EndsWithI(".rtf") &&
+                    !f.Name.EndsWithI(".wri") &&
+                    !f.Name.ExtIsHtml())
+                {
+                    continue;
+                }
+
+                var readmeFile = f;
+
                 ZipArchiveEntry readmeEntry = null;
 
                 if (FmIsZip) readmeEntry = Archive.Entries[readmeFile.Index];
 
-                int fileLen = FmIsZip
+                int readmeFileLen = FmIsZip
                     ? (int)readmeEntry.Length
                     : (int)new FileInfo(Path.Combine(FmWorkingPath, readmeFile.Name)).Length;
+
+                var readmeFileOnDisk = "";
+
+                string fileName;
+                DateTime lastModifiedDate;
+
+                if (FmIsZip)
+                {
+                    fileName = readmeEntry.Name;
+                    lastModifiedDate =
+                        new DateTimeOffset(ZipHelpers.ZipTimeToDateTime(readmeEntry.LastWriteTime)).DateTime;
+                }
+                else
+                {
+                    readmeFileOnDisk = Path.Combine(FmWorkingPath, readmeFile.Name);
+                    var fi = new FileInfo(readmeFileOnDisk);
+                    fileName = fi.Name;
+                    lastModifiedDate = fi.LastWriteTime;
+                }
+
+                ReadmeFiles.Add(new ReadmeInternal
+                {
+                    FileName = fileName,
+                    ArchiveIndex = readmeFile.Index,
+                    LastModifiedDate = lastModifiedDate
+                });
+
+                if (readmeFile.Name.ExtIsHtml() || !readmeFile.Name.IsEnglishReadme()) continue;
 
                 // try-finally instead of using, because we only want to initialize the readme stream if FmIsZip
                 Stream readmeStream = null;
                 try
                 {
-                    var readmeFileOnDisk = "";
-
-                    string fileName;
-                    DateTime lastModifiedDate;
-
-                    long readmeLength = 0;
-
                     if (FmIsZip)
                     {
-                        fileName = readmeEntry.Name;
-                        lastModifiedDate =
-                            new DateTimeOffset(ZipHelpers.ZipTimeToDateTime(readmeEntry.LastWriteTime)).DateTime;
-                    }
-                    else
-                    {
-                        readmeFileOnDisk = Path.Combine(FmWorkingPath, readmeFile.Name);
-                        var fi = new FileInfo(readmeFileOnDisk);
-                        fileName = fi.Name;
-                        lastModifiedDate = fi.LastWriteTime;
-                    }
+                        readmeStream = new MemoryStream(readmeFileLen);
+                        using (var es = readmeEntry.Open()) es.CopyTo(readmeStream);
 
-                    ReadmeFiles.Add(new ReadmeInternal
-                    {
-                        FileName = fileName,
-                        ArchiveIndex = readmeFile.Index,
-                        LastModifiedDate = lastModifiedDate
-                    });
-
-                    if (readmeFile.Name.ExtIsHtml() || !readmeFile.Name.IsEnglishReadme()) continue;
-
-                    if (FmIsZip)
-                    {
-                        readmeLength = readmeEntry.Length;
-                        readmeStream = new MemoryStream(fileLen);
-
-                        using (var es = readmeEntry.Open())
-                        {
-                            es.CopyTo(readmeStream);
-                            readmeStream.Position = 0;
-                        }
+                        readmeStream.Position = 0;
                     }
 
                     // Saw one ".rtf" that was actually a plaintext file, and one vice versa. So detect by
@@ -1079,13 +1076,13 @@ namespace FMScanner
                         bool success;
                         if (FmIsZip)
                         {
-                            success = GetRtfFileLinesAndText(readmeStream, fileLen, rtfBox);
+                            success = GetRtfFileLinesAndText(readmeStream, readmeFileLen, rtfBox);
                         }
                         else
                         {
                             using (var fs = new FileStream(readmeFileOnDisk, FileMode.Open, FileAccess.Read))
                             {
-                                success = GetRtfFileLinesAndText(fs, fileLen, rtfBox);
+                                success = GetRtfFileLinesAndText(fs, readmeFileLen, rtfBox);
                             }
                         }
 
@@ -1100,7 +1097,7 @@ namespace FMScanner
                     {
                         var last = ReadmeFiles[ReadmeFiles.Count - 1];
                         last.Lines = FmIsZip
-                            ? ReadAllLinesE(readmeStream, readmeLength)
+                            ? ReadAllLinesE(readmeStream, readmeFileLen, streamIsSeekable: true)
                             : ReadAllLinesE(readmeFileOnDisk);
                         last.Text = string.Join("\r\n", last.Lines);
                     }
