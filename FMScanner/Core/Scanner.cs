@@ -830,73 +830,58 @@ namespace FMScanner
             var ret = (Title: (string)null, Author: (string)null, Description: (string)null,
                 LastUpdateDate: (string)null);
 
-            FMIniData fmIni;
+            #region Load INI
 
-            using (var fmIniStream = new MemoryStream())
+            string[] iniLines;
+
+            if (FmIsZip)
             {
-                #region Load INI
-
-                var fmIniFileOnDisk = "";
-
-                long fmIniLength = 0;
-
-                if (FmIsZip)
-                {
-                    var e = Archive.Entries[file.Index];
-                    fmIniLength = e.Length;
-                    using (var es = e.Open())
-                    {
-                        es.CopyTo(fmIniStream);
-                        fmIniStream.Position = 0;
-                    }
-                }
-                else
-                {
-                    fmIniFileOnDisk = Path.Combine(FmWorkingPath, file.Name);
-                }
-
-                var iniLines = FmIsZip
-                    ? ReadAllLinesE(fmIniStream, fmIniLength, streamIsSeekable: true)
-                    : ReadAllLinesE(fmIniFileOnDisk);
-
-                if (iniLines == null || iniLines.Length == 0) return (null, null, null, null);
-
-                fmIni = Ini.DeserializeFmIniLines(iniLines);
-
-                #endregion
-
-                #region Descr
-
-                // Descr can be multiline. You're supposed to use \n for linebreaks. Most of the time people do
-                // that. That's always nice when people do that. It's so much nicer than when they break an ini
-                // value into multiple actual lines for some reason. God help us if any more keys get added to
-                // the spec and some wise guy puts one of those keys after a multiline Descr.
-
-                if (!string.IsNullOrEmpty(fmIni.Descr))
-                {
-                    fmIni.Descr = fmIni.Descr
-                        .Replace(@"\t", "\t")
-                        .Replace(@"\r\n", "\r\n")
-                        .Replace(@"\r", "\r\n")
-                        .Replace(@"\n", "\r\n")
-                        .Replace(@"\""", "\"");
-
-                    // Remove surrounding quotes
-                    if (fmIni.Descr[0] == '\"' && fmIni.Descr[fmIni.Descr.Length - 1] == '\"' &&
-                        fmIni.Descr.CountChars('\"') == 2)
-                    {
-                        fmIni.Descr = fmIni.Descr.Trim('\"');
-                    }
-                    fmIni.Descr = fmIni.Descr.RemoveUnpairedLeadingOrTrailingQuotes();
-
-                    // Normalize to just LF for now. Otherwise it just doesn't work right for reasons confusing
-                    // and senseless. It can easily be converted later.
-                    fmIni.Descr = fmIni.Descr.Replace("\r\n", "\n");
-                    if (string.IsNullOrWhiteSpace(fmIni.Descr)) fmIni.Descr = null;
-                }
-
-                #endregion
+                var e = Archive.Entries[file.Index];
+                using (var es = e.Open()) iniLines = ReadAllLinesE(es, e.Length);
             }
+            else
+            {
+                iniLines = ReadAllLinesE(Path.Combine(FmWorkingPath, file.Name));
+            }
+
+            if (iniLines == null || iniLines.Length == 0) return (null, null, null, null);
+
+            var fmIni = Ini.DeserializeFmIniLines(iniLines);
+
+            #endregion
+
+            #region Descr
+
+            // Descr can be multiline. You're supposed to use \n for linebreaks. Most of the time people do
+            // that. That's always nice when people do that. It's so much nicer than when they break an ini
+            // value into multiple actual lines for some reason. God help us if any more keys get added to
+            // the spec and some wise guy puts one of those keys after a multiline Descr.
+
+            if (!string.IsNullOrEmpty(fmIni.Descr))
+            {
+                fmIni.Descr = fmIni.Descr
+                    .Replace(@"\t", "\t")
+                    .Replace(@"\r\n", "\r\n")
+                    .Replace(@"\r", "\r\n")
+                    .Replace(@"\n", "\r\n")
+                    .Replace(@"\""", "\"");
+
+                // Remove surrounding quotes
+                if (fmIni.Descr[0] == '\"' && fmIni.Descr[fmIni.Descr.Length - 1] == '\"' &&
+                    fmIni.Descr.CountChars('\"') == 2)
+                {
+                    fmIni.Descr = fmIni.Descr.Trim('\"');
+                }
+
+                fmIni.Descr = fmIni.Descr.RemoveUnpairedLeadingOrTrailingQuotes();
+
+                // Normalize to just LF for now. Otherwise it just doesn't work right for reasons confusing
+                // and senseless. It can easily be converted later.
+                fmIni.Descr = fmIni.Descr.Replace("\r\n", "\n");
+                if (string.IsNullOrWhiteSpace(fmIni.Descr)) fmIni.Descr = null;
+            }
+
+            #endregion
 
             #region Tags
 
@@ -919,6 +904,7 @@ namespace FMScanner
 
                         first = false;
                     }
+
                     ret.Author = authorString;
                 }
             }
