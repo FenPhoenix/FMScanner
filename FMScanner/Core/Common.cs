@@ -36,6 +36,20 @@ namespace FMScanner
         internal const string Snd = "snd";
         internal const string Strings = "strings";
         internal const string Subtitles = "subtitles";
+
+        // Perf, so directory separator char doesn't have to converted to a string and concatenated
+        internal static string BooksS(char dsc) => dsc == '/' ? "books/" : @"books\";
+        internal static string FamS(char dsc) => dsc == '/' ? "fam/" : @"fam\";
+        internal static string IntrfaceS(char dsc) => dsc == '/' ? "intrface/" : @"intrface\";
+        internal static string MeshS(char dsc) => dsc == '/' ? "mesh/" : @"mesh\";
+        internal static string MotionsS(char dsc) => dsc == '/' ? "motions/" : @"motions\";
+        internal static string MoviesS(char dsc) => dsc == '/' ? "movies/" : @"movies\";
+        internal static string ObjS(char dsc) => dsc == '/' ? "obj/" : @"obj\";
+        internal static string ScriptsS(char dsc) => dsc == '/' ? "scripts/" : @"scripts\";
+        internal static string SndS(char dsc) => dsc == '/' ? "snd/" : @"snd\";
+        internal static string StringsS(char dsc) => dsc == '/' ? "strings/" : @"strings\";
+        internal static string SubtitlesS(char dsc) => dsc == '/' ? "subtitles/" : @"subtitles\";
+
     }
 
     internal static class FMFiles

@@ -66,6 +66,8 @@ namespace FMScanner
 
         #endregion
 
+        private List<FileInfo> FmDirFiles { get; set; }
+
         private char dsc { get; set; }
 
         private ScanOptions ScanOptions { get; set; } = new ScanOptions();
@@ -232,6 +234,11 @@ namespace FMScanner
 
             dsc = FmIsZip ? '/' : Path.DirectorySeparatorChar;
 
+            // Sometimes we'll want to remove this from the start of a string to get a relative path, so
+            // it's critical that we always know we have a dir separator on the end so we don't end up
+            // with a leading one on the string when we remove this from the start of it
+            if (FmWorkingPath[FmWorkingPath.Length - 1] != dsc) FmWorkingPath += dsc;
+
             #region Check for and setup 7-Zip
 
             bool fmIsSevenZip = false;
@@ -291,14 +298,38 @@ namespace FMScanner
 
             #endregion
 
+            var fmData = new ScannedFMData();
+
+            // Getting the size is horrendously expensive for folders, but if we're doing it then we can save
+            // some time later by using the FileInfo list as a cache.
+            if (ScanOptions.ScanSize)
+            {
+                if (FmIsZip)
+                {
+                    fmData.Size = Archive.ArchiveStream.Length;
+                }
+                else
+                {
+                    FmDirFiles = new List<FileInfo>();
+
+                    long size = 0;
+                    foreach (var f in Directory.EnumerateFiles(FmWorkingPath, "*", SearchOption.AllDirectories))
+                    {
+                        var fileInfo = new FileInfo(f);
+                        FmDirFiles.Add(fileInfo);
+                        size += fileInfo.Length;
+                    }
+
+                    fmData.Size = size;
+                }
+            }
+
             var baseDirFiles = new List<NameAndIndex>();
             var misFiles = new List<NameAndIndex>();
             var usedMisFiles = new List<NameAndIndex>();
             var stringsDirFiles = new List<NameAndIndex>();
             var intrfaceDirFiles = new List<NameAndIndex>();
             var booksDirFiles = new List<NameAndIndex>();
-
-            var fmData = new ScannedFMData();
 
             #region Cache FM data
 
@@ -456,7 +487,7 @@ namespace FMScanner
 
             Debug.WriteLine(@"This FM took:\r\n" + OverallTimer.Elapsed.ToString(@"hh\:mm\:ss\.fffffff"));
 
-            fmData.ArchiveName = FmIsZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath);
+            fmData.ArchiveName = FmIsZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath.TrimEnd(dsc));
 
             foreach (var r in ReadmeFiles)
             {
@@ -476,10 +507,10 @@ namespace FMScanner
             // order to have a var in the middle to avoid multiple LastIndexOf calls).
             bool MapFileExists(string path)
             {
-                if (path.StartsWithI(FMDirs.Intrface + '/') &&
-                    path.CountChars('/') >= 2)
+                if (path.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                    path.CountChars(dsc) >= 2)
                 {
-                    var lsi = path.LastIndexOf('/');
+                    var lsi = path.LastIndexOf(dsc);
                     if (path.Length > lsi + 5 &&
                         path.Substring(lsi + 1, 5).EqualsI("page0") &&
                         path.LastIndexOf('.') > lsi)
@@ -493,29 +524,34 @@ namespace FMScanner
 
             try
             {
-                if (FmIsZip)
+                if (FmIsZip || ScanOptions.ScanSize)
                 {
-                    for (var i = 0; i < Archive.Entries.Count; i++)
+                    for (var i = 0; i < (FmIsZip ? Archive.Entries.Count : FmDirFiles.Count); i++)
                     {
-                        var e = Archive.Entries[i];
-                        if (!e.FullName.Contains('/') && e.FullName.Contains('.'))
+                        var fn = FmIsZip
+                            ? Archive.Entries[i].FullName
+                            : FmDirFiles[i].FullName.Substring(FmWorkingPath.Length);
+
+                        var index = FmIsZip ? i : -1;
+
+                        if (!fn.Contains(dsc) && fn.Contains('.'))
                         {
-                            baseDirFiles.Add(new NameAndIndex { Name = e.FullName, Index = i });
+                            baseDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                             // Fallthrough so ScanCustomResources can use it
                         }
-                        else if (e.FullName.StartsWithI(FMDirs.Strings + '/'))
+                        else if (fn.StartsWithI(FMDirs.StringsS(dsc)))
                         {
-                            stringsDirFiles.Add(new NameAndIndex { Name = e.FullName, Index = i });
+                            stringsDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                             continue;
                         }
-                        else if (e.FullName.StartsWithI(FMDirs.Intrface + '/'))
+                        else if (fn.StartsWithI(FMDirs.IntrfaceS(dsc)))
                         {
-                            intrfaceDirFiles.Add(new NameAndIndex { Name = e.FullName, Index = i });
+                            intrfaceDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                             // Fallthrough so ScanCustomResources can use it
                         }
-                        else if (e.FullName.StartsWithI(FMDirs.Books + '/'))
+                        else if (fn.StartsWithI(FMDirs.BooksS(dsc)))
                         {
-                            booksDirFiles.Add(new NameAndIndex { Name = e.FullName, Index = i });
+                            booksDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                             continue;
                         }
 
@@ -523,65 +559,65 @@ namespace FMScanner
                         if (ScanOptions.ScanCustomResources)
                         {
                             if (fmd.HasAutomap == null &&
-                                     e.FullName.StartsWithI(FMDirs.Intrface + '/') &&
-                                     e.FullName.CountChars('/') >= 2 &&
-                                     e.FullName.EndsWithI("ra.bin"))
+                                     fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                                     fn.CountChars(dsc) >= 2 &&
+                                     fn.EndsWithI("ra.bin"))
                             {
                                 fmd.HasAutomap = true;
                                 // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
                                 fmd.HasMap = true;
                             }
-                            else if (fmd.HasMap == null && MapFileExists(e.FullName))
+                            else if (fmd.HasMap == null && MapFileExists(fn))
                             {
                                 fmd.HasMap = true;
                             }
                             else if (fmd.HasCustomMotions == null &&
-                                     e.FullName.StartsWithI(FMDirs.Motions + '/') &&
-                                     MotionFileExtensions.Any(e.FullName.EndsWithI))
+                                     fn.StartsWithI(FMDirs.MotionsS(dsc)) &&
+                                     MotionFileExtensions.Any(fn.EndsWithI))
                             {
                                 fmd.HasCustomMotions = true;
                             }
                             else if (fmd.HasMovies == null &&
-                                     e.FullName.StartsWithI(FMDirs.Movies + '/') &&
-                                     e.FullName.HasFileExtension())
+                                     fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
+                                     fn.HasFileExtension())
                             {
                                 fmd.HasMovies = true;
                             }
                             else if (fmd.HasCustomTextures == null &&
-                                     e.FullName.StartsWithI(FMDirs.Fam + '/') &&
-                                     ImageFileExtensions.Any(e.FullName.EndsWithI))
+                                     fn.StartsWithI(FMDirs.FamS(dsc)) &&
+                                     ImageFileExtensions.Any(fn.EndsWithI))
                             {
                                 fmd.HasCustomTextures = true;
                             }
                             else if (fmd.HasCustomObjects == null &&
-                                     e.FullName.StartsWithI(FMDirs.Obj + '/') &&
-                                     e.FullName.EndsWithI(".bin"))
+                                     fn.StartsWithI(FMDirs.ObjS(dsc)) &&
+                                     fn.EndsWithI(".bin"))
                             {
                                 fmd.HasCustomObjects = true;
                             }
                             else if (fmd.HasCustomCreatures == null &&
-                                     e.FullName.StartsWithI(FMDirs.Mesh + '/') &&
-                                     e.FullName.EndsWithI(".bin"))
+                                     fn.StartsWithI(FMDirs.MeshS(dsc)) &&
+                                     fn.EndsWithI(".bin"))
                             {
                                 fmd.HasCustomCreatures = true;
                             }
                             else if (fmd.HasCustomScripts == null &&
-                                     (!e.FullName.Contains('/') &&
-                                      ScriptFileExtensions.Any(e.FullName.EndsWithI)) ||
-                                     (e.FullName.StartsWithI(FMDirs.Scripts + '/') &&
-                                      e.FullName.HasFileExtension()))
+                                     (!fn.Contains(dsc) &&
+                                      ScriptFileExtensions.Any(fn.EndsWithI)) ||
+                                     (fn.StartsWithI(FMDirs.ScriptsS(dsc)) &&
+                                      fn.HasFileExtension()))
                             {
                                 fmd.HasCustomScripts = true;
                             }
                             else if (fmd.HasCustomSounds == null &&
-                                     e.FullName.StartsWithI(FMDirs.Snd + '/') &&
-                                     e.FullName.HasFileExtension())
+                                     fn.StartsWithI(FMDirs.SndS(dsc)) &&
+                                     fn.HasFileExtension())
                             {
                                 fmd.HasCustomSounds = true;
                             }
                             else if (fmd.HasCustomSubtitles == null &&
-                                     e.FullName.StartsWithI(FMDirs.Subtitles + '/') &&
-                                     e.FullName.EndsWithI(".sub"))
+                                     fn.StartsWithI(FMDirs.SubtitlesS(dsc)) &&
+                                     fn.EndsWithI(".sub"))
                             {
                                 fmd.HasCustomSubtitles = true;
                             }
@@ -665,9 +701,9 @@ namespace FMScanner
                 // I don't remember if I need to search in this exact order, so uh... not rockin' the boat.
                 missFlag =
                     stringsDirFiles.FirstOrDefault(x =>
-                        x.Name.EqualsI(FMDirs.Strings + dsc + FMFiles.MissFlag))
+                        x.Name.EqualsI(FMDirs.StringsS(dsc) + FMFiles.MissFlag))
                     ?? stringsDirFiles.FirstOrDefault(x =>
-                        x.Name.EqualsI(FMDirs.Strings + dsc + "english" + dsc + FMFiles.MissFlag))
+                        x.Name.EqualsI(FMDirs.StringsS(dsc) + "english" + dsc + FMFiles.MissFlag))
                     ?? stringsDirFiles.FirstOrDefault(x =>
                         x.Name.EndsWithI(dsc + FMFiles.MissFlag));
             }
@@ -1118,17 +1154,17 @@ namespace FMScanner
             // Do not change search order: strings/english, strings, strings/[any other language]
             var titlesStrDirs = new List<string>
             {
-                FMDirs.Strings + dsc + "english" + dsc + FMFiles.TitlesStr,
-                FMDirs.Strings + dsc + "english" + dsc + FMFiles.TitleStr,
-                FMDirs.Strings + dsc + FMFiles.TitlesStr,
-                FMDirs.Strings + dsc + FMFiles.TitleStr
+                FMDirs.StringsS(dsc) + "english" + dsc + FMFiles.TitlesStr,
+                FMDirs.StringsS(dsc) + "english" + dsc + FMFiles.TitleStr,
+                FMDirs.StringsS(dsc) + FMFiles.TitlesStr,
+                FMDirs.StringsS(dsc) + FMFiles.TitleStr
             };
             foreach (var lang in Languages)
             {
                 if (lang == "english") continue;
 
-                titlesStrDirs.Add(FMDirs.Strings + dsc + lang + dsc + FMFiles.TitlesStr);
-                titlesStrDirs.Add(FMDirs.Strings + dsc + lang + dsc + FMFiles.TitleStr);
+                titlesStrDirs.Add(FMDirs.StringsS(dsc) + lang + dsc + FMFiles.TitlesStr);
+                titlesStrDirs.Add(FMDirs.StringsS(dsc) + lang + dsc + FMFiles.TitleStr);
             }
 
             foreach (var titlesFileLocation in titlesStrDirs)
@@ -1454,11 +1490,11 @@ namespace FMScanner
             {
                 newGameStrFile =
                     intrfaceDirFiles.FirstOrDefault(x =>
-                        x.Name.EqualsI(FMDirs.Intrface + dsc + "english" + dsc + FMFiles.NewGameStr))
+                        x.Name.EqualsI(FMDirs.IntrfaceS(dsc) + "english" + dsc + FMFiles.NewGameStr))
                     ?? intrfaceDirFiles.FirstOrDefault(x =>
-                        x.Name.EqualsI(FMDirs.Intrface + dsc + FMFiles.NewGameStr))
+                        x.Name.EqualsI(FMDirs.IntrfaceS(dsc) + FMFiles.NewGameStr))
                     ?? intrfaceDirFiles.FirstOrDefault(x =>
-                        x.Name.StartsWithI(FMDirs.Intrface + dsc) &&
+                        x.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
                         x.Name.EndsWithI(dsc + FMFiles.NewGameStr));
             }
 

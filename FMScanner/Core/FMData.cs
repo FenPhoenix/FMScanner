@@ -55,6 +55,11 @@ namespace FMScanner
         /// <see langword="true"/> to detect whether the mission contains custom resources.
         /// </summary>
         public bool ScanCustomResources { get; set; } = true;
+        /// <summary>
+        /// <see langword="true"/> to detect the size of the mission. This will differ depending on whether the
+        /// mission is a compressed archive or an uncompressed directory.
+        /// </summary>
+        public bool ScanSize { get; set; } = true;
     }
 
     public sealed class ProgressReport
@@ -89,6 +94,7 @@ namespace FMScanner
     public sealed class ScannedFMData
     {
         public string ArchiveName { get; set; } = null;
+        public long? Size { get; set; } = null;
         public string Title { get; set; } = null;
         public List<string> AlternateTitles { get; set; } = new List<string>();
         public string Author { get; set; } = null;
