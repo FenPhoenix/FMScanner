@@ -277,6 +277,8 @@ namespace FMScanner
                     try
                     {
                         Archive = new ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read));
+                        // Archive.Entries is lazy-loaded, so this will also trigger any exceptions that may be
+                        // thrown while loading them. If this passes, we're definitely good.
                         if (Archive.Entries.Count == 0) return null;
                     }
                     catch (Exception)
