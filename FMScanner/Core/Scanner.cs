@@ -174,6 +174,8 @@ namespace FMScanner
 
             #endregion
 
+            tempPath = tempPath.Replace('/', '\\');
+
             var scannedFMDataList = new List<ScannedFMData>();
 
             // Init and dispose rtfBox here to avoid cross-thread exceptions.
@@ -184,7 +186,7 @@ namespace FMScanner
                 {
                     #region Init
 
-                    var fm = missions[i];
+                    var fm = missions[i].Replace('/', '\\');
                     FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
 
                     Archive?.Dispose();
@@ -232,11 +234,11 @@ namespace FMScanner
         {
             OverallTimer.Restart();
 
-            dsc = FmIsZip ? '/' : Path.DirectorySeparatorChar;
+            dsc = FmIsZip ? '/' : '\\';
 
-            // Sometimes we'll want to remove this from the start of a string to get a relative path, so
-            // it's critical that we always know we have a dir separator on the end so we don't end up
-            // with a leading one on the string when we remove this from the start of it
+            // Sometimes we'll want to remove this from the start of a string to get a relative path, so it's
+            // critical that we always know we have a dir separator on the end so we don't end up with a leading
+            // one on the string when we remove this from the start of it
             if (FmWorkingPath[FmWorkingPath.Length - 1] != dsc) FmWorkingPath += dsc;
 
             #region Check for and setup 7-Zip
@@ -275,8 +277,9 @@ namespace FMScanner
                     try
                     {
                         Archive = new ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read));
+                        if (Archive.Entries.Count == 0) return null;
                     }
-                    catch (InvalidDataException)
+                    catch (Exception)
                     {
                         // Invalid zip file, whatever, move on
                         return null;
@@ -522,215 +525,211 @@ namespace FMScanner
                 return false;
             }
 
-            try
+            if (FmIsZip || ScanOptions.ScanSize)
             {
-                if (FmIsZip || ScanOptions.ScanSize)
+                for (var i = 0; i < (FmIsZip ? Archive.Entries.Count : FmDirFiles.Count); i++)
                 {
-                    for (var i = 0; i < (FmIsZip ? Archive.Entries.Count : FmDirFiles.Count); i++)
+                    var fn = FmIsZip
+                        ? Archive.Entries[i].FullName
+                        : FmDirFiles[i].FullName.Substring(FmWorkingPath.Length);
+
+                    var index = FmIsZip ? i : -1;
+
+                    if (!fn.Contains(dsc) && fn.Contains('.'))
                     {
-                        var fn = FmIsZip
-                            ? Archive.Entries[i].FullName
-                            : FmDirFiles[i].FullName.Substring(FmWorkingPath.Length);
-
-                        var index = FmIsZip ? i : -1;
-
-                        if (!fn.Contains(dsc) && fn.Contains('.'))
-                        {
-                            baseDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
-                            // Fallthrough so ScanCustomResources can use it
-                        }
-                        else if (fn.StartsWithI(FMDirs.StringsS(dsc)))
-                        {
-                            stringsDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
-                            continue;
-                        }
-                        else if (fn.StartsWithI(FMDirs.IntrfaceS(dsc)))
-                        {
-                            intrfaceDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
-                            // Fallthrough so ScanCustomResources can use it
-                        }
-                        else if (fn.StartsWithI(FMDirs.BooksS(dsc)))
-                        {
-                            booksDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
-                            continue;
-                        }
-
-                        // Inlined for performance. We cut the time roughly in half by doing this.
-                        if (ScanOptions.ScanCustomResources)
-                        {
-                            if (fmd.HasAutomap == null &&
-                                fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                                fn.CountChars(dsc) >= 2 &&
-                                fn.EndsWithI("ra.bin"))
-                            {
-                                fmd.HasAutomap = true;
-                                // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
-                                fmd.HasMap = true;
-                            }
-                            else if (fmd.HasMap == null && MapFileExists(fn))
-                            {
-                                fmd.HasMap = true;
-                            }
-                            else if (fmd.HasCustomMotions == null &&
-                                     fn.StartsWithI(FMDirs.MotionsS(dsc)) &&
-                                     MotionFileExtensions.Any(fn.EndsWithI))
-                            {
-                                fmd.HasCustomMotions = true;
-                            }
-                            else if (fmd.HasMovies == null &&
-                                     fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
-                                     fn.HasFileExtension())
-                            {
-                                fmd.HasMovies = true;
-                            }
-                            else if (fmd.HasCustomTextures == null &&
-                                     fn.StartsWithI(FMDirs.FamS(dsc)) &&
-                                     ImageFileExtensions.Any(fn.EndsWithI))
-                            {
-                                fmd.HasCustomTextures = true;
-                            }
-                            else if (fmd.HasCustomObjects == null &&
-                                     fn.StartsWithI(FMDirs.ObjS(dsc)) &&
-                                     fn.EndsWithI(".bin"))
-                            {
-                                fmd.HasCustomObjects = true;
-                            }
-                            else if (fmd.HasCustomCreatures == null &&
-                                     fn.StartsWithI(FMDirs.MeshS(dsc)) &&
-                                     fn.EndsWithI(".bin"))
-                            {
-                                fmd.HasCustomCreatures = true;
-                            }
-                            else if (fmd.HasCustomScripts == null &&
-                                     (!fn.Contains(dsc) &&
-                                      ScriptFileExtensions.Any(fn.EndsWithI)) ||
-                                     (fn.StartsWithI(FMDirs.ScriptsS(dsc)) &&
-                                      fn.HasFileExtension()))
-                            {
-                                fmd.HasCustomScripts = true;
-                            }
-                            else if (fmd.HasCustomSounds == null &&
-                                     fn.StartsWithI(FMDirs.SndS(dsc)) &&
-                                     fn.HasFileExtension())
-                            {
-                                fmd.HasCustomSounds = true;
-                            }
-                            else if (fmd.HasCustomSubtitles == null &&
-                                     fn.StartsWithI(FMDirs.SubtitlesS(dsc)) &&
-                                     fn.EndsWithI(".sub"))
-                            {
-                                fmd.HasCustomSubtitles = true;
-                            }
-                        }
+                        baseDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
+                        // Fallthrough so ScanCustomResources can use it
+                    }
+                    else if (fn.StartsWithI(FMDirs.StringsS(dsc)))
+                    {
+                        stringsDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
+                        continue;
+                    }
+                    else if (fn.StartsWithI(FMDirs.IntrfaceS(dsc)))
+                    {
+                        intrfaceDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
+                        // Fallthrough so ScanCustomResources can use it
+                    }
+                    else if (fn.StartsWithI(FMDirs.BooksS(dsc)))
+                    {
+                        booksDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
+                        continue;
                     }
 
+                    // Inlined for performance. We cut the time roughly in half by doing this.
                     if (ScanOptions.ScanCustomResources)
                     {
-                        if (fmd.HasMap == null) fmd.HasMap = false;
-                        if (fmd.HasAutomap == null) fmd.HasAutomap = false;
-                        if (fmd.HasCustomMotions == null) fmd.HasCustomMotions = false;
-                        if (fmd.HasMovies == null) fmd.HasMovies = false;
-                        if (fmd.HasCustomTextures == null) fmd.HasCustomTextures = false;
-                        if (fmd.HasCustomObjects == null) fmd.HasCustomObjects = false;
-                        if (fmd.HasCustomCreatures == null) fmd.HasCustomCreatures = false;
-                        if (fmd.HasCustomScripts == null) fmd.HasCustomScripts = false;
-                        if (fmd.HasCustomSounds == null) fmd.HasCustomSounds = false;
-                        if (fmd.HasCustomSubtitles == null) fmd.HasCustomSubtitles = false;
-                    }
-                }
-                else
-                {
-                    foreach (var f in EnumFiles("*", SearchOption.TopDirectoryOnly))
-                    {
-                        baseDirFiles.Add(new NameAndIndex { Name = GetFileName(f) });
-                    }
-
-                    foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
-                    {
-                        stringsDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
-                    }
-
-                    foreach (var f in EnumFiles(FMDirs.Intrface, "*", SearchOption.AllDirectories))
-                    {
-                        intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
-                    }
-
-                    foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
-                    {
-                        booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
-                    }
-
-                    // TODO: Maybe extract this again, but then I have to extract MapFileExists() too
-                    if (ScanOptions.ScanCustomResources)
-                    {
-                        // TODO: I already have baseDirFiles; see if this EnumerateDirectories can be removed
-                        // Even a janky scan through baseDirFiles would probably be faster than hitting the disk
-                        var baseDirFolders = (
-                            from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
-                                SearchOption.TopDirectoryOnly)
-                            select f.Substring(f.LastIndexOf(dsc) + 1)).ToArray();
-
-                        foreach (var f in intrfaceDirFiles)
+                        if (fmd.HasAutomap == null &&
+                            fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                            fn.CountChars(dsc) >= 2 &&
+                            fn.EndsWithI("ra.bin"))
                         {
-                            if (fmd.HasAutomap == null &&
-                                f.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                                f.Name.CountChars(dsc) >= 2 &&
-                                f.Name.EndsWithI("ra.bin"))
-                            {
-                                fmd.HasAutomap = true;
-                                // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
-                                fmd.HasMap = true;
-                                break;
-                            }
-                            if (fmd.HasMap == null && MapFileExists(f.Name)) fmd.HasMap = true;
+                            fmd.HasAutomap = true;
+                            // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
+                            fmd.HasMap = true;
                         }
-                        if (fmd.HasMap == null) fmd.HasMap = false;
-                        if (fmd.HasAutomap == null) fmd.HasAutomap = false;
-
-                        fmd.HasCustomMotions =
-                            baseDirFolders.ContainsI(FMDirs.Motions) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Motions),
-                                MotionFilePatterns);
-
-                        fmd.HasMovies =
-                            baseDirFolders.ContainsI(FMDirs.Movies) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
-
-                        fmd.HasCustomTextures =
-                            baseDirFolders.ContainsI(FMDirs.Fam) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Fam),
-                                ImageFilePatterns);
-
-                        fmd.HasCustomObjects =
-                            baseDirFolders.ContainsI(FMDirs.Obj) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Obj), "*.bin");
-
-                        fmd.HasCustomCreatures =
-                            baseDirFolders.ContainsI(FMDirs.Mesh) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Mesh), "*.bin");
-
-                        fmd.HasCustomScripts =
-                            baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
-                            (baseDirFolders.ContainsI(FMDirs.Scripts) &&
-                             FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
-
-                        fmd.HasCustomSounds =
-                            baseDirFolders.ContainsI(FMDirs.Snd) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
-
-                        fmd.HasCustomSubtitles =
-                            baseDirFolders.ContainsI(FMDirs.Subtitles) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
+                        else if (fmd.HasMap == null && MapFileExists(fn))
+                        {
+                            fmd.HasMap = true;
+                        }
+                        else if (fmd.HasCustomMotions == null &&
+                                 fn.StartsWithI(FMDirs.MotionsS(dsc)) &&
+                                 MotionFileExtensions.Any(fn.EndsWithI))
+                        {
+                            fmd.HasCustomMotions = true;
+                        }
+                        else if (fmd.HasMovies == null &&
+                                 fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
+                                 fn.HasFileExtension())
+                        {
+                            fmd.HasMovies = true;
+                        }
+                        else if (fmd.HasCustomTextures == null &&
+                                 fn.StartsWithI(FMDirs.FamS(dsc)) &&
+                                 ImageFileExtensions.Any(fn.EndsWithI))
+                        {
+                            fmd.HasCustomTextures = true;
+                        }
+                        else if (fmd.HasCustomObjects == null &&
+                                 fn.StartsWithI(FMDirs.ObjS(dsc)) &&
+                                 fn.EndsWithI(".bin"))
+                        {
+                            fmd.HasCustomObjects = true;
+                        }
+                        else if (fmd.HasCustomCreatures == null &&
+                                 fn.StartsWithI(FMDirs.MeshS(dsc)) &&
+                                 fn.EndsWithI(".bin"))
+                        {
+                            fmd.HasCustomCreatures = true;
+                        }
+                        else if (fmd.HasCustomScripts == null &&
+                                 (!fn.Contains(dsc) &&
+                                  ScriptFileExtensions.Any(fn.EndsWithI)) ||
+                                 (fn.StartsWithI(FMDirs.ScriptsS(dsc)) &&
+                                  fn.HasFileExtension()))
+                        {
+                            fmd.HasCustomScripts = true;
+                        }
+                        else if (fmd.HasCustomSounds == null &&
+                                 fn.StartsWithI(FMDirs.SndS(dsc)) &&
+                                 fn.HasFileExtension())
+                        {
+                            fmd.HasCustomSounds = true;
+                        }
+                        else if (fmd.HasCustomSubtitles == null &&
+                                 fn.StartsWithI(FMDirs.SubtitlesS(dsc)) &&
+                                 fn.EndsWithI(".sub"))
+                        {
+                            fmd.HasCustomSubtitles = true;
+                        }
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.WriteLine(e);
-                return false;
-            }
 
-            if (baseDirFiles.Count == 0) return false;
+                if (baseDirFiles.Count == 0) return false;
+
+                if (ScanOptions.ScanCustomResources)
+                {
+                    if (fmd.HasMap == null) fmd.HasMap = false;
+                    if (fmd.HasAutomap == null) fmd.HasAutomap = false;
+                    if (fmd.HasCustomMotions == null) fmd.HasCustomMotions = false;
+                    if (fmd.HasMovies == null) fmd.HasMovies = false;
+                    if (fmd.HasCustomTextures == null) fmd.HasCustomTextures = false;
+                    if (fmd.HasCustomObjects == null) fmd.HasCustomObjects = false;
+                    if (fmd.HasCustomCreatures == null) fmd.HasCustomCreatures = false;
+                    if (fmd.HasCustomScripts == null) fmd.HasCustomScripts = false;
+                    if (fmd.HasCustomSounds == null) fmd.HasCustomSounds = false;
+                    if (fmd.HasCustomSubtitles == null) fmd.HasCustomSubtitles = false;
+                }
+            }
+            else
+            {
+                foreach (var f in EnumFiles("*", SearchOption.TopDirectoryOnly))
+                {
+                    baseDirFiles.Add(new NameAndIndex { Name = GetFileName(f) });
+                }
+
+                if (baseDirFiles.Count == 0) return false;
+
+                foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
+                {
+                    stringsDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                }
+
+                foreach (var f in EnumFiles(FMDirs.Intrface, "*", SearchOption.AllDirectories))
+                {
+                    intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                }
+
+                foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
+                {
+                    booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                }
+
+                // TODO: Maybe extract this again, but then I have to extract MapFileExists() too
+                if (ScanOptions.ScanCustomResources)
+                {
+                    // TODO: I already have baseDirFiles; see if this EnumerateDirectories can be removed
+                    // Even a janky scan through baseDirFiles would probably be faster than hitting the disk
+                    var baseDirFolders = (
+                        from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
+                            SearchOption.TopDirectoryOnly)
+                        select f.Substring(f.LastIndexOf(dsc) + 1)).ToArray();
+
+                    foreach (var f in intrfaceDirFiles)
+                    {
+                        if (fmd.HasAutomap == null &&
+                            f.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                            f.Name.CountChars(dsc) >= 2 &&
+                            f.Name.EndsWithI("ra.bin"))
+                        {
+                            fmd.HasAutomap = true;
+                            // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
+                            fmd.HasMap = true;
+                            break;
+                        }
+
+                        if (fmd.HasMap == null && MapFileExists(f.Name)) fmd.HasMap = true;
+                    }
+
+                    if (fmd.HasMap == null) fmd.HasMap = false;
+                    if (fmd.HasAutomap == null) fmd.HasAutomap = false;
+
+                    fmd.HasCustomMotions =
+                        baseDirFolders.ContainsI(FMDirs.Motions) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Motions),
+                            MotionFilePatterns);
+
+                    fmd.HasMovies =
+                        baseDirFolders.ContainsI(FMDirs.Movies) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
+
+                    fmd.HasCustomTextures =
+                        baseDirFolders.ContainsI(FMDirs.Fam) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Fam),
+                            ImageFilePatterns);
+
+                    fmd.HasCustomObjects =
+                        baseDirFolders.ContainsI(FMDirs.Obj) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Obj), "*.bin");
+
+                    fmd.HasCustomCreatures =
+                        baseDirFolders.ContainsI(FMDirs.Mesh) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Mesh), "*.bin");
+
+                    fmd.HasCustomScripts =
+                        baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
+                        (baseDirFolders.ContainsI(FMDirs.Scripts) &&
+                         FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
+
+                    fmd.HasCustomSounds =
+                        baseDirFolders.ContainsI(FMDirs.Snd) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
+
+                    fmd.HasCustomSubtitles =
+                        baseDirFolders.ContainsI(FMDirs.Subtitles) &&
+                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
+                }
+            }
 
             #endregion
 

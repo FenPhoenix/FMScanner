@@ -74,9 +74,7 @@ namespace FMScanner
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         private static bool FirstFileExists(FastIOSearchOption searchOption, string path, params string[] searchPatterns)
         {
-            var dsc = Path.DirectorySeparatorChar;
-
-            path = path.TrimEnd(dsc);
+            path = path.TrimEnd('\\');
 
             if (string.IsNullOrWhiteSpace(path) || Path.GetInvalidPathChars().Any(path.Contains))
             {
@@ -103,7 +101,7 @@ namespace FMScanner
             {
                 foreach (var p in searchPatterns)
                 {
-                    findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd(dsc) + @"\" + p, out findData);
+                    findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + '\\' + p, out findData);
                     if (findHandle == INVALID_HANDLE_VALUE)
                     {
                         var err = Marshal.GetLastWin32Error();
@@ -135,7 +133,7 @@ namespace FMScanner
                 }
             }
 
-            findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd(dsc) + @"\*", out findData);
+            findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + @"\*", out findData);
             if (findHandle == INVALID_HANDLE_VALUE)
             {
                 var err = Marshal.GetLastWin32Error();
