@@ -62,6 +62,13 @@ namespace FMScanner
 
         #region Properties
 
+        /// <summary>
+        /// The encoding to use when reading entry names in FM archives. Use this when you need absolute
+        /// consistency (like when you're grabbing file names and then looking them back up within the archive
+        /// later). Default: <see cref="Encoding.UTF8"/>
+        /// </summary>
+        public Encoding ZipEntryNameEncoding { get; set; } = Encoding.UTF8;
+
         #region Disposable
 
         private ZipArchive Archive { get; set; }
@@ -280,7 +287,9 @@ namespace FMScanner
                 {
                     try
                     {
-                        Archive = new ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read));
+                        Archive = new ZipArchive(new FileStream(ArchivePath, FileMode.Open, FileAccess.Read),
+                            leaveOpen: false, ZipEntryNameEncoding);
+
                         // Archive.Entries is lazy-loaded, so this will also trigger any exceptions that may be
                         // thrown while loading them. If this passes, we're definitely good.
                         if (Archive.Entries.Count == 0) return null;
@@ -393,10 +402,7 @@ namespace FMScanner
                     if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
                     fmData.Version = t.Version;
 
-                    if (!string.IsNullOrEmpty(t.ReleaseDate))
-                    {
-                        if (StringToDate(t.ReleaseDate, out var dt)) fmData.LastUpdateDate = dt;
-                    }
+                    if (t.ReleaseDate != null) fmData.LastUpdateDate = t.ReleaseDate;
                 }
             }
             {
@@ -408,10 +414,7 @@ namespace FMScanner
                     if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
                     fmData.Description = t.Description;
 
-                    if (!string.IsNullOrEmpty(t.LastUpdateDate))
-                    {
-                        if (StringToDate(t.LastUpdateDate, out var dt)) fmData.LastUpdateDate = dt;
-                    }
+                    if (t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
 
                     fmData.TagsString = t.Tags;
                 }
@@ -444,14 +447,6 @@ namespace FMScanner
                     "Date of release", "Release Date", "Release date");
                 if (!string.IsNullOrEmpty(ds))
                 {
-                    // Remove "st", "nd", "rd, "th" if present, as DateTime.TryParse() will choke on them
-                    var match = DaySuffixes.Match(ds);
-                    if (match.Success)
-                    {
-                        var suffix = match.Groups["Suffix"];
-                        ds = ds.Substring(0, suffix.Index) + ds.Substring(suffix.Index + suffix.Length);
-                    }
-
                     if (StringToDate(ds, out var dt)) fmData.LastUpdateDate = dt;
                 }
             }
@@ -460,10 +455,7 @@ namespace FMScanner
             if (fmData.LastUpdateDate == null && ReadmeFiles.Count > 0)
             {
                 var rd = ReadmeFiles[0].LastModifiedDate;
-                if (rd.Year > 1998)
-                {
-                    fmData.LastUpdateDate = rd;
-                }
+                if (rd.Year > 1998) fmData.LastUpdateDate = rd;
             }
 
             // Look for the first used .mis file's last modified date
@@ -916,13 +908,13 @@ namespace FMScanner
             return true;
         }
 
-        private (string Title, string Author, string Version, string ReleaseDate)
+        private (string Title, string Author, string Version, DateTime? ReleaseDate)
         ReadFmInfoXml(NameAndIndex file)
         {
             string title = null;
             string author = null;
             string version = null;
-            string releaseDate = null;
+            DateTime? releaseDate = null;
 
             var fmInfoXml = new XmlDocument();
 
@@ -964,8 +956,8 @@ namespace FMScanner
             var xReleaseDate = fmInfoXml.GetElementsByTagName("releasedate");
             if (xReleaseDate.Count > 0)
             {
-                releaseDate = xReleaseDate[0].InnerText;
-                releaseDate = StringToDate(releaseDate, out var dt) ? dt.ToShortDateString() : null;
+                var rdString = xReleaseDate[0].InnerText;
+                releaseDate = StringToDate(rdString, out var dt) ? (DateTime?)dt : null;
             }
 
             // These files also specify languages and whether the mission has custom stuff, but we're not going
@@ -974,11 +966,11 @@ namespace FMScanner
             return (title, author, version, releaseDate);
         }
 
-        private (string Title, string Author, string Description, string LastUpdateDate, string Tags)
+        private (string Title, string Author, string Description, DateTime? LastUpdateDate, string Tags)
         ReadFmIni(NameAndIndex file)
         {
             var ret = (Title: (string)null, Author: (string)null, Description: (string)null,
-                LastUpdateDate: (string)null, Tags: (string)null);
+                LastUpdateDate: (DateTime?)null, Tags: (string)null);
 
             #region Load INI
 
@@ -1065,19 +1057,18 @@ namespace FMScanner
             if (ScanOptions.ScanTitle) ret.Title = fmIni.NiceName;
 
             var rd = fmIni.ReleaseDate;
-            var epoch1970 = new DateTime(1970, 1, 1, 0, 0, 0);
 
             // The fm.ini Unix timestamp looks 32-bit, but FMSel's source code pegs it as int64. It must just be
             // writing only as many digits as it needs. That's good, because 32-bit will run out in 2038. Anyway,
             // we should parse it as long (NDL only does int, so it's in for a surprise in 20 years :P)
             if (long.TryParse(rd, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long seconds))
             {
-                var newDate = epoch1970.AddSeconds(seconds).ToShortDateString();
+                var newDate = DateTimeOffset.FromUnixTimeSeconds(seconds).DateTime;
                 ret.LastUpdateDate = newDate;
             }
             else if (!string.IsNullOrEmpty(fmIni.ReleaseDate))
             {
-                ret.LastUpdateDate = StringToDate(fmIni.ReleaseDate, out var dt) ? dt.ToShortDateString() : null;
+                ret.LastUpdateDate = StringToDate(fmIni.ReleaseDate, out var dt) ? (DateTime?)dt : null;
             }
 
             ret.Description = fmIni.Descr;
@@ -1661,8 +1652,8 @@ namespace FMScanner
             var containsCloseParen = ret.Contains(')');
 
             // Remove extraneous whitespace within parentheses
-            if (containsOpenParen) ret = ret.Replace("( ", "(");
-            if (containsCloseParen) ret = ret.Replace(" )", ")");
+            if (containsOpenParen) ret = OpenParenSpacesRegex.Replace(ret, "(");
+            if (containsCloseParen) ret = CloseParenSpacesRegex.Replace(ret, ")");
 
             // If there's stuff like "(this an incomplete sentence and" at the end, chop it right off
             if (containsOpenParen && ret.CountChars('(') == 1 && !containsCloseParen)

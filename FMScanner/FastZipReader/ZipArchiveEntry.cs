@@ -141,16 +141,17 @@ namespace FMScanner.FastZipReader
             if ((_generalPurposeBitFlag & BitFlagValues.UnicodeFileName) == 0)
             {
                 #region Original corefx
-                //readEntryNameEncoding = _archive == null ?
-                //    Encoding.UTF8 :
-                //    _archive.EntryNameEncoding ?? Encoding.UTF8;
+                readEntryNameEncoding = Archive == null ?
+                    Encoding.UTF8 :
+                    Archive.EntryNameEncoding ?? Encoding.UTF8;
                 #endregion
 
+                #region .NET Framework 4.7.2
                 // This is what .NET Framework 4.7.2 seems to be doing (at least I get the same result with this)
-                // TODO: Carefully consider whether I want to use Encoding.Default
-                readEntryNameEncoding = Archive == null
-                    ? Encoding.UTF8
-                    : Archive.EntryNameEncoding ?? Encoding.Default;
+                //readEntryNameEncoding = Archive == null
+                //    ? Encoding.UTF8
+                //    : Archive.EntryNameEncoding ?? Encoding.Default;
+                #endregion
             }
             else
             {

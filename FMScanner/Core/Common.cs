@@ -171,10 +171,19 @@ namespace FMScanner
         public string Descr { get; set; }
     }
 
+    // Putting regexes in here is a perf optimization: static (initialized only once) and Compiled increases
+    // their performance by a huge amount. And as we know, regexes need all the performance help they can get.
     internal static class Regexes
     {
-        internal static Regex DaySuffixes =
-            new Regex(@"\d(?<Suffix>(st|nd|rd|th)).+", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+        internal static Regex OpenParenSpacesRegex =
+            new Regex(@"\(\s+", RegexOptions.Compiled);
+
+        internal static Regex CloseParenSpacesRegex =
+            new Regex(@"\s+\)", RegexOptions.Compiled);
+
+        internal static Regex DaySuffixesRegex =
+            new Regex(@"\d(?<Suffix>(st|nd|rd|th)).+",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
         internal static Regex VersionExclude1Regex =
             new Regex(@"\d\.\d+\+", RegexOptions.Compiled);
