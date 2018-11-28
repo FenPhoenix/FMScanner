@@ -10,8 +10,8 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
 If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
+using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 
 namespace FMScanner
 {
@@ -83,41 +83,66 @@ namespace FMScanner
         public static string Campaign { get; } = "campaign";
     }
 
+    public enum ReadmeType
+    {
+        PlainText,
+        Rtf,
+        Wri
+    }
+
     public sealed class Readme
     {
         public string FileName { get; set; } = null;
+        public ReadmeType Type { get; set; }
         public int ArchiveIndex { get; set; } = -1;
     }
 
-    [SuppressMessage("ReSharper", "MemberCanBeInternal")]
-    [SuppressMessage("ReSharper", "AutoPropertyCanBeMadeGetOnly.Global")]
     public sealed class ScannedFMData
     {
-        public string ArchiveName { get; set; } = null;
-        public long? Size { get; set; } = null;
-        public string Title { get; set; } = null;
-        public List<string> AlternateTitles { get; set; } = new List<string>();
-        public string Author { get; set; } = null;
-        public string Type { get; set; } = null;
-        public string[] IncludedMissions { get; set; } = null;
-        public string Game { get; set; } = null;
-        public string[] Languages { get; set; } = null;
-        public string Version { get; set; } = null;
-        public bool? NewDarkRequired { get; set; }
-        public string NewDarkMinRequiredVersion { get; set; } = null;
-        public string OriginalReleaseDate { get; set; } = null;
-        public string LastUpdateDate { get; set; } = null;
-        public bool? HasCustomScripts { get; set; }
-        public bool? HasCustomTextures { get; set; }
-        public bool? HasCustomSounds { get; set; }
-        public bool? HasCustomObjects { get; set; }
-        public bool? HasCustomCreatures { get; set; }
-        public bool? HasCustomMotions { get; set; }
-        public bool? HasAutomap { get; set; }
-        public bool? HasMovies { get; set; }
-        public bool? HasMap { get; set; }
-        public bool? HasCustomSubtitles { get; set; }
-        public string Description { get; set; } = null;
-        public List<Readme> Readmes { get; set; } = new List<Readme>();
+        public string ArchiveName { get; internal set; } = null;
+        public long? Size { get; internal set; } = null;
+        public string Title { get; internal set; } = null;
+        public List<string> AlternateTitles { get; internal set; } = new List<string>();
+        public string Author { get; internal set; } = null;
+        public string Type { get; internal set; } = null;
+        public string[] IncludedMissions { get; internal set; } = null;
+        public string Game { get; internal set; } = null;
+        public string[] Languages { get; internal set; } = null;
+        public string Version { get; internal set; } = null;
+        public bool? NewDarkRequired { get; internal set; }
+        public string NewDarkMinRequiredVersion { get; internal set; } = null;
+        public DateTime? OriginalReleaseDate { get; internal set; } = null;
+
+        private DateTime? _lastUpdateDate;
+        public DateTime? LastUpdateDate
+        {
+            get => _lastUpdateDate;
+            internal set
+            {
+                // Future years will eventually stop being rejected once the current date passes them, but eh
+                if (value != null && ((DateTime)value).Year > DateTime.Now.Year)
+                {
+                    _lastUpdateDate = null;
+                }
+                else
+                {
+                    _lastUpdateDate = value;
+                }
+            }
+        }
+
+        public bool? HasCustomScripts { get; internal set; }
+        public bool? HasCustomTextures { get; internal set; }
+        public bool? HasCustomSounds { get; internal set; }
+        public bool? HasCustomObjects { get; internal set; }
+        public bool? HasCustomCreatures { get; internal set; }
+        public bool? HasCustomMotions { get; internal set; }
+        public bool? HasAutomap { get; internal set; }
+        public bool? HasMovies { get; internal set; }
+        public bool? HasMap { get; internal set; }
+        public bool? HasCustomSubtitles { get; internal set; }
+        public string Description { get; internal set; } = null;
+        public List<Readme> Readmes { get; internal set; } = new List<Readme>();
+        public string TagsString { get; internal set; } = null;
     }
 }

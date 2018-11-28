@@ -10,7 +10,9 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
 If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using FMScanner.SimpleHelpers;
@@ -19,6 +21,24 @@ namespace FMScanner
 {
     internal static class Methods
     {
+        internal static bool StringToDate(string dateString, out DateTime dateTime)
+        {
+            // We pass specific date formats to ensure that no field will be inferred: if there's no year, we
+            // want to fail, and not assume the current year.
+            var success = DateTime.TryParseExact(dateString, FMConstants.DateFormats,
+                DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AllowWhiteSpaces, out var result);
+            if (success)
+            {
+                dateTime = result;
+                return true;
+            }
+            else
+            {
+                dateTime = new DateTime();
+                return false;
+            }
+        }
+
         #region ReadAllLines / ReadAllText
 
         /// <summary>

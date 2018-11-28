@@ -109,9 +109,6 @@ namespace FMScanner
 
         internal static string[] DateFormats { get; } =
         {
-            "yyyy/MM/dd",
-            "yyyy-MM-dd",
-
             "MMM d yyyy",
             "MMM d, yyyy",
             "MMM dd yyyy",
@@ -125,10 +122,34 @@ namespace FMScanner
             "d MMM yyyy",
             "d MMM, yyyy",
             "dd MMM yyyy",
-            "dd MMM, yyyy"
+            "dd MMM, yyyy",
 
-            // Don't even bother with the nasty MM/dd/yyyy / dd/MM/yyyy stuff unless I find a lot of missions are
-            // using it
+            "yyyy MMM d",
+            "yyyy MMM dd",
+            "yyyy MMMM d",
+            "yyyy MMMM dd",
+
+            "MM/dd/yyyy",
+            "dd/MM/yyyy",
+            "MM/dd/yy",
+            "dd/MM/yy",
+
+            "M/d/yyyy",
+            "d/M/yyyy",
+            "M/d/yy",
+            "d/M/yy",
+
+            "MM-dd-yyyy",
+            "dd-MM-yyyy",
+            "MM-dd-yy",
+            "dd-MM-yy",
+
+            "M-d-yyyy",
+            "d-M-yyyy",
+            "M-d-yy",
+            "d-M-yy"
+
+            // TODO: Ambiguous months and days might pose a problem?
         };
     }
 
@@ -152,6 +173,9 @@ namespace FMScanner
 
     internal static class Regexes
     {
+        internal static Regex DaySuffixes =
+            new Regex(@"\d(?<Suffix>(st|nd|rd|th)).+", RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+
         internal static Regex VersionExclude1Regex =
             new Regex(@"\d\.\d+\+", RegexOptions.Compiled);
 

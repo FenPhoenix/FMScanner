@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -38,6 +39,7 @@ namespace FMScanner
     internal sealed class ReadmeInternal
     {
         internal string FileName { get; set; }
+        internal ReadmeType Type { get; set; }
         internal int ArchiveIndex { get; set; } = -1;
         internal string[] Lines { get; set; }
         internal string Text { get; set; }
@@ -85,6 +87,7 @@ namespace FMScanner
 
         private enum SpecialLogic
         {
+            None,
             Title,
             Version,
             NewDarkMinimumVersion,
@@ -202,6 +205,7 @@ namespace FMScanner
                     }
 
                     ReadmeFiles = new List<ReadmeInternal>();
+                    FmDirFiles = new List<FileInfo>();
 
                     #endregion
 
@@ -303,7 +307,12 @@ namespace FMScanner
 
             #endregion
 
-            var fmData = new ScannedFMData();
+            var fmData = new ScannedFMData
+            {
+                ArchiveName = FmIsZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath.TrimEnd(dsc))
+            };
+
+            #region Size
 
             // Getting the size is horrendously expensive for folders, but if we're doing it then we can save
             // some time later by using the FileInfo list as a cache.
@@ -328,6 +337,8 @@ namespace FMScanner
                     fmData.Size = size;
                 }
             }
+
+            #endregion
 
             var baseDirFiles = new List<NameAndIndex>();
             var misFiles = new List<NameAndIndex>();
@@ -381,6 +392,11 @@ namespace FMScanner
                     if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
                     if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
                     fmData.Version = t.Version;
+
+                    if (!string.IsNullOrEmpty(t.ReleaseDate))
+                    {
+                        if (StringToDate(t.ReleaseDate, out var dt)) fmData.LastUpdateDate = dt;
+                    }
                 }
             }
             {
@@ -388,16 +404,100 @@ namespace FMScanner
                 if (fmIni != null)
                 {
                     var t = ReadFmIni(fmIni);
-                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Item1);
-                    if (ScanOptions.ScanAuthor) fmData.Author = t.Item2;
-                    fmData.Description = t.Item3;
-                    fmData.LastUpdateDate = t.Item4;
+                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
+                    if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
+                    fmData.Description = t.Description;
+
+                    if (!string.IsNullOrEmpty(t.LastUpdateDate))
+                    {
+                        if (StringToDate(t.LastUpdateDate, out var dt)) fmData.LastUpdateDate = dt;
+                    }
+
+                    fmData.TagsString = t.Tags;
                 }
             }
 
             #endregion
 
+            #region Read, cache, and set readme files
+
             ReadAndCacheReadmeFiles(baseDirFiles, rtfBox);
+
+            foreach (var r in ReadmeFiles)
+            {
+                fmData.Readmes.Add(new Readme
+                {
+                    FileName = r.FileName,
+                    Type = r.Type,
+                    ArchiveIndex = r.ArchiveIndex
+                });
+            }
+
+            #endregion
+
+            #region Set release date
+
+            // Look in the readme
+            if (fmData.LastUpdateDate == null)
+            {
+                var ds = GetValueFromReadme(SpecialLogic.None, "Date Of Release", "Date of Release",
+                    "Date of release", "Release Date", "Release date");
+                if (!string.IsNullOrEmpty(ds))
+                {
+                    // Remove "st", "nd", "rd, "th" if present, as DateTime.TryParse() will choke on them
+                    var match = DaySuffixes.Match(ds);
+                    if (match.Success)
+                    {
+                        var suffix = match.Groups["Suffix"];
+                        ds = ds.Substring(0, suffix.Index) + ds.Substring(suffix.Index + suffix.Length);
+                    }
+
+                    if (StringToDate(ds, out var dt)) fmData.LastUpdateDate = dt;
+                }
+            }
+
+            // Look for the first readme file's last modified date
+            if (fmData.LastUpdateDate == null && ReadmeFiles.Count > 0)
+            {
+                var rd = ReadmeFiles[0].LastModifiedDate;
+                if (rd.Year > 1998)
+                {
+                    fmData.LastUpdateDate = rd;
+                }
+            }
+
+            // Look for the first used .mis file's last modified date
+            if (fmData.LastUpdateDate == null)
+            {
+                DateTime misFileDate;
+                if (FmIsZip)
+                {
+                    misFileDate =
+                        new DateTimeOffset(ZipHelpers.ZipTimeToDateTime(
+                                    Archive.Entries[usedMisFiles[0].Index].LastWriteTime)).DateTime;
+                }
+                else
+                {
+                    if (ScanOptions.ScanSize && FmDirFiles.Count > 0)
+                    {
+                        var misFile =
+                            FmDirFiles.First(x => x.FullName.EqualsI(FmWorkingPath + usedMisFiles[0].Name));
+
+                        misFileDate = new DateTimeOffset(misFile.LastWriteTime).DateTime;
+                    }
+                    else
+                    {
+                        misFileDate = new FileInfo(Path.Combine(FmWorkingPath, usedMisFiles[0].Name))
+                            .LastWriteTime;
+                    }
+                }
+
+                if (misFileDate.Year > 1998) fmData.LastUpdateDate = misFileDate;
+            }
+
+            // If we still don't have anything, give up: we've made a good-faith effort.
+
+            #endregion
 
             #region Title and IncludedMissions
 
@@ -426,6 +526,12 @@ namespace FMScanner
                         "The name of Mission:"));
 
                 SetOrAddTitle(GetTitleFromNewGameStrFile(intrfaceDirFiles));
+
+                var topOfReadmeTitles = GetTitlesFromTopOfReadmes(ReadmeFiles);
+                if (topOfReadmeTitles != null && topOfReadmeTitles.Count > 0)
+                {
+                    foreach (var title in topOfReadmeTitles) SetOrAddTitle(title);
+                }
             }
 
             #endregion
@@ -460,15 +566,22 @@ namespace FMScanner
 
             #endregion
 
+            #region Version
+
             if (ScanOptions.ScanVersion && fmData.Version.IsEmpty())
             {
                 fmData.Version = GetVersion();
             }
+            #endregion
+
+            #region Languages
 
             if (ScanOptions.ScanLanguages)
             {
                 fmData.Languages = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
             }
+
+            #endregion
 
             #region NewDark/GameType checks
 
@@ -489,15 +602,7 @@ namespace FMScanner
             if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
 
             OverallTimer.Stop();
-
             Debug.WriteLine(@"This FM took:\r\n" + OverallTimer.Elapsed.ToString(@"hh\:mm\:ss\.fffffff"));
-
-            fmData.ArchiveName = FmIsZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath.TrimEnd(dsc));
-
-            foreach (var r in ReadmeFiles)
-            {
-                fmData.Readmes.Add(new Readme { FileName = r.FileName, ArchiveIndex = r.ArchiveIndex });
-            }
 
             return fmData;
         }
@@ -811,12 +916,13 @@ namespace FMScanner
             return true;
         }
 
-        private (string Title, string Author, string Version)
+        private (string Title, string Author, string Version, string ReleaseDate)
         ReadFmInfoXml(NameAndIndex file)
         {
             string title = null;
             string author = null;
             string version = null;
+            string releaseDate = null;
 
             var fmInfoXml = new XmlDocument();
 
@@ -855,17 +961,24 @@ namespace FMScanner
                 if (xVersion.Count > 0) version = xVersion[0].InnerText;
             }
 
+            var xReleaseDate = fmInfoXml.GetElementsByTagName("releasedate");
+            if (xReleaseDate.Count > 0)
+            {
+                releaseDate = xReleaseDate[0].InnerText;
+                releaseDate = StringToDate(releaseDate, out var dt) ? dt.ToShortDateString() : null;
+            }
+
             // These files also specify languages and whether the mission has custom stuff, but we're not going
             // to trust what we're told - we're going to detect that stuff by looking at what's actually there.
 
-            return (title, author, version);
+            return (title, author, version, releaseDate);
         }
 
-        private (string Title, string Author, string Description, string LastUpdateDate)
+        private (string Title, string Author, string Description, string LastUpdateDate, string Tags)
         ReadFmIni(NameAndIndex file)
         {
             var ret = (Title: (string)null, Author: (string)null, Description: (string)null,
-                LastUpdateDate: (string)null);
+                LastUpdateDate: (string)null, Tags: (string)null);
 
             #region Load INI
 
@@ -881,7 +994,7 @@ namespace FMScanner
                 iniLines = ReadAllLinesE(Path.Combine(FmWorkingPath, file.Name));
             }
 
-            if (iniLines == null || iniLines.Length == 0) return (null, null, null, null);
+            if (iniLines == null || iniLines.Length == 0) return (null, null, null, null, null);
 
             var fmIni = Ini.DeserializeFmIniLines(iniLines);
 
@@ -920,15 +1033,13 @@ namespace FMScanner
 
             #endregion
 
-            #region Tags
+            #region Get author from tags
 
-            // TODO: Get other info from tags: genre, length, whatever
             if (ScanOptions.ScanAuthor)
             {
-                var tags = fmIni.Tags;
-                if (tags != null)
+                if (fmIni.Tags != null)
                 {
-                    var tagsList = tags.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
+                    var tagsList = fmIni.Tags.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries);
 
                     var authors = tagsList.Where(x => x.StartsWithI("author:"));
 
@@ -948,8 +1059,27 @@ namespace FMScanner
 
             #endregion
 
+            // Return the raw string and let the caller decide what to do with it
+            ret.Tags = fmIni.Tags;
+
             if (ScanOptions.ScanTitle) ret.Title = fmIni.NiceName;
-            ret.LastUpdateDate = fmIni.ReleaseDate;
+
+            var rd = fmIni.ReleaseDate;
+            var epoch1970 = new DateTime(1970, 1, 1, 0, 0, 0);
+
+            // The fm.ini Unix timestamp looks 32-bit, but FMSel's source code pegs it as int64. It must just be
+            // writing only as many digits as it needs. That's good, because 32-bit will run out in 2038. Anyway,
+            // we should parse it as long (NDL only does int, so it's in for a surprise in 20 years :P)
+            if (long.TryParse(rd, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long seconds))
+            {
+                var newDate = epoch1970.AddSeconds(seconds).ToShortDateString();
+                ret.LastUpdateDate = newDate;
+            }
+            else if (!string.IsNullOrEmpty(fmIni.ReleaseDate))
+            {
+                ret.LastUpdateDate = StringToDate(fmIni.ReleaseDate, out var dt) ? dt.ToShortDateString() : null;
+            }
+
             ret.Description = fmIni.Descr;
 
             /*
@@ -1061,12 +1191,14 @@ namespace FMScanner
 
                 string fileName;
                 DateTime lastModifiedDate;
+                long readmeSize;
 
                 if (FmIsZip)
                 {
                     fileName = readmeEntry.Name;
                     lastModifiedDate =
                         new DateTimeOffset(ZipHelpers.ZipTimeToDateTime(readmeEntry.LastWriteTime)).DateTime;
+                    readmeSize = readmeEntry.Length;
                 }
                 else
                 {
@@ -1074,7 +1206,10 @@ namespace FMScanner
                     var fi = new FileInfo(readmeFileOnDisk);
                     fileName = fi.Name;
                     lastModifiedDate = fi.LastWriteTime;
+                    readmeSize = fi.Length;
                 }
+
+                if (readmeSize == 0) continue;
 
                 ReadmeFiles.Add(new ReadmeInternal
                 {
@@ -1126,13 +1261,20 @@ namespace FMScanner
                         if (success)
                         {
                             var last = ReadmeFiles[ReadmeFiles.Count - 1];
+                            last.Type = ReadmeType.Rtf;
                             last.Lines = rtfBox.Lines;
                             last.Text = rtfBox.Text;
+                        }
+                        else
+                        {
+                            Debug.WriteLine("-GetRtf fail");
+                            Debug.WriteLine(FmWorkingPath);
                         }
                     }
                     else
                     {
                         var last = ReadmeFiles[ReadmeFiles.Count - 1];
+                        last.Type = ReadmeType.PlainText;
                         last.Lines = FmIsZip
                             ? ReadAllLinesE(readmeStream, readmeFileLen, streamIsSeekable: true)
                             : ReadAllLinesE(readmeFileOnDisk);
@@ -1300,6 +1442,62 @@ namespace FMScanner
         private string GetValueFromReadme(SpecialLogic specialLogic, params string[] keys)
         {
             return GetValueFromReadme(specialLogic, false, keys);
+        }
+
+        // This is kind of just an excuse to say that my scanner can catch the full proper title of Deceptive
+        // Perception 2. :P
+        // This is likely to be a bit loose with its accuracy, but since values caught here are almost certain to
+        // end up as alternate titles, I can afford that.
+        private List<string> GetTitlesFromTopOfReadmes(List<ReadmeInternal> readmes)
+        {
+            var ret = new List<string>();
+
+            if (ReadmeFiles == null || ReadmeFiles.Count == 0) return ret;
+
+            foreach (var r in readmes)
+            {
+                if (r.FileName.ExtIsHtml() || r.Lines == null || r.Lines.Length == 0) continue;
+
+                var lines = r.Lines.ToList();
+
+                lines.RemoveAll(string.IsNullOrWhiteSpace);
+
+                if (lines.Count < 2) continue;
+
+                var titleConcat = "";
+
+                int linesToSearch = lines.Count >= 5 ? 5 : lines.Count;
+                for (int i = 0; i < linesToSearch; i++)
+                {
+                    var lineT = lines[i].Trim();
+                    if (i > 0 &&
+                        lineT.StartsWithI("By ") || lineT.StartsWithI("By: ") ||
+                        lineT.StartsWithI("Original concept by ") ||
+                        lineT.StartsWithI("Created by ") ||
+                        lineT.StartsWithI("A Thief 2 fan") ||
+                        lineT.StartsWithI("A Thief Gold fan") ||
+                        lineT.StartsWithI("A Thief 1 fan") ||
+                        lineT.StartsWithI("A Thief fan") ||
+                        lineT.StartsWithI("A fan mission"))
+                    {
+                        for (int j = 0; j < i; j++)
+                        {
+                            if (j > 0) titleConcat += " ";
+                            titleConcat += lines[j];
+                        }
+                        // Set a cutoff for the length so we don't end up with a huge string that's obviously
+                        // more than a title
+                        if (!string.IsNullOrWhiteSpace(titleConcat) && titleConcat.Length <= 50)
+                        {
+                            ret.Add(CleanupTitle(titleConcat));
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            return ret;
         }
 
         private string
