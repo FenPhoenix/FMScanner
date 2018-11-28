@@ -13,6 +13,7 @@ Detects the following:
 - Whether the mission requires NewDark
 - The minimum required NewDark version (if specified; work in progress)
 - Last updated date (only if specified in fm.ini currently)
+- Size of the FM (compressed size for zips; uncompressed size for folders)
 - Whether the mission has any of the following:
   - Map
   - Automap
@@ -43,7 +44,8 @@ private async void FMScannerUsageExample()
         ScanGameType = true,
         ScanNewDarkRequired = true,
         ScanNewDarkMinimumVersion = true,
-        ScanCustomResources = true
+        ScanCustomResources = true,
+        ScanSize = true
     };
 
     // In most cases archives will be scanned without requiring an extract to disk, but when that's not the
