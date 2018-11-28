@@ -1265,11 +1265,6 @@ namespace FMScanner
                             last.Lines = rtfBox.Lines;
                             last.Text = rtfBox.Text;
                         }
-                        else
-                        {
-                            Debug.WriteLine("-GetRtf fail");
-                            Debug.WriteLine(FmWorkingPath);
-                        }
                     }
                     else
                     {
