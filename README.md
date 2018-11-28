@@ -12,7 +12,7 @@ Detects the following:
 - Version (if specified; work in progress)
 - Whether the mission requires NewDark
 - The minimum required NewDark version (if specified; work in progress)
-- Last updated date (only if specified in fm.ini currently)
+- Last updated date (if specified explicitly; otherwise best guess)
 - Size of the FM (compressed size for zips; uncompressed size for folders)
 - Whether the mission has any of the following:
   - Map
