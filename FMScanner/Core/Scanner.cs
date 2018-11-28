@@ -431,8 +431,6 @@ namespace FMScanner
                 fmData.Readmes.Add(new Readme
                 {
                     FileName = r.FileName,
-                    Type = r.Type,
-                    ArchiveIndex = r.ArchiveIndex
                 });
             }
 

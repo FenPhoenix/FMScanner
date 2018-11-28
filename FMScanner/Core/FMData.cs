@@ -93,8 +93,6 @@ namespace FMScanner
     public sealed class Readme
     {
         public string FileName { get; set; } = null;
-        public ReadmeType Type { get; set; }
-        public int ArchiveIndex { get; set; } = -1;
     }
 
     public sealed class ScannedFMData
