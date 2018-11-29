@@ -309,7 +309,7 @@ namespace FMScanner
             {
                 if (!Directory.Exists(FmWorkingPath))
                 {
-                    throw new DirectoryNotFoundException("Directory not found: " + FmWorkingPath);
+                    return null;
                 }
                 Debug.WriteLine(@"----------" + FmWorkingPath);
             }
