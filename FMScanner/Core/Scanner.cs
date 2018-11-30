@@ -1575,7 +1575,7 @@ namespace FMScanner
                     {
                         lineStartsWithKey = true;
                         // Regex perf: fast enough not to worry about it
-                        if (Regex.Match(lineStartTrimmed, @"^" + x + @"\s*(:|-)", RegexOptions.IgnoreCase)
+                        if (Regex.Match(lineStartTrimmed, @"^" + x + @"\s*(:|-|\u2013)", RegexOptions.IgnoreCase)
                             .Success)
                         {
                             lineStartsWithKeyAndSeparatorChar = true;
@@ -1589,10 +1589,13 @@ namespace FMScanner
                 {
                     int indexColon = lineStartTrimmed.IndexOf(':');
                     int indexDash = lineStartTrimmed.IndexOf('-');
+                    int indexUnicodeDash = lineStartTrimmed.IndexOf('\u2013');
 
                     int index = indexColon > -1 && indexDash > -1
                         ? Math.Min(indexColon, indexDash)
                         : Math.Max(indexColon, indexDash);
+
+                    if (index == -1) index = indexUnicodeDash;
 
                     var finalValue = lineStartTrimmed.Substring(index + 1).Trim();
                     if (!string.IsNullOrEmpty(finalValue)) return finalValue;
