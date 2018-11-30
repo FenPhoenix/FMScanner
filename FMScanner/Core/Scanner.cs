@@ -1388,7 +1388,6 @@ namespace FMScanner
 
                     var umfNoExt = usedMisFiles[umfIndex].Name.RemoveExtension();
                     if (umfNoExt != null && umfNoExt.StartsWithI("miss") && umfNoExt.Length > 4 &&
-                        ScanOptions.ScanCampaignMissionNames &&
                         titleNum == umfNoExt.Substring(4))
                     {
                         titles.Add(title);
