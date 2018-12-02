@@ -157,8 +157,11 @@ namespace FMScanner
     {
         internal static char[] SkyObjVar = { 'S', 'K', 'Y', 'O', 'B', 'J', 'V', 'A', 'R' };
         internal static char[] ObjMap = { 'O', 'B', 'J', '_', 'M', 'A', 'P' };
-        internal static byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("vnull");
-        internal static byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("vnull");
+        //internal static byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("vnull");
+        //internal static byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("vnull");
+        internal static byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("RopeyArrow");
+        internal static byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("RopeyArrow");
+
     }
 
     [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
