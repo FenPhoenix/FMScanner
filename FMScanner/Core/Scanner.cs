@@ -258,6 +258,8 @@ namespace FMScanner
             if (FmIsZip && ArchivePath.EndsWithI(".7z"))
             {
                 FmIsZip = false;
+                dsc = '\\';
+                FmWorkingPath = FmWorkingPath.Replace('/', '\\');
                 fmIsSevenZip = true;
 
                 try
