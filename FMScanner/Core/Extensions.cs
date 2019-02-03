@@ -26,10 +26,9 @@ namespace FMScanner
             var rNoExt = value.RemoveExtension();
             if (string.IsNullOrEmpty(rNoExt)) return false;
 
-            return rNoExt.Equals("fminfo-en", OrdinalIgnoreCase) ||
-                   rNoExt.Equals("fminfo-eng", OrdinalIgnoreCase) ||
-                   !(rNoExt.StartsWith("fminfo", OrdinalIgnoreCase) &&
-                     !rNoExt.Equals("fminfo", OrdinalIgnoreCase));
+            return rNoExt.EqualsI("fminfo-en") ||
+                   rNoExt.EqualsI("fminfo-eng") ||
+                   !(rNoExt.StartsWithI("fminfo") && !rNoExt.EqualsI("fminfo"));
         }
 
         /// <summary>
