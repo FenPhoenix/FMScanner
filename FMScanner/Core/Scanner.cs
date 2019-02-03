@@ -1572,7 +1572,7 @@ namespace FMScanner
                     var lineT = lines[i].TrimStart();
                     if (prevLineIsAuthor)
                     {
-                        if (!string.IsNullOrWhiteSpace(lineT) && !lineT.Contains(':'))
+                        if (!string.IsNullOrWhiteSpace(lineT) && !lineT.Contains(':') && lineT.Length <= 100)
                         {
                             return lineT.TrimEnd();
                         }
