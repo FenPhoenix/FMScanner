@@ -98,7 +98,8 @@ namespace FMScanner
             Title,
             Version,
             NewDarkMinimumVersion,
-            Author
+            Author,
+            AuthorNextLine
         }
 
         #region Scan synchronous
@@ -544,7 +545,7 @@ namespace FMScanner
 
                     // TODO: Do I want to check AlternateTitles for StartsWithI("By ") as well?
                     var author =
-                        GetValueFromReadme(SpecialLogic.Author, fmData.Title.StartsWithI("By "),
+                        GetValueFromReadme(SpecialLogic.Author,
                             titles,
                             "Author", "Authors", "Autor",
                             "Created by", "Devised by", "Designed by", "Author=", "Made by",
@@ -1433,11 +1434,6 @@ namespace FMScanner
             return ret;
         }
 
-        private string GetValueFromReadme(SpecialLogic specialLogic, List<string> titles = null, params string[] keys)
-        {
-            return GetValueFromReadme(specialLogic, false, titles, keys);
-        }
-
         // This is kind of just an excuse to say that my scanner can catch the full proper title of Deceptive
         // Perception 2. :P
         // This is likely to be a bit loose with its accuracy, but since values caught here are almost certain to
@@ -1495,7 +1491,7 @@ namespace FMScanner
         }
 
         private string
-        GetValueFromReadme(SpecialLogic specialLogic, bool fmTitleStartsWithBy, List<string> titles = null, params string[] keys)
+        GetValueFromReadme(SpecialLogic specialLogic, List<string> titles = null, params string[] keys)
         {
             string ret = null;
 
@@ -1516,7 +1512,7 @@ namespace FMScanner
                             Briefing Movie
                             Created by Yandros using VideoPad by NCH Software
                         */
-                        ret = GetAuthorFromTopOfReadme(file.Lines, fmTitleStartsWithBy);
+                        ret = GetAuthorFromTopOfReadme(file.Lines, titles);
                         if (!string.IsNullOrEmpty(ret)) return ret;
                     }
 
@@ -1536,12 +1532,25 @@ namespace FMScanner
                 }
             }
 
+            // Do the less common cases separately so as not to slow down the main ones with checks that are
+            // statistically unlikely to find anything
             if (specialLogic == SpecialLogic.Author && string.IsNullOrEmpty(ret))
             {
-                // We do this separately for performance and clarity; it's an uncommon case involving regex
-                // searching and we don't want to run it unless we have to. Also, it's specific enough that we
-                // don't really want to shoehorn it into the standard line search.
-                ret = GetAuthorFromCopyrightMessage();
+                // Finds eg.
+                // Author:
+                //      GORT (Shaun M.D. Morin)
+                foreach (var file in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
+                {
+                    ret = GetValueFromLines(SpecialLogic.AuthorNextLine, null, file.Lines);
+                }
+
+                if (string.IsNullOrEmpty(ret))
+                {
+                    // We do this separately for performance and clarity; it's an uncommon case involving regex
+                    // searching and we don't want to run it unless we have to. Also, it's specific enough that
+                    // we don't really want to shoehorn it into the standard line search.
+                    ret = GetAuthorFromCopyrightMessage();
+                }
 
                 if (string.IsNullOrEmpty(ret))
                 {
@@ -1553,8 +1562,27 @@ namespace FMScanner
             return ret;
         }
 
-        private static string GetValueFromLines(SpecialLogic specialLogic, string[] keys, string[] lines)
+        private string GetValueFromLines(SpecialLogic specialLogic, string[] keys, string[] lines)
         {
+            if (specialLogic == SpecialLogic.AuthorNextLine)
+            {
+                bool prevLineIsAuthor = false;
+                for (var i = 0; i < lines.Length; i++)
+                {
+                    var lineT = lines[i].TrimStart();
+                    if (prevLineIsAuthor)
+                    {
+                        if (!string.IsNullOrWhiteSpace(lineT) && !lineT.Contains(':'))
+                        {
+                            return lineT.TrimEnd();
+                        }
+                    }
+                    prevLineIsAuthor = lineT.EqualsI("Author") || lineT.EqualsI("Author:");
+                }
+
+                return null;
+            }
+
             for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
             {
                 var line = lines[lineIndex];
@@ -1773,8 +1801,19 @@ namespace FMScanner
             return value;
         }
 
-        private static string GetAuthorFromTopOfReadme(string[] linesArray, bool fmTitleStartsWithBy)
+        private static string GetAuthorFromTopOfReadme(string[] linesArray, List<string> titles)
         {
+            bool titleStartsWithBy = false;
+            bool titleContainsBy = false;
+            if (titles != null)
+            {
+                foreach (var title in titles)
+                {
+                    if (title.StartsWithI("by ")) titleStartsWithBy = true;
+                    if (title.ContainsI(" by ")) titleContainsBy = true;
+                }
+            }
+
             // Look for a "by [author]" in the first few lines. Looking for a line starting with "by" throughout
             // the whole text is asking for a cavalcade of false positives, hence why we only look near the top.
             var lines = linesArray.ToList();
@@ -1787,13 +1826,20 @@ namespace FMScanner
             for (int i = 0; i < linesToSearch; i++)
             {
                 // Preemptive check
-                if (i == 0 && fmTitleStartsWithBy) continue;
+                if (i == 0 && titleStartsWithBy) continue;
 
                 var lineT = lines[i].Trim();
                 if (lineT.StartsWithI("By ") || lineT.StartsWithI("By: "))
                 {
                     var author = lineT.Substring(lineT.IndexOf(' ')).TrimStart();
                     if (!string.IsNullOrEmpty(author)) return author;
+                }
+                else if (lineT.EqualsI("By"))
+                {
+                    if (!titleContainsBy && i < linesToSearch - 1)
+                    {
+                        return lines[i + 1].Trim();
+                    }
                 }
                 else
                 {
@@ -1850,7 +1896,7 @@ namespace FMScanner
                 //language=regexp
                 @"^\s*" + titleString +
                 //language=regexp
-                @"(\s+|\s*(:|-|\u2013)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
+                @"(\s+|\s*(:|-|\u2013|,)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
 
             foreach (var rf in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
@@ -1867,6 +1913,16 @@ namespace FMScanner
 
         private string GetAuthorFromCopyrightMessage()
         {
+            string AuthorCopyrightRegexesMatch(string line)
+            {
+                for (var i = 0; i < AuthorMissionCopyrightRegexes.Length; i++)
+                {
+                    var match = AuthorMissionCopyrightRegexes[i].Match(line);
+                    if (match.Success) return match.Groups["Author"].Value;
+                }
+                return null;
+            }
+
             string author = null;
 
             bool foundAuthor = false;
@@ -1897,10 +1953,9 @@ namespace FMScanner
                         pastFirstLineOfCopyrightSection = true;
                     }
 
-                    var authorMatch = AuthorMissionCopyrightRegex.Match(line);
-                    if (authorMatch.Success)
+                    author = AuthorCopyrightRegexesMatch(line);
+                    if (!string.IsNullOrEmpty(author))
                     {
-                        author = authorMatch.Groups["Author"].Value;
                         foundAuthor = true;
                         break;
                     }

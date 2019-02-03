@@ -250,7 +250,7 @@ namespace FMScanner
                 @"A(n)? (fan(-| ?)mis((si|is|i)on)|FM|campaign)\s+(made\s+)?by\s+(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(
-                @"^(\s*)Author:?(\r|\n|\r\n)(?<Author>.+)",
+                @"A(n)? .+(-| )part\s+Thief( Gold |: The Dark Project |\s*2(: The Metal Age )?)\s+(fan(-| ?)mis((si|is|i)on)|FM|campaign)\s+((made\s+by)|by|from)\s+(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture)
         };
 
@@ -262,11 +262,17 @@ namespace FMScanner
 
         // Unicode 00A9 = copyright symbol
 
-        internal static Regex AuthorMissionCopyrightRegex { get; } =
+        internal static Regex[] AuthorMissionCopyrightRegexes { get; } =
+        {
             new Regex(
                 //language=regexp
-                @"^This (level|(fan(-| |))?mission|FM) is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
-                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
+                @"^This (level|(fan(-| |))?mission|FM)( in this (zip|archive( file)?))? is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
+            new Regex(
+                //language=regexp
+                @"^These (levels|(fan(-| |))?missions|FMs) are( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture)
+        };
 
         // This one is only to be used if we know the above line says "Copyright" or something, because it has
         // an @ as an option for a copyright symbol (used by some Theker missions) and we want to be sure it
