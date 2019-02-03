@@ -21,6 +21,43 @@ namespace FMScanner
     {
         #region Queries
 
+        /// <summary>
+        /// Returns a value between 0 and 1.0 that indicates how similar the two strings are.
+        /// </summary>
+        /// <param name="string1"></param>
+        /// <param name="string2"></param>
+        /// <param name="stringComparison"></param>
+        /// <returns></returns>
+        internal static double SimilarityTo(this string string1, string string2, StringComparison stringComparison)
+        {
+            if (string1.Equals(string2, stringComparison)) return 1.0;
+            if (string1.Length == 0) return 0;
+            if (string2.Length == 0) return 0;
+
+            var vec1 = new int[string2.Length + 1];
+            var vec2 = new int[string2.Length + 1];
+
+            for (int i = 0; i < vec1.Length; i++) vec1[i] = i;
+
+            for (int i = 0; i < string1.Length; i++)
+            {
+                vec2[0] = i + 1;
+
+                for (int j = 0; j < string2.Length; j++)
+                {
+                    var delCost = vec1[j + 1] + 1;
+                    var insCost = vec2[j] + 1;
+                    var substCost =
+                        string1[i].ToString().Equals(string2[j].ToString(), stringComparison) ? 0 : 1;
+                    vec2[j + 1] = Math.Min(insCost, Math.Min(delCost, vec1[j] + substCost));
+                }
+
+                Array.Copy(vec2, vec1, vec1.Length);
+            }
+
+            return 1.0 - ((double)vec2[string2.Length] / Math.Max(string1.Length, string2.Length));
+        }
+
         internal static bool IsEnglishReadme(this string value)
         {
             var rNoExt = value.RemoveExtension();

@@ -1892,19 +1892,38 @@ namespace FMScanner
 
             if (titleString.Contains('|')) titleString = "(" + titleString + ")";
 
-            var titleByAuthorRegex = new Regex(
-                //language=regexp
-                @"^\s*" + titleString +
-                //language=regexp
-                @"(\s+|\s*(:|-|\u2013|,)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
+            var titleByAuthorRegex = new Regex(@"(\s+|\s*(:|-|\u2013|,)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
 
             foreach (var rf in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
             {
                 foreach (var line in rf.Lines)
                 {
-                    var match = titleByAuthorRegex.Match(line);
-                    if (match.Success) return match.Groups["Author"].Value;
+                    var lineT = line.Trim();
+
+                    if (!lineT.ContainsI(" by ")) continue;
+
+                    var titleCandidate = lineT.Substring(0, lineT.IndexOf(" by", OrdinalIgnoreCase)).Trim();
+
+                    bool fuzzyMatched = false;
+                    foreach (var title in titles)
+                    {
+                        if (titleCandidate.SimilarityTo(title, OrdinalIgnoreCase) > 0.75)
+                        {
+                            fuzzyMatched = true;
+                            break;
+                        }
+                    }
+                    if (!fuzzyMatched) continue;
+
+                    var secondHalf = lineT.Substring(lineT.IndexOf(" by", OrdinalIgnoreCase));
+
+                    var match = titleByAuthorRegex.Match(secondHalf);
+                    if (match.Success)
+                    {
+                        Trace.WriteLine(match.Groups["Author"].Value);
+                        return match.Groups["Author"].Value;
+                    }
                 }
             }
 
