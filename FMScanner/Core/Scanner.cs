@@ -580,7 +580,12 @@ namespace FMScanner
 
             if (ScanOptions.ScanLanguages)
             {
-                fmData.Languages = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
+                var getLangs = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
+                fmData.Languages = getLangs.Langs;
+                if (getLangs.Langs?.Length > 0)
+                {
+                    SetLangTags(fmData, getLangs.UncertainLangs);
+                }
             }
 
             #endregion
@@ -607,6 +612,37 @@ namespace FMScanner
             Debug.WriteLine(@"This FM took:\r\n" + OverallTimer.Elapsed.ToString(@"hh\:mm\:ss\.fffffff"));
 
             return fmData;
+        }
+
+
+        private void SetLangTags(ScannedFMData fmData, string[] uncertainLangs)
+        {
+            if (string.IsNullOrWhiteSpace(fmData.TagsString)) fmData.TagsString = "";
+            for (var i = 0; i < fmData.Languages.Length; i++)
+            {
+                var lang = fmData.Languages[i];
+
+                // NOTE: This all depends on langs being lowercase!
+                Debug.Assert(lang == lang.ToLowerInvariant(),
+                            "lang != lang.ToLowerInvariant() - lang is not lowercase");
+
+                if (uncertainLangs.Contains(lang)) continue;
+
+                if (fmData.TagsString.Contains(lang))
+                {
+                    fmData.TagsString = Regex.Replace(fmData.TagsString, @":\s*" + lang, ":" + LanguagesC[lang]);
+                }
+
+                // PERF: 5ms over the whole 1098 set, whatever
+                var match = Regex.Match(fmData.TagsString, @"language:\s*" + lang, RegexOptions.IgnoreCase);
+                if (match.Success) continue;
+
+                if (fmData.TagsString != "") fmData.TagsString += ", ";
+                fmData.TagsString += "language:" + LanguagesC[lang];
+            }
+
+            // Compatibility with old behavior for painless diffing
+            if (string.IsNullOrEmpty(fmData.TagsString)) fmData.TagsString = null;
         }
 
         private bool ReadAndCacheFMData(ScannedFMData fmd, List<NameAndIndex> baseDirFiles,
@@ -1508,7 +1544,7 @@ namespace FMScanner
                     {
                         /*
                             Check this first so as to avoid:
-                        
+
                             Briefing Movie
                             Created by Yandros using VideoPad by NCH Software
                         */
@@ -2073,10 +2109,12 @@ namespace FMScanner
         }
 
         // TODO: Add all missing languages, and implement language detection for non-folder-specified FMs
-        private string[] GetLanguages(List<NameAndIndex> baseDirFiles, List<NameAndIndex> booksDirFiles,
+        private (string[] Langs, string[] UncertainLangs)
+        GetLanguages(List<NameAndIndex> baseDirFiles, List<NameAndIndex> booksDirFiles,
             List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> stringsDirFiles)
         {
             var langs = new List<string>();
+            var uncertainLangs = new List<string>();
 
             for (var dirIndex = 0; dirIndex < 3; dirIndex++)
             {
@@ -2099,7 +2137,11 @@ namespace FMScanner
                 }
             }
 
-            if (!langs.ContainsI("english")) langs.Add("english");
+            if (!langs.ContainsI("english"))
+            {
+                langs.Add("english");
+                uncertainLangs.Add("english");
+            }
 
             // Sometimes extra languages are in zip files inside the FM archive
             for (var i = 0; i < baseDirFiles.Count; i++)
@@ -2154,11 +2196,11 @@ namespace FMScanner
             {
                 var langsD = langs.Distinct().ToArray();
                 Array.Sort(langsD);
-                return langsD;
+                return (langsD, uncertainLangs.ToArray());
             }
             else
             {
-                return new[] { "english" };
+                return (new[] { "english" }, new[] { "english" });
             }
         }
 

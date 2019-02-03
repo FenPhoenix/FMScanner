@@ -103,8 +103,33 @@ namespace FMScanner
 
         internal static string[] Languages { get; } =
         {
-            "english", "french", "german", "russian", "italian", "spanish", "polish", "hungarian", "dutch",
-            "czech"
+            "english",
+            "czech",
+            "dutch",
+            "french",
+            "german",
+            "hungarian",
+            "italian",
+            "japanese",
+            "polish",
+            "russian",
+            "spanish"
+        };
+
+        // Cheesy hack because it wasn't designed this way
+        internal static Dictionary<string, string> LanguagesC { get; } = new Dictionary<string, string>()
+        {
+            { "english", "English" },
+            { "czech", "Czech" },
+            { "dutch", "Dutch" },
+            { "french", "French" },
+            { "german", "German" },
+            { "hungarian", "Hungarian" },
+            { "italian", "Italian" },
+            { "japanese", "Japanese" },
+            { "polish", "Polish" },
+            { "russian", "Russian" },
+            { "spanish", "Spanish" }
         };
 
         internal static string[] DateFormats { get; } =
@@ -309,8 +334,8 @@ namespace FMScanner
             int yIndex1;
             var yNum = y.Substring(yIndex1 = y.IndexOf('_') + 1, y.IndexOf(':') - yIndex1);
 
-            while (xNum.Length < 3) xNum = '0' + xNum;
-            while (yNum.Length < 3) yNum = '0' + yNum;
+            while (xNum.Length < yNum.Length) xNum = '0' + xNum;
+            while (yNum.Length < xNum.Length) yNum = '0' + yNum;
 
             return string.CompareOrdinal(xNum, yNum);
         }
