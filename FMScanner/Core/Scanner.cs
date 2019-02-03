@@ -443,7 +443,7 @@ namespace FMScanner
             // Look in the readme
             if (fmData.LastUpdateDate == null)
             {
-                var ds = GetValueFromReadme(SpecialLogic.None, "Date Of Release", "Date of Release",
+                var ds = GetValueFromReadme(SpecialLogic.None, null, "Date Of Release", "Date of Release",
                     "Date of release", "Release Date", "Release date");
                 if (!string.IsNullOrEmpty(ds))
                 {
@@ -512,7 +512,7 @@ namespace FMScanner
             if (ScanOptions.ScanTitle)
             {
                 SetOrAddTitle(
-                    GetValueFromReadme(SpecialLogic.Title, "Title of the Mission", "Title of the mission",
+                    GetValueFromReadme(SpecialLogic.Title, null, "Title of the Mission", "Title of the mission",
                         "Title", "Mission Title", "Mission title", "Mission Name", "Mission name", "Level Name",
                         "Level name", "Mission:", "Mission ", "Campaign Title", "Campaign title",
                         "The name of Mission:"));
@@ -534,9 +534,18 @@ namespace FMScanner
             {
                 if (fmData.Author.IsEmpty())
                 {
+                    var titles = !string.IsNullOrEmpty(fmData.Title)
+                        ? new List<string> { fmData.Title }
+                        : null;
+                    if (titles != null && fmData.AlternateTitles?.Count > 0)
+                    {
+                        titles.AddRange(fmData.AlternateTitles);
+                    }
+
                     // TODO: Do I want to check AlternateTitles for StartsWithI("By ") as well?
                     var author =
                         GetValueFromReadme(SpecialLogic.Author, fmData.Title.StartsWithI("By "),
+                            titles,
                             "Author", "Authors", "Autor",
                             "Created by", "Devised by", "Designed by", "Author=", "Made by",
                             "FM Author", "Mission Author", "Mission author", "The author:",
@@ -1424,9 +1433,9 @@ namespace FMScanner
             return ret;
         }
 
-        private string GetValueFromReadme(SpecialLogic specialLogic, params string[] keys)
+        private string GetValueFromReadme(SpecialLogic specialLogic, List<string> titles = null, params string[] keys)
         {
-            return GetValueFromReadme(specialLogic, false, keys);
+            return GetValueFromReadme(specialLogic, false, titles, keys);
         }
 
         // This is kind of just an excuse to say that my scanner can catch the full proper title of Deceptive
@@ -1486,7 +1495,7 @@ namespace FMScanner
         }
 
         private string
-        GetValueFromReadme(SpecialLogic specialLogic, bool fmTitleStartsWithBy, params string[] keys)
+        GetValueFromReadme(SpecialLogic specialLogic, bool fmTitleStartsWithBy, List<string> titles = null, params string[] keys)
         {
             string ret = null;
 
@@ -1533,6 +1542,12 @@ namespace FMScanner
                 // searching and we don't want to run it unless we have to. Also, it's specific enough that we
                 // don't really want to shoehorn it into the standard line search.
                 ret = GetAuthorFromCopyrightMessage();
+
+                if (string.IsNullOrEmpty(ret))
+                {
+                    // Very last resort, because it has a dynamic regex in it
+                    ret = GetAuthorFromTitleByAuthorLine(titles);
+                }
             }
 
             return ret;
@@ -1810,6 +1825,46 @@ namespace FMScanner
             return !string.IsNullOrEmpty(author) ? author : null;
         }
 
+        private string GetAuthorFromTitleByAuthorLine(List<string> titles)
+        {
+            if (titles == null || titles.Count == 0) return null;
+
+            string titleString = "";
+            for (int i = 0; i < titles.Count; i++)
+            {
+                if (titles[i].ContainsI(" by "))
+                {
+                    titles.RemoveAt(i);
+                    i--;
+                    continue;
+                }
+                if (i > 0) titleString += "|";
+                titleString += Regex.Escape(titles[i].Trim());
+            }
+
+            if (string.IsNullOrEmpty(titleString)) return null;
+
+            if (titleString.Contains('|')) titleString = "(" + titleString + ")";
+
+            var titleByAuthorRegex = new Regex(
+                //language=regexp
+                @"^\s*" + titleString +
+                //language=regexp
+                @"(\s+|\s*(:|-|\u2013)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
+                RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
+
+            foreach (var rf in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
+            {
+                foreach (var line in rf.Lines)
+                {
+                    var match = titleByAuthorRegex.Match(line);
+                    if (match.Success) return match.Groups["Author"].Value;
+                }
+            }
+
+            return null;
+        }
+
         private string GetAuthorFromCopyrightMessage()
         {
             string author = null;
@@ -1893,7 +1948,7 @@ namespace FMScanner
 
         private string GetVersion()
         {
-            var version = GetValueFromReadme(SpecialLogic.Version, "Version");
+            var version = GetValueFromReadme(SpecialLogic.Version, null, "Version");
 
             if (string.IsNullOrEmpty(version)) return null;
 

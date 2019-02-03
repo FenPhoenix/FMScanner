@@ -222,16 +222,16 @@ namespace FMScanner
             new Regex(@"(Dark ?Engine) (Version.?|v)?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(
-                @"((?<!(Love |Being |Penitent |Counter-|Requiem for a |Space ))Thief|(?<!Being )Thief ?2|Thief ?II|The Metal Age) v?(\.| )?(?<Version>\d\.\d+)",
+                @"((?<!(Love |Being |Penitent |Counter-|Requiem for a |Space ))Thief|(?<!Being )Thief ?(2|II)|The Metal Age) v?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(
                 @"\D(?<Version>\d\.\d+) (version of |.?)New ?Dark(?! ?\d\.\d+)|Thief Gold( Patch)? (?<Version>(?!1\.33|1\.37)\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            new Regex(@"Version (?<Version>\d\.\d+) of (Thief 2|Thief2|Thief II)",
+            new Regex(@"Version (?<Version>\d\.\d+) of (Thief ?(2|II))",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(@"(New ?Dark|""New ?Dark"") (is )?required (.? )v?(\.| )?(?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
-            new Regex(@"(?<Version>(?!1\.33|1\.37)\d\.\d+) Patch",
+            new Regex(@"(?<Version>(?!1\.3(3|7))\d\.\d+) Patch",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture)
 
             // Original regex for reference - slow!
@@ -241,19 +241,22 @@ namespace FMScanner
         internal static Regex[] AuthorRegexes { get; } =
         {
             new Regex(
-                @"(FM|mission|campaign|series) for (Thief|Thief Gold|Thief: The Dark Project|Thief\s*2|Thief 2: The Metal Age)\s+by\s*(?<Author>.+)",
+                @"(FM|mission|campaign|series) for Thief( Gold|: The Dark Project|\s*2(: The Metal Age)?)\s+by\s*(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(
-                @"(A )?(Thief|Thief Gold|Thief: The Dark Project|Thief\s*2|Thief 2: The Metal Age) (fan ?(mission|misison|mision)|FM|campaign)\s+by (?<Author>.+)",
+                @"(A )?Thief( Gold|: The Dark Project|\s*2(: The Metal Age)?) (fan(-| ?)mis((si|is|i)on)|FM|campaign)\s+by (?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(
-                @"A(n)? (fan(-| ?)mission|FM)\s+(made\s+)?by\s+(?<Author>.+)",
+                @"A(n)? (fan(-| ?)mis((si|is|i)on)|FM|campaign)\s+(made\s+)?by\s+(?<Author>.+)",
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
+            new Regex(
+                @"^(\s*)Author:?(\r|\n|\r\n)(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture)
         };
 
         private const string CopyrightSecondPart =
             //language=regexp
-            @"(?<Months>( January| February| March| April| May| June| July| August| September| October| November| December))?" +
+            @"(?<Months>( (Jan|Febr)uary| Ma(rch|y)| A(pril|ugust)| Ju(ne|ly)| (((Sept|Nov|Dec)em)|Octo)ber))?" +
             //language=regexp
             @"(?(Months)(, ?| ))\d*( by| to)? (?<Author>.+)";
 
@@ -262,7 +265,7 @@ namespace FMScanner
         internal static Regex AuthorMissionCopyrightRegex { get; } =
             new Regex(
                 //language=regexp
-                @"^This (level|mission|fan(-| )?mission|FM) is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
+                @"^This (level|(fan(-| |))?mission|FM) is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
         // This one is only to be used if we know the above line says "Copyright" or something, because it has
