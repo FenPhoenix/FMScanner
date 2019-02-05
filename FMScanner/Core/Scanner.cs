@@ -1572,33 +1572,30 @@ namespace FMScanner
             // statistically unlikely to find anything
             if (specialLogic == SpecialLogic.Author && string.IsNullOrEmpty(ret))
             {
+                // We do this separately for performance and clarity; it's an uncommon case involving regex
+                // searching and we don't want to run it unless we have to. Also, it's specific enough that
+                // we don't really want to shoehorn it into the standard line search.
+                ret = GetAuthorFromCopyrightMessage();
+
+                if (!string.IsNullOrEmpty(ret)) return ret;
+
                 // Finds eg.
                 // Author:
                 //      GORT (Shaun M.D. Morin)
                 foreach (var file in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
                 {
                     ret = GetValueFromLines(SpecialLogic.AuthorNextLine, null, file.Lines);
+                    if (!string.IsNullOrEmpty(ret)) return ret;
                 }
 
-                if (string.IsNullOrEmpty(ret))
-                {
-                    // We do this separately for performance and clarity; it's an uncommon case involving regex
-                    // searching and we don't want to run it unless we have to. Also, it's specific enough that
-                    // we don't really want to shoehorn it into the standard line search.
-                    ret = GetAuthorFromCopyrightMessage();
-                }
-
-                if (string.IsNullOrEmpty(ret))
-                {
-                    // Very last resort, because it has a dynamic regex in it
-                    ret = GetAuthorFromTitleByAuthorLine(titles);
-                }
+                // Very last resort, because it has a dynamic regex in it
+                ret = GetAuthorFromTitleByAuthorLine(titles);
             }
 
             return ret;
         }
 
-        private string GetValueFromLines(SpecialLogic specialLogic, string[] keys, string[] lines)
+        private static string GetValueFromLines(SpecialLogic specialLogic, string[] keys, string[] lines)
         {
             if (specialLogic == SpecialLogic.AuthorNextLine)
             {
@@ -1933,6 +1930,8 @@ namespace FMScanner
             var titleByAuthorRegex = new Regex(@"(\s+|\s*(:|-|\u2013|,)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
 
+            // We DON'T just check the first five lines, because there might be another language section first
+            // and this kind of author string might well be buried down in the file.
             foreach (var rf in ReadmeFiles.Where(x => !x.FileName.ExtIsHtml() && x.FileName.IsEnglishReadme()))
             {
                 foreach (var line in rf.Lines)
