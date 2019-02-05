@@ -1602,18 +1602,20 @@ namespace FMScanner
         {
             if (specialLogic == SpecialLogic.AuthorNextLine)
             {
-                bool prevLineIsAuthor = false;
                 for (var i = 0; i < lines.Length; i++)
                 {
-                    var lineT = lines[i].TrimStart();
-                    if (prevLineIsAuthor)
+                    var lineT = lines[i].Trim();
+                    if (!lineT.EqualsI("Author") && !lineT.EqualsI("Author:")) continue;
+
+                    if (i < lines.Length - 2)
                     {
-                        if (!string.IsNullOrWhiteSpace(lineT) && !lineT.Contains(':') && lineT.Length <= 100)
+                        var lineAfterNext = lines[i + 2].Trim();
+                        if ((lineAfterNext.EndsWithI(":") && lineAfterNext.Length <= 50) ||
+                            string.IsNullOrWhiteSpace(lineAfterNext))
                         {
-                            return lineT.TrimEnd();
+                            return lines[i + 1].Trim();
                         }
                     }
-                    prevLineIsAuthor = lineT.EqualsI("Author") || lineT.EqualsI("Author:");
                 }
 
                 return null;
