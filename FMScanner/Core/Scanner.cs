@@ -431,10 +431,7 @@ namespace FMScanner
 
             foreach (var r in ReadmeFiles)
             {
-                fmData.Readmes.Add(new Readme
-                {
-                    FileName = r.FileName,
-                });
+                fmData.Readmes.Add(new Readme { FileName = r.FileName });
             }
 
             #endregion
@@ -615,7 +612,7 @@ namespace FMScanner
         }
 
 
-        private void SetLangTags(ScannedFMData fmData, string[] uncertainLangs)
+        private static void SetLangTags(ScannedFMData fmData, string[] uncertainLangs)
         {
             if (string.IsNullOrWhiteSpace(fmData.TagsString)) fmData.TagsString = "";
             for (var i = 0; i < fmData.Languages.Length; i++)
@@ -1910,22 +1907,17 @@ namespace FMScanner
         {
             if (titles == null || titles.Count == 0) return null;
 
-            string titleString = "";
+            // With the new fuzzy match method, it might be possible for me to remove the need for this guard
             for (int i = 0; i < titles.Count; i++)
             {
                 if (titles[i].ContainsI(" by "))
                 {
                     titles.RemoveAt(i);
                     i--;
-                    continue;
                 }
-                if (i > 0) titleString += "|";
-                titleString += Regex.Escape(titles[i].Trim());
             }
 
-            if (string.IsNullOrEmpty(titleString)) return null;
-
-            if (titleString.Contains('|')) titleString = "(" + titleString + ")";
+            if (titles.Count == 0) return null;
 
             var titleByAuthorRegex = new Regex(@"(\s+|\s*(:|-|\u2013|,)\s*)by(\s+|\s*(:|-|\u2013)\s*)(?<Author>.+)",
                 RegexOptions.IgnoreCase | RegexOptions.ExplicitCapture);
