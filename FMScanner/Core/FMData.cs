@@ -75,6 +75,7 @@ namespace FMScanner
     {
         public static string TDP { get; } = "tdp";
         public static string TMA { get; } = "tma";
+        public static string SS2 { get; } = "ss2";
     }
 
     public static class FMTypes

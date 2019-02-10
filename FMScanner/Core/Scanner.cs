@@ -321,7 +321,7 @@ namespace FMScanner
 
             var fmData = new ScannedFMData
             {
-                ArchiveName = FmIsZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath.TrimEnd(dsc))
+                ArchiveName = FmIsZip || fmIsSevenZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath.TrimEnd(dsc))
             };
 
             #region Size
@@ -370,6 +370,24 @@ namespace FMScanner
                 {
                     if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
                     return null;
+                }
+            }
+
+            #endregion
+
+            // Do this as early as possible so we can reject SS2 FMs early. We need to special-case SS2 FMs because
+            // they're similar enough to T1/T2 FMs that they may very well be mistaken for them, rather than being
+            // outright rejected as would any other archive.
+            #region NewDark/GameType checks
+
+            if (ScanOptions.ScanNewDarkRequired || ScanOptions.ScanGameType)
+            {
+                var (newDarkRequired, game) = GetGameTypeAndEngine(baseDirFiles, usedMisFiles);
+                if (ScanOptions.ScanNewDarkRequired) fmData.NewDarkRequired = newDarkRequired;
+                if (ScanOptions.ScanGameType)
+                {
+                    fmData.Game = game;
+                    if (fmData.Game == Games.SS2) return fmData;
                 }
             }
 
@@ -432,6 +450,16 @@ namespace FMScanner
             foreach (var r in ReadmeFiles)
             {
                 fmData.Readmes.Add(new Readme { FileName = r.FileName });
+            }
+
+            #endregion
+
+            // This is here because it needs to come after the readmes are cached
+            #region NewDark minimum required version
+
+            if (fmData.NewDarkRequired == true && ScanOptions.ScanNewDarkMinimumVersion)
+            {
+                fmData.NewDarkMinRequiredVersion = GetValueFromReadme(SpecialLogic.NewDarkMinimumVersion);
             }
 
             #endregion
@@ -583,22 +611,6 @@ namespace FMScanner
                 {
                     SetLangTags(fmData, getLangs.UncertainLangs);
                 }
-            }
-
-            #endregion
-
-            #region NewDark/GameType checks
-
-            if (ScanOptions.ScanNewDarkRequired || ScanOptions.ScanGameType)
-            {
-                var t = GetGameTypeAndEngine(baseDirFiles, usedMisFiles);
-                if (ScanOptions.ScanNewDarkRequired) fmData.NewDarkRequired = t.Item1;
-                if (ScanOptions.ScanGameType) fmData.Game = t.Item2;
-            }
-
-            if (fmData.NewDarkRequired == true && ScanOptions.ScanNewDarkMinimumVersion)
-            {
-                fmData.NewDarkMinRequiredVersion = GetValueFromReadme(SpecialLogic.NewDarkMinimumVersion);
             }
 
             #endregion
@@ -1950,7 +1962,6 @@ namespace FMScanner
                     var match = titleByAuthorRegex.Match(secondHalf);
                     if (match.Success)
                     {
-                        Trace.WriteLine(match.Groups["Author"].Value);
                         return match.Groups["Author"].Value;
                     }
                 }
@@ -2284,6 +2295,12 @@ namespace FMScanner
                  ~7216                  - NewDark, could be either T1/G or T2    Commonness: ~14%
                  ~3092                  - NewDark, could be either T1/G or T2    Commonness: ~4%
                  Any other location*    - OldDark Thief2
+                 
+            System Shock 2 .mis files can (but may not) have the SKYOBJVAR string. If they do, it'll be at 3168
+            or 7292.
+            System Shock 2 .mis files all have the MAPPARAM string. It will be at either 696 or 916. One or the
+            other may correspond to NewDark but I dunno cause I haven't looked into it that far cause this scanner
+            isn't meant to support SS2 properly. We just need to know enough to reject SS2 FMs.
 
              * We skip this check because only a handful of OldDark Thief 2 missions have SKYOBJVAR in a wacky
                location, and it's faster and more reliable to simply carry on with the secondary check than to
@@ -2292,15 +2309,25 @@ namespace FMScanner
 
             // For folder scans, we can seek to these positions directly, but for zip scans, we have to read
             // through the stream sequentially until we hit each one.
-            const int oldDarkThief2Location = 750;
-            const int newDarkLocation1 = 7180;
-            const int newDarkLocation2 = 3050;
-            int[] locations = { oldDarkThief2Location, newDarkLocation1, newDarkLocation2 };
+            const int oldDarkT2Loc = 750;
+
+            // These two locations just narrowly avoid the places where an SS2 SKYOBJVAR can be
+            // (when read length is 100 bytes)
+            const int newDarkLoc1 = 7180;
+            const int newDarkLoc2 = 3050;
+
+            const int ss2MapParamLoc1 = 670;
+            const int ss2MapParamLoc2 = 870;
+            // Keep the original three at the start positions, or else things break
+            int[] locations = { ss2MapParamLoc1, ss2MapParamLoc2, oldDarkT2Loc, newDarkLoc1, newDarkLoc2 };
 
             // 750+100 = 850
             // (3050+100)-850 = 2300
             // ((7180+100)-2300)-850 = 4130
-            int[] zipOffsets = { 850, 2300, 4130 };
+            // For SS2, SKYOBJVAR is located after position 2300, so we can get away without explicitly accounting
+            // for it here.
+            // Extra dummy values to make its length match locations[]
+            int[] zipOffsets = { -1, -1, 850, 2300, 4130 };
 
             const int locationBytesToRead = 100;
             var foundAtNewDarkLocation = false;
@@ -2318,6 +2345,7 @@ namespace FMScanner
                 {
                     if (FmIsZip)
                     {
+                        if (zipOffsets[i] == -1) continue;
                         zipBuf = sr.ReadChars(zipOffsets[i]);
                     }
                     else
@@ -2326,18 +2354,29 @@ namespace FMScanner
                         dirBuf = sr.ReadChars(locationBytesToRead);
                     }
 
+                    if ((FmIsZip && i < 4 && zipBuf.Contains(MisFileStrings.MapParam)) ||
+                        (!FmIsZip && i < 2 && dirBuf.Contains(MisFileStrings.MapParam)))
+                    {
+                        return (null, Games.SS2);
+                    }
+
+                    if (locations[i] == ss2MapParamLoc1 || locations[i] == ss2MapParamLoc2)
+                    {
+                        continue;
+                    }
+
                     // We avoid string.Concat() in favor of directly searching char arrays, as that's WAY faster
                     if ((FmIsZip ? zipBuf : dirBuf).Contains(MisFileStrings.SkyObjVar))
                     {
                         // Zip reading is going to check the NewDark locations the other way round, but
                         // fortunately they're interchangeable in meaning so we don't have to do anything
-                        if (locations[i] == newDarkLocation1 || locations[i] == newDarkLocation2)
+                        if (locations[i] == newDarkLoc1 || locations[i] == newDarkLoc2)
                         {
                             ret.NewDarkRequired = true;
                             foundAtNewDarkLocation = true;
                             break;
                         }
-                        else if (locations[i] == oldDarkThief2Location)
+                        else if (locations[i] == oldDarkT2Loc)
                         {
                             foundAtOldDarkThief2Location = true;
                             break;

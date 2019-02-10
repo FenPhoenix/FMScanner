@@ -187,6 +187,8 @@ namespace FMScanner
         internal static byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("RopeyArrow");
         internal static byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("RopeyArrow");
 
+        // We don't support System Shock 2, but we use this to detect and report if the FM is for SS2
+        internal static char[] MapParam = { 'M', 'A', 'P', 'P', 'A', 'R', 'A', 'M' };
     }
 
     [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
