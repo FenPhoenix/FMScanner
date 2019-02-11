@@ -253,6 +253,24 @@ namespace FMScanner
             // one on the string when we remove this from the start of it
             if (FmWorkingPath[FmWorkingPath.Length - 1] != dsc) FmWorkingPath += dsc;
 
+            ScannedFMData UnsupportedZip()
+            {
+                return new ScannedFMData
+                {
+                    ArchiveName = GetFileName(ArchivePath),
+                    Game = Games.Unsupported
+                };
+            }
+
+            ScannedFMData UnsupportedDir()
+            {
+                return new ScannedFMData
+                {
+                    ArchiveName = GetFileName(FmWorkingPath.TrimEnd(dsc)),
+                    Game = Games.Unsupported
+                };
+            }
+
             #region Check for and setup 7-Zip
 
             bool fmIsSevenZip = false;
@@ -274,7 +292,7 @@ namespace FMScanner
                 {
                     // Third party thing, doesn't tell you what exceptions it can throw, whatever
                     DeleteFmWorkingPath(FmWorkingPath);
-                    return null;
+                    return UnsupportedZip();
                 }
             }
 
@@ -295,24 +313,24 @@ namespace FMScanner
 
                         // Archive.Entries is lazy-loaded, so this will also trigger any exceptions that may be
                         // thrown while loading them. If this passes, we're definitely good.
-                        if (Archive.Entries.Count == 0) return null;
+                        if (Archive.Entries.Count == 0) return UnsupportedZip();
                     }
                     catch (Exception)
                     {
                         // Invalid zip file, whatever, move on
-                        return null;
+                        return UnsupportedZip();
                     }
                 }
                 else
                 {
-                    return null;
+                    return UnsupportedZip();
                 }
             }
             else
             {
                 if (!Directory.Exists(FmWorkingPath))
                 {
-                    return null;
+                    return UnsupportedDir();
                 }
                 Debug.WriteLine(@"----------" + FmWorkingPath);
             }
@@ -369,7 +387,7 @@ namespace FMScanner
                 if (!success)
                 {
                     if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
-                    return null;
+                    return FmIsZip || fmIsSevenZip ? UnsupportedZip() : UnsupportedDir();
                 }
             }
 
@@ -387,7 +405,7 @@ namespace FMScanner
                 if (ScanOptions.ScanGameType)
                 {
                     fmData.Game = game;
-                    if (fmData.Game == Games.SS2) return fmData;
+                    if (fmData.Game == Games.Unsupported) return fmData;
                 }
             }
 
@@ -2318,7 +2336,6 @@ namespace FMScanner
 
             const int ss2MapParamLoc1 = 670;
             const int ss2MapParamLoc2 = 870;
-            // Keep the original three at the start positions, or else things break
             int[] locations = { ss2MapParamLoc1, ss2MapParamLoc2, oldDarkT2Loc, newDarkLoc1, newDarkLoc2 };
 
             // 750+100 = 850
@@ -2357,7 +2374,7 @@ namespace FMScanner
                     if ((FmIsZip && i < 4 && zipBuf.Contains(MisFileStrings.MapParam)) ||
                         (!FmIsZip && i < 2 && dirBuf.Contains(MisFileStrings.MapParam)))
                     {
-                        return (null, Games.SS2);
+                        return (null, Games.Unsupported);
                     }
 
                     if (locations[i] == ss2MapParamLoc1 || locations[i] == ss2MapParamLoc2)
