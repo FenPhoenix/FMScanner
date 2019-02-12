@@ -264,11 +264,7 @@ namespace FMScanner
 
             ScannedFMData UnsupportedDir()
             {
-                return new ScannedFMData
-                {
-                    ArchiveName = GetFileName(FmWorkingPath.TrimEnd(dsc)),
-                    Game = Games.Unsupported
-                };
+                return null;
             }
 
             #region Check for and setup 7-Zip
@@ -339,7 +335,9 @@ namespace FMScanner
 
             var fmData = new ScannedFMData
             {
-                ArchiveName = FmIsZip || fmIsSevenZip ? GetFileName(ArchivePath) : GetFileName(FmWorkingPath.TrimEnd(dsc))
+                ArchiveName = FmIsZip || fmIsSevenZip
+                    ? GetFileName(ArchivePath)
+                    : new DirectoryInfo(FmWorkingPath).Name
             };
 
             #region Size
