@@ -631,6 +631,21 @@ namespace FMScanner
 
             #endregion
 
+            if (fmData.Type == FMTypes.Campaign) SetMiscTag(fmData, "campaign");
+
+            if (!string.IsNullOrEmpty(fmData.Author))
+            {
+                int ai = fmData.Author.IndexOf(' ');
+                if (ai == -1) ai = fmData.Author.IndexOf('-');
+                if (ai == -1) ai = fmData.Author.Length - 1;
+                var anonAuthor = fmData.Author.Substring(0, ai);
+                if (anonAuthor.EqualsI("Anon") || anonAuthor.EqualsI("Withheld") ||
+                    anonAuthor.SimilarityTo("Anonymous", OrdinalIgnoreCase) > 0.75)
+                {
+                    SetMiscTag(fmData, "unknown author");
+                }
+            }
+
             if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
 
             OverallTimer.Stop();
@@ -668,6 +683,47 @@ namespace FMScanner
 
             // Compatibility with old behavior for painless diffing
             if (string.IsNullOrEmpty(fmData.TagsString)) fmData.TagsString = null;
+        }
+
+        private static void SetMiscTag(ScannedFMData fmData, string tag)
+        {
+            if (string.IsNullOrWhiteSpace(fmData.TagsString)) fmData.TagsString = "";
+
+            var list = fmData.TagsString.Split(',', ';').ToList();
+            bool tagFound = false;
+            for (int i = 0; i < list.Count; i++)
+            {
+                list[i] = list[i].Trim();
+                if (string.IsNullOrEmpty(list[i]))
+                {
+                    list.RemoveAt(i);
+                    i--;
+                }
+                else if (list[i].EqualsI(tag))
+                {
+                    if (tagFound)
+                    {
+                        list.RemoveAt(i);
+                        i--;
+                    }
+                    else
+                    {
+                        list[i] = tag;
+                        tagFound = true;
+                    }
+                }
+            }
+            if (tagFound) return;
+
+            list.Add(tag);
+
+            var tagsString = "";
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (i > 0) tagsString += ", ";
+                tagsString += list[i];
+            }
+            fmData.TagsString = tagsString;
         }
 
         private bool ReadAndCacheFMData(ScannedFMData fmd, List<NameAndIndex> baseDirFiles,
