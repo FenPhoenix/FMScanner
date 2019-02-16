@@ -39,7 +39,6 @@ namespace FMScanner
     internal sealed class ReadmeInternal
     {
         internal string FileName { get; set; }
-        internal ReadmeType Type { get; set; }
         internal int ArchiveIndex { get; set; } = -1;
         internal string[] Lines { get; set; }
         internal string Text { get; set; }
@@ -374,42 +373,23 @@ namespace FMScanner
             var stringsDirFiles = new List<NameAndIndex>();
             var intrfaceDirFiles = new List<NameAndIndex>();
             var booksDirFiles = new List<NameAndIndex>();
+            var t3FMExtrasDirFiles = new List<NameAndIndex>();
 
             #region Cache FM data
 
-            {
-                var success =
-                    ReadAndCacheFMData(fmData, baseDirFiles, misFiles, usedMisFiles, stringsDirFiles,
-                        intrfaceDirFiles, booksDirFiles);
+            var success =
+                ReadAndCacheFMData(fmData, baseDirFiles, misFiles, usedMisFiles, stringsDirFiles,
+                    intrfaceDirFiles, booksDirFiles, t3FMExtrasDirFiles);
 
-                if (!success)
-                {
-                    if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
-                    return FmIsZip || fmIsSevenZip ? UnsupportedZip() : UnsupportedDir();
-                }
+            if (!success)
+            {
+                if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
+                return FmIsZip || fmIsSevenZip ? UnsupportedZip() : UnsupportedDir();
             }
 
             #endregion
 
-            // Do this as early as possible so we can reject SS2 FMs early. We need to special-case SS2 FMs because
-            // they're similar enough to T1/T2 FMs that they may very well be mistaken for them, rather than being
-            // outright rejected as would any other archive.
-            #region NewDark/GameType checks
-
-            if (ScanOptions.ScanNewDarkRequired || ScanOptions.ScanGameType)
-            {
-                var (newDarkRequired, game) = GetGameTypeAndEngine(baseDirFiles, usedMisFiles);
-                if (ScanOptions.ScanNewDarkRequired) fmData.NewDarkRequired = newDarkRequired;
-                if (ScanOptions.ScanGameType)
-                {
-                    fmData.Game = game;
-                    if (fmData.Game == Games.Unsupported) return fmData;
-                }
-            }
-
-            #endregion
-
-            fmData.Type = usedMisFiles.Count > 1 ? FMTypes.Campaign : FMTypes.FanMission;
+            var fmIsT3 = fmData.Game == Games.TDS;
 
             void SetOrAddTitle(string value)
             {
@@ -427,127 +407,114 @@ namespace FMScanner
                 }
             }
 
-            #region Check info files
-
-            if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor || ScanOptions.ScanVersion)
+            if (!fmIsT3)
             {
-                var fmInfoXml = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMInfoXml));
-                if (fmInfoXml != null)
+                // Do this as early as possible so we can reject SS2 FMs early. We need to special-case SS2 FMs because
+                // they're similar enough to T1/T2 FMs that they may very well be mistaken for them, rather than being
+                // outright rejected as would any other archive.
+
+                #region NewDark/GameType checks
+
+                if (ScanOptions.ScanNewDarkRequired || ScanOptions.ScanGameType)
                 {
-                    var t = ReadFmInfoXml(fmInfoXml);
-                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
-                    if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
-                    fmData.Version = t.Version;
-
-                    if (t.ReleaseDate != null) fmData.LastUpdateDate = t.ReleaseDate;
+                    var (newDarkRequired, game) = GetGameTypeAndEngine(baseDirFiles, usedMisFiles);
+                    if (ScanOptions.ScanNewDarkRequired) fmData.NewDarkRequired = newDarkRequired;
+                    if (ScanOptions.ScanGameType)
+                    {
+                        fmData.Game = game;
+                        if (fmData.Game == Games.Unsupported) return fmData;
+                    }
                 }
-            }
-            {
-                var fmIni = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMIni));
-                if (fmIni != null)
+
+                #endregion
+
+                // If we're Thief 3, we just skip figuring this out - I don't know how to detect if a T3 mission
+                // is a campaign, and I'm not even sure any T3 campaigns have been released (not counting ones
+                // that are just a series of separate FMs, of course).
+                fmData.Type = usedMisFiles.Count > 1 ? FMTypes.Campaign : FMTypes.FanMission;
+
+                #region Check info files
+
+                if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor || ScanOptions.ScanVersion)
                 {
-                    var t = ReadFmIni(fmIni);
-                    if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
-                    if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
-                    fmData.Description = t.Description;
+                    var fmInfoXml = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMInfoXml));
+                    if (fmInfoXml != null)
+                    {
+                        var t = ReadFmInfoXml(fmInfoXml);
+                        if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
+                        if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
+                        fmData.Version = t.Version;
 
-                    if (t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
-
-                    fmData.TagsString = t.Tags;
+                        if (t.ReleaseDate != null) fmData.LastUpdateDate = t.ReleaseDate;
+                    }
                 }
-            }
+                {
+                    var fmIni = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMIni));
+                    if (fmIni != null)
+                    {
+                        var t = ReadFmIni(fmIni);
+                        if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
+                        if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
+                        fmData.Description = t.Description;
 
-            #endregion
+                        if (t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
+
+                        fmData.TagsString = t.Tags;
+                    }
+                }
+
+                #endregion
+            }
 
             #region Read, cache, and set readme files
 
-            ReadAndCacheReadmeFiles(baseDirFiles, rtfBox);
-
-            foreach (var r in ReadmeFiles)
+            var readmeDirFiles = baseDirFiles;
+            if (fmIsT3)
             {
-                fmData.Readmes.Add(new Readme { FileName = r.FileName });
+                foreach (var f in t3FMExtrasDirFiles) readmeDirFiles.Add(f);
             }
+
+            ReadAndCacheReadmeFiles(readmeDirFiles, rtfBox);
 
             #endregion
 
-            // This is here because it needs to come after the readmes are cached
-            #region NewDark minimum required version
-
-            if (fmData.NewDarkRequired == true && ScanOptions.ScanNewDarkMinimumVersion)
+            if (!fmIsT3)
             {
-                fmData.NewDarkMinRequiredVersion = GetValueFromReadme(SpecialLogic.NewDarkMinimumVersion);
-            }
+                // This is here because it needs to come after the readmes are cached
+                #region NewDark minimum required version
 
-            #endregion
+                if (fmData.NewDarkRequired == true && ScanOptions.ScanNewDarkMinimumVersion)
+                {
+                    fmData.NewDarkMinRequiredVersion = GetValueFromReadme(SpecialLogic.NewDarkMinimumVersion);
+                }
+
+                #endregion
+            }
 
             #region Set release date
 
-            // Look in the readme
-            if (fmData.LastUpdateDate == null)
-            {
-                var ds = GetValueFromReadme(SpecialLogic.None, null, "Date Of Release", "Date of Release",
-                    "Date of release", "Release Date", "Release date");
-                if (!string.IsNullOrEmpty(ds))
-                {
-                    if (StringToDate(ds, out var dt)) fmData.LastUpdateDate = dt;
-                }
-            }
-
-            // Look for the first readme file's last modified date
-            if (fmData.LastUpdateDate == null && ReadmeFiles.Count > 0)
-            {
-                var rd = ReadmeFiles[0].LastModifiedDate;
-                if (rd.Year > 1998) fmData.LastUpdateDate = rd;
-            }
-
-            // Look for the first used .mis file's last modified date
-            if (fmData.LastUpdateDate == null)
-            {
-                DateTime misFileDate;
-                if (FmIsZip)
-                {
-                    misFileDate =
-                        new DateTimeOffset(ZipHelpers.ZipTimeToDateTime(
-                                    Archive.Entries[usedMisFiles[0].Index].LastWriteTime)).DateTime;
-                }
-                else
-                {
-                    if (ScanOptions.ScanSize && FmDirFiles.Count > 0)
-                    {
-                        var misFile =
-                            FmDirFiles.First(x => x.FullName.EqualsI(FmWorkingPath + usedMisFiles[0].Name));
-
-                        misFileDate = new DateTimeOffset(misFile.LastWriteTime).DateTime;
-                    }
-                    else
-                    {
-                        misFileDate = new FileInfo(Path.Combine(FmWorkingPath, usedMisFiles[0].Name))
-                            .LastWriteTime;
-                    }
-                }
-
-                if (misFileDate.Year > 1998) fmData.LastUpdateDate = misFileDate;
-            }
-
-            // If we still don't have anything, give up: we've made a good-faith effort.
+            if (fmData.LastUpdateDate == null) fmData.LastUpdateDate = GetReleaseDate(fmIsT3, usedMisFiles);
 
             #endregion
 
             #region Title and IncludedMissions
 
-            if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
+            if (!fmIsT3)
             {
-                var (titleFrom0, titleFromN, cNames) = GetMissionNames(stringsDirFiles, misFiles, usedMisFiles);
-                if (ScanOptions.ScanTitle)
+                if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
                 {
-                    SetOrAddTitle(titleFrom0);
-                    SetOrAddTitle(titleFromN);
-                }
+                    var (titleFrom0, titleFromN, cNames) = GetMissionNames(stringsDirFiles, misFiles, usedMisFiles);
+                    if (ScanOptions.ScanTitle)
+                    {
+                        SetOrAddTitle(titleFrom0);
+                        SetOrAddTitle(titleFromN);
+                    }
 
-                if (ScanOptions.ScanCampaignMissionNames && cNames != null && cNames.Length > 0)
-                {
-                    for (int i = 0; i < cNames.Length; i++) cNames[i] = CleanupTitle(cNames[i]);
-                    fmData.IncludedMissions = cNames;
+                    if (ScanOptions.ScanCampaignMissionNames && cNames != null && cNames.Length > 0)
+                    {
+                        for (int i = 0; i < cNames.Length; i++) cNames[i] = CleanupTitle(cNames[i]);
+                        fmData.IncludedMissions = cNames;
+                    }
                 }
             }
 
@@ -559,7 +526,7 @@ namespace FMScanner
                         "Level name", "Mission:", "Mission ", "Campaign Title", "Campaign title",
                         "The name of Mission:"));
 
-                SetOrAddTitle(GetTitleFromNewGameStrFile(intrfaceDirFiles));
+                if (!fmIsT3) SetOrAddTitle(GetTitleFromNewGameStrFile(intrfaceDirFiles));
 
                 var topOfReadmeTitles = GetTitlesFromTopOfReadmes(ReadmeFiles);
                 if (topOfReadmeTitles != null && topOfReadmeTitles.Count > 0)
@@ -590,8 +557,8 @@ namespace FMScanner
                             titles,
                             "Author", "Authors", "Autor",
                             "Created by", "Devised by", "Designed by", "Author=", "Made by",
-                            "FM Author", "Mission Author", "Mission author", "The author:",
-                            "author:");
+                            "FM Author", "Mission Author", "Mission author", "Mission Creator", "Mission creator",
+                            "The author:", "author:");
 
                     fmData.Author = CleanupValue(author);
                 }
@@ -615,21 +582,26 @@ namespace FMScanner
             {
                 fmData.Version = GetVersion();
             }
+
             #endregion
 
-            #region Languages
-
-            if (ScanOptions.ScanLanguages)
+            // Again, I don't know enough about Thief 3 to know how to detect its languages
+            if (!fmIsT3)
             {
-                var getLangs = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
-                fmData.Languages = getLangs.Langs;
-                if (getLangs.Langs?.Length > 0)
-                {
-                    SetLangTags(fmData, getLangs.UncertainLangs);
-                }
-            }
+                #region Languages
 
-            #endregion
+                if (ScanOptions.ScanLanguages)
+                {
+                    var getLangs = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
+                    fmData.Languages = getLangs.Langs;
+                    if (getLangs.Langs?.Length > 0)
+                    {
+                        SetLangTags(fmData, getLangs.UncertainLangs);
+                    }
+                }
+
+                #endregion
+            }
 
             if (fmData.Type == FMTypes.Campaign) SetMiscTag(fmData, "campaign");
 
@@ -654,6 +626,59 @@ namespace FMScanner
             return fmData;
         }
 
+        private DateTime? GetReleaseDate(bool fmIsT3, List<NameAndIndex> usedMisFiles)
+        {
+            DateTime? ret = null;
+
+            // Look in the readme
+            var ds = GetValueFromReadme(SpecialLogic.None, null, "Date Of Release", "Date of Release",
+                "Date of release", "Release Date", "Release date");
+            if (!string.IsNullOrEmpty(ds) && StringToDate(ds, out var dt))
+            {
+                ret = dt;
+            }
+
+            // Look for the first readme file's last modified date
+            if (ret == null && ReadmeFiles.Count > 0 && ReadmeFiles[0].LastModifiedDate.Year > 1998)
+            {
+                ret = ReadmeFiles[0].LastModifiedDate;
+            }
+
+            // No first used mission file for T3: no idea how to find such a thing
+            if (fmIsT3) return ret;
+
+            // Look for the first used .mis file's last modified date
+            if (ret == null)
+            {
+                DateTime misFileDate;
+                if (FmIsZip)
+                {
+                    misFileDate =
+                        new DateTimeOffset(ZipHelpers.ZipTimeToDateTime(
+                            Archive.Entries[usedMisFiles[0].Index].LastWriteTime)).DateTime;
+                }
+                else
+                {
+                    if (ScanOptions.ScanSize && FmDirFiles.Count > 0)
+                    {
+                        var misFile = FmDirFiles.First(x => x.FullName.EqualsI(FmWorkingPath + usedMisFiles[0].Name));
+                        misFileDate = new DateTimeOffset(misFile.LastWriteTime).DateTime;
+                    }
+                    else
+                    {
+                        misFileDate = new FileInfo(Path.Combine(FmWorkingPath, usedMisFiles[0].Name)).LastWriteTime;
+                    }
+                }
+
+                if (misFileDate.Year > 1998)
+                {
+                    ret = misFileDate;
+                }
+            }
+
+            // If we still don't have anything, give up: we've made a good-faith effort.
+            return ret;
+        }
 
         private static void SetLangTags(ScannedFMData fmData, string[] uncertainLangs)
         {
@@ -728,9 +753,12 @@ namespace FMScanner
 
         private bool ReadAndCacheFMData(ScannedFMData fmd, List<NameAndIndex> baseDirFiles,
             List<NameAndIndex> misFiles, List<NameAndIndex> usedMisFiles, List<NameAndIndex> stringsDirFiles,
-            List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> booksDirFiles)
+            List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> booksDirFiles,
+            List<NameAndIndex> t3FMExtrasDirFiles)
         {
             #region Add BaseDirFiles
+
+            bool t3Found = false;
 
             // This is split out because of weird semantics with if(this && that) vs nested ifs (required in
             // order to have a var in the middle to avoid multiple LastIndexOf calls).
@@ -761,29 +789,50 @@ namespace FMScanner
 
                     var index = FmIsZip ? i : -1;
 
-                    if (!fn.Contains(dsc) && fn.Contains('.'))
+                    if (!t3Found &&
+                        fn.StartsWithI(FMDirs.T3DetectS(dsc)) &&
+                        fn.CountChars(dsc) == 3 &&
+                        fn.EndsWithI(".ibt") ||
+                        fn.EndsWithI(".cbt") ||
+                        fn.EndsWithI(".gmp") ||
+                        fn.EndsWithI(".ned") ||
+                        fn.EndsWithI(".unr"))
+                    {
+                        fmd.Game = Games.TDS;
+                        t3Found = true;
+                        continue;
+                    }
+                    // We can't early-out if !t3Found here because if we find it after this point, we'll be
+                    // missing however many of these we skipped before we detected Thief 3
+                    else if (fn.StartsWithI(FMDirs.T3FMExtras1S(dsc)) ||
+                             fn.StartsWithI(FMDirs.T3FMExtras2S(dsc)))
+                    {
+                        t3FMExtrasDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
+                        continue;
+                    }
+                    else if (!fn.Contains(dsc) && fn.Contains('.'))
                     {
                         baseDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                         // Fallthrough so ScanCustomResources can use it
                     }
-                    else if (fn.StartsWithI(FMDirs.StringsS(dsc)))
+                    else if (!t3Found && fn.StartsWithI(FMDirs.StringsS(dsc)))
                     {
                         stringsDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                         continue;
                     }
-                    else if (fn.StartsWithI(FMDirs.IntrfaceS(dsc)))
+                    else if (!t3Found && fn.StartsWithI(FMDirs.IntrfaceS(dsc)))
                     {
                         intrfaceDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                         // Fallthrough so ScanCustomResources can use it
                     }
-                    else if (fn.StartsWithI(FMDirs.BooksS(dsc)))
+                    else if (!t3Found && fn.StartsWithI(FMDirs.BooksS(dsc)))
                     {
                         booksDirFiles.Add(new NameAndIndex { Name = fn, Index = index });
                         continue;
                     }
 
                     // Inlined for performance. We cut the time roughly in half by doing this.
-                    if (ScanOptions.ScanCustomResources)
+                    if (!t3Found && ScanOptions.ScanCustomResources)
                     {
                         if (fmd.HasAutomap == null &&
                             fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
@@ -851,111 +900,141 @@ namespace FMScanner
                     }
                 }
 
-                if (baseDirFiles.Count == 0) return false;
-
-                if (ScanOptions.ScanCustomResources)
+                // Thief 3 can have no files in its base dir, and we don't scan for custom resources for T3
+                if (!t3Found)
                 {
-                    if (fmd.HasMap == null) fmd.HasMap = false;
-                    if (fmd.HasAutomap == null) fmd.HasAutomap = false;
-                    if (fmd.HasCustomMotions == null) fmd.HasCustomMotions = false;
-                    if (fmd.HasMovies == null) fmd.HasMovies = false;
-                    if (fmd.HasCustomTextures == null) fmd.HasCustomTextures = false;
-                    if (fmd.HasCustomObjects == null) fmd.HasCustomObjects = false;
-                    if (fmd.HasCustomCreatures == null) fmd.HasCustomCreatures = false;
-                    if (fmd.HasCustomScripts == null) fmd.HasCustomScripts = false;
-                    if (fmd.HasCustomSounds == null) fmd.HasCustomSounds = false;
-                    if (fmd.HasCustomSubtitles == null) fmd.HasCustomSubtitles = false;
+                    if (baseDirFiles.Count == 0) return false;
+
+                    if (ScanOptions.ScanCustomResources)
+                    {
+                        if (fmd.HasMap == null) fmd.HasMap = false;
+                        if (fmd.HasAutomap == null) fmd.HasAutomap = false;
+                        if (fmd.HasCustomMotions == null) fmd.HasCustomMotions = false;
+                        if (fmd.HasMovies == null) fmd.HasMovies = false;
+                        if (fmd.HasCustomTextures == null) fmd.HasCustomTextures = false;
+                        if (fmd.HasCustomObjects == null) fmd.HasCustomObjects = false;
+                        if (fmd.HasCustomCreatures == null) fmd.HasCustomCreatures = false;
+                        if (fmd.HasCustomScripts == null) fmd.HasCustomScripts = false;
+                        if (fmd.HasCustomSounds == null) fmd.HasCustomSounds = false;
+                        if (fmd.HasCustomSubtitles == null) fmd.HasCustomSubtitles = false;
+                    }
                 }
             }
             else
             {
+                var t3DetectPath = Path.Combine(FmWorkingPath, FMDirs.T3Detect);
+                if (Directory.Exists(t3DetectPath) &&
+                    FastIO.FilesExistSearchTop(t3DetectPath, "*.ibt", "*.cbt", "*.gmp", "*.ned", "*.unr"))
+                {
+                    t3Found = true;
+                    fmd.Game = Games.TDS;
+                }
+
                 foreach (var f in EnumFiles("*", SearchOption.TopDirectoryOnly))
                 {
                     baseDirFiles.Add(new NameAndIndex { Name = GetFileName(f) });
                 }
 
-                if (baseDirFiles.Count == 0) return false;
-
-                foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
+                if (t3Found)
                 {
-                    stringsDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
-                }
-
-                foreach (var f in EnumFiles(FMDirs.Intrface, "*", SearchOption.AllDirectories))
-                {
-                    intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
-                }
-
-                foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
-                {
-                    booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
-                }
-
-                // TODO: Maybe extract this again, but then I have to extract MapFileExists() too
-                if (ScanOptions.ScanCustomResources)
-                {
-                    // TODO: I already have baseDirFiles; see if this EnumerateDirectories can be removed
-                    // Even a janky scan through baseDirFiles would probably be faster than hitting the disk
-                    var baseDirFolders = (
-                        from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
-                            SearchOption.TopDirectoryOnly)
-                        select f.Substring(f.LastIndexOf(dsc) + 1)).ToArray();
-
-                    foreach (var f in intrfaceDirFiles)
+                    foreach (var f in EnumFiles(FMDirs.T3FMExtras1, "*", SearchOption.TopDirectoryOnly))
                     {
-                        if (fmd.HasAutomap == null &&
-                            f.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                            f.Name.CountChars(dsc) >= 2 &&
-                            f.Name.EndsWithI("ra.bin"))
-                        {
-                            fmd.HasAutomap = true;
-                            // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
-                            fmd.HasMap = true;
-                            break;
-                        }
-
-                        if (fmd.HasMap == null && MapFileExists(f.Name)) fmd.HasMap = true;
+                        t3FMExtrasDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
                     }
 
-                    if (fmd.HasMap == null) fmd.HasMap = false;
-                    if (fmd.HasAutomap == null) fmd.HasAutomap = false;
+                    foreach (var f in EnumFiles(FMDirs.T3FMExtras2, "*", SearchOption.TopDirectoryOnly))
+                    {
+                        t3FMExtrasDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                    }
+                }
+                else
+                {
+                    if (baseDirFiles.Count == 0) return false;
 
-                    fmd.HasCustomMotions =
-                        baseDirFolders.ContainsI(FMDirs.Motions) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Motions),
-                            MotionFilePatterns);
+                    foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
+                    {
+                        stringsDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                    }
 
-                    fmd.HasMovies =
-                        baseDirFolders.ContainsI(FMDirs.Movies) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
+                    foreach (var f in EnumFiles(FMDirs.Intrface, "*", SearchOption.AllDirectories))
+                    {
+                        intrfaceDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                    }
 
-                    fmd.HasCustomTextures =
-                        baseDirFolders.ContainsI(FMDirs.Fam) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Fam),
-                            ImageFilePatterns);
+                    foreach (var f in EnumFiles(FMDirs.Books, "*", SearchOption.AllDirectories))
+                    {
+                        booksDirFiles.Add(new NameAndIndex { Name = f.Substring(FmWorkingPath.Length) });
+                    }
 
-                    fmd.HasCustomObjects =
-                        baseDirFolders.ContainsI(FMDirs.Obj) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Obj), "*.bin");
+                    // TODO: Maybe extract this again, but then I have to extract MapFileExists() too
+                    if (ScanOptions.ScanCustomResources)
+                    {
+                        // TODO: I already have baseDirFiles; see if this EnumerateDirectories can be removed
+                        // Even a janky scan through baseDirFiles would probably be faster than hitting the disk
+                        var baseDirFolders = (
+                            from f in Directory.EnumerateDirectories(FmWorkingPath, "*",
+                                SearchOption.TopDirectoryOnly)
+                            select f.Substring(f.LastIndexOf(dsc) + 1)).ToArray();
 
-                    fmd.HasCustomCreatures =
-                        baseDirFolders.ContainsI(FMDirs.Mesh) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Mesh), "*.bin");
+                        foreach (var f in intrfaceDirFiles)
+                        {
+                            if (fmd.HasAutomap == null &&
+                                f.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                                f.Name.CountChars(dsc) >= 2 &&
+                                f.Name.EndsWithI("ra.bin"))
+                            {
+                                fmd.HasAutomap = true;
+                                // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
+                                fmd.HasMap = true;
+                                break;
+                            }
 
-                    fmd.HasCustomScripts =
-                        baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
-                        (baseDirFolders.ContainsI(FMDirs.Scripts) &&
-                         FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
+                            if (fmd.HasMap == null && MapFileExists(f.Name)) fmd.HasMap = true;
+                        }
 
-                    fmd.HasCustomSounds =
-                        baseDirFolders.ContainsI(FMDirs.Snd) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
+                        if (fmd.HasMap == null) fmd.HasMap = false;
+                        if (fmd.HasAutomap == null) fmd.HasAutomap = false;
 
-                    fmd.HasCustomSubtitles =
-                        baseDirFolders.ContainsI(FMDirs.Subtitles) &&
-                        FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
+                        fmd.HasCustomMotions =
+                            baseDirFolders.ContainsI(FMDirs.Motions) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Motions),
+                                MotionFilePatterns);
+
+                        fmd.HasMovies =
+                            baseDirFolders.ContainsI(FMDirs.Movies) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
+
+                        fmd.HasCustomTextures =
+                            baseDirFolders.ContainsI(FMDirs.Fam) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Fam),
+                                ImageFilePatterns);
+
+                        fmd.HasCustomObjects =
+                            baseDirFolders.ContainsI(FMDirs.Obj) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Obj), "*.bin");
+
+                        fmd.HasCustomCreatures =
+                            baseDirFolders.ContainsI(FMDirs.Mesh) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Mesh), "*.bin");
+
+                        fmd.HasCustomScripts =
+                            baseDirFiles.Any(x => ScriptFileExtensions.ContainsI(GetExtension(x.Name))) ||
+                            (baseDirFolders.ContainsI(FMDirs.Scripts) &&
+                             FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
+
+                        fmd.HasCustomSounds =
+                            baseDirFolders.ContainsI(FMDirs.Snd) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
+
+                        fmd.HasCustomSubtitles =
+                            baseDirFolders.ContainsI(FMDirs.Subtitles) &&
+                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Subtitles), "*.sub");
+                    }
                 }
             }
+
+            // Cut it right here for Thief 3: we don't need anything else
+            if (t3Found) return true;
 
             #endregion
 
@@ -1280,20 +1359,14 @@ namespace FMScanner
             }
         }
 
-        private void ReadAndCacheReadmeFiles(List<NameAndIndex> baseDirFiles, RichTextBox rtfBox)
+        private void ReadAndCacheReadmeFiles(List<NameAndIndex> readmeDirFiles, RichTextBox rtfBox)
         {
             // Note: .wri files look like they may be just plain text with garbage at the top. Shrug.
             // Treat 'em like plaintext and see how it goes.
 
-            foreach (var f in baseDirFiles)
+            foreach (var f in readmeDirFiles)
             {
-                if (!f.Name.EndsWithI(".txt") &&
-                    !f.Name.EndsWithI(".rtf") &&
-                    !f.Name.EndsWithI(".wri") &&
-                    !f.Name.ExtIsHtml())
-                {
-                    continue;
-                }
+                if (!f.Name.IsValidReadme()) continue;
 
                 var readmeFile = f;
 
@@ -1379,7 +1452,6 @@ namespace FMScanner
                         if (success)
                         {
                             var last = ReadmeFiles[ReadmeFiles.Count - 1];
-                            last.Type = ReadmeType.Rtf;
                             last.Lines = rtfBox.Lines;
                             last.Text = rtfBox.Text;
                         }
@@ -1387,10 +1459,24 @@ namespace FMScanner
                     else
                     {
                         var last = ReadmeFiles[ReadmeFiles.Count - 1];
-                        last.Type = ReadmeType.PlainText;
                         last.Lines = FmIsZip
                             ? ReadAllLinesE(readmeStream, readmeFileLen, streamIsSeekable: true)
                             : ReadAllLinesE(readmeFileOnDisk);
+
+                        // Convert GLML files to plaintext by stripping the markup. Fortunately this is extremely
+                        // easy as all tags are of the form [GLWHATEVER][/GLWHATEVER]. Very nice, very simple.
+                        if (last.FileName.EndsWithI(".glml"))
+                        {
+                            for (var i = 0; i < last.Lines.Length; i++)
+                            {
+                                var matches = GLMLTagRegex.Matches(last.Lines[i]);
+                                foreach (Match m in matches)
+                                {
+                                    last.Lines[i] = last.Lines[i].Replace(m.Value, "");
+                                }
+                            }
+                        }
+
                         last.Text = string.Join("\r\n", last.Lines);
                     }
                 }

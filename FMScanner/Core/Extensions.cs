@@ -192,6 +192,16 @@ namespace FMScanner
                    lastDotIndex > value.LastIndexOf('\\');
         }
 
+        internal static bool IsValidReadme(this string readme, bool englishOnly = false)
+        {
+            return (readme.EndsWithI(".txt") ||
+                    readme.EndsWithI(".rtf") ||
+                    readme.EndsWithI(".wri") ||
+                    readme.EndsWithI(".glml") ||
+                    readme.ExtIsHtml()) &&
+                   (!englishOnly || readme.IsEnglishReadme());
+        }
+
         /// <summary>
         /// Returns true if value ends with ".html" or ".htm".
         /// </summary>

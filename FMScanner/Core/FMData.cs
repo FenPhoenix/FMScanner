@@ -24,6 +24,7 @@ namespace FMScanner
         /// <summary>
         /// <see langword="true"/> to detect the titles of individual campaign missions.
         /// If the mission is not a campaign, this option has no effect.
+        /// If the mission is for Thief: Deadly Shadows, this option has no effect.
         /// </summary>
         public bool ScanCampaignMissionNames { get; set; } = true;
         /// <summary>
@@ -36,23 +37,27 @@ namespace FMScanner
         public bool ScanVersion { get; set; } = true;
         /// <summary>
         /// <see langword="true"/> to detect the languages the mission supports.
+        /// If the mission is for Thief: Deadly Shadows, this option has no effect.
         /// </summary>
         public bool ScanLanguages { get; set; } = true;
         /// <summary>
-        /// <see langword="true"/> to detect which game the mission is for (Thief 1 or Thief 2).
+        /// <see langword="true"/> to detect which game the mission is for (Thief 1, Thief 2, or Thief 3).
         /// </summary>
         public bool ScanGameType { get; set; } = true;
         /// <summary>
         /// <see langword="true"/> to detect whether the mission requires NewDark.
+        /// If the mission is for Thief: Deadly Shadows, this option has no effect.
         /// </summary>
         public bool ScanNewDarkRequired { get; set; } = true;
         /// <summary>
         /// <see langword="true"/> to detect the minimum NewDark version the mission requires.
         /// If ScanNewDarkRequired is false, this option has no effect.
+        /// If the mission is for Thief: Deadly Shadows, this option has no effect.
         /// </summary>
         public bool ScanNewDarkMinimumVersion { get; set; } = true;
         /// <summary>
         /// <see langword="true"/> to detect whether the mission contains custom resources.
+        /// If the mission is for Thief: Deadly Shadows, this option has no effect.
         /// </summary>
         public bool ScanCustomResources { get; set; } = true;
         /// <summary>
@@ -75,6 +80,7 @@ namespace FMScanner
     {
         public static string TDP { get; } = "tdp";
         public static string TMA { get; } = "tma";
+        public static string TDS { get; } = "tds";
         public static string Unsupported { get; } = "unsupported";
     }
 
@@ -82,18 +88,6 @@ namespace FMScanner
     {
         public static string FanMission { get; } = "fanmission";
         public static string Campaign { get; } = "campaign";
-    }
-
-    public enum ReadmeType
-    {
-        PlainText,
-        Rtf,
-        Wri
-    }
-
-    public sealed class Readme
-    {
-        public string FileName { get; set; } = null;
     }
 
     public sealed class ScannedFMData
@@ -110,6 +104,9 @@ namespace FMScanner
         public string Version { get; internal set; } = null;
         public bool? NewDarkRequired { get; internal set; }
         public string NewDarkMinRequiredVersion { get; internal set; } = null;
+        /// <summary>
+        /// Deprecated and will always be blank. Use <see cref="LastUpdateDate"/> instead.
+        /// </summary>
         public DateTime? OriginalReleaseDate { get; internal set; } = null;
 
         private DateTime? _lastUpdateDate;
@@ -141,7 +138,6 @@ namespace FMScanner
         public bool? HasMap { get; internal set; }
         public bool? HasCustomSubtitles { get; internal set; }
         public string Description { get; internal set; } = null;
-        public List<Readme> Readmes { get; internal set; } = new List<Readme>();
         public string TagsString { get; internal set; } = null;
     }
 }

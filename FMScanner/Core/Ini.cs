@@ -10,8 +10,6 @@ You should have received a copy of the CC0 Public Domain Dedication along with t
 If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 */
 
-using System.Text;
-
 namespace FMScanner
 {
     internal static class Ini

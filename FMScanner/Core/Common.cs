@@ -37,7 +37,16 @@ namespace FMScanner
         internal const string Strings = "strings";
         internal const string Subtitles = "subtitles";
 
+        internal const string T3Detect = @"Content\T3\Maps\";
+        internal const string T3FMExtras1 = "Fan Mission Extras";
+        internal const string T3FMExtras2 = "FanMissionExtras";
+
         // Perf, so directory separator char doesn't have to converted to a string and concatenated
+        // NOTE: This is dubious, did I even profile this? Still, the scanner is lightning fast anyway, so whatever
+        internal static string T3DetectS(char dsc) => dsc == '/' ? "Content/T3/Maps/" : @"Content\T3\Maps\";
+        internal static string T3FMExtras1S(char dsc) => dsc == '/' ? "Fan Mission Extras/" : @"Fan Mission Extras\";
+        internal static string T3FMExtras2S(char dsc) => dsc == '/' ? "FanMissionExtras/" : @"FanMissionExtras\";
+
         internal static string BooksS(char dsc) => dsc == '/' ? "books/" : @"books\";
         internal static string FamS(char dsc) => dsc == '/' ? "fam/" : @"fam\";
         internal static string IntrfaceS(char dsc) => dsc == '/' ? "intrface/" : @"intrface\";
@@ -134,20 +143,45 @@ namespace FMScanner
 
         internal static string[] DateFormats { get; } =
         {
+            "MMM d yy",
+            "MMM d, yy",
+            "MMM dd yy",
+            "MMM dd, yy",
+
             "MMM d yyyy",
             "MMM d, yyyy",
             "MMM dd yyyy",
             "MMM dd, yyyy",
+
+            "MMMM d yy",
+            "MMMM d, yy",
+            "MMMM dd yy",
+            "MMMM dd, yy",
 
             "MMMM d yyyy",
             "MMMM d, yyyy",
             "MMMM dd yyyy",
             "MMMM dd, yyyy",
 
+            "d MMM yy",
+            "d MMM, yy",
+            "dd MMM yy",
+            "dd MMM, yy",
+
             "d MMM yyyy",
             "d MMM, yyyy",
             "dd MMM yyyy",
             "dd MMM, yyyy",
+
+            "d MMMM yy",
+            "d MMMM, yy",
+            "dd MMMM yy",
+            "dd MMMM, yy",
+            
+            "d MMMM yyyy",
+            "d MMMM, yyyy",
+            "dd MMMM yyyy",
+            "dd MMMM, yyyy",
 
             "yyyy MMM d",
             "yyyy MMM dd",
@@ -205,6 +239,9 @@ namespace FMScanner
     // their performance by a huge amount. And as we know, regexes need all the performance help they can get.
     internal static class Regexes
     {
+        internal static Regex GLMLTagRegex =
+            new Regex(@"\[/?GL[A-Z]+\]", RegexOptions.Compiled);
+
         internal static Regex OpenParenSpacesRegex =
             new Regex(@"\(\s+", RegexOptions.Compiled);
 
