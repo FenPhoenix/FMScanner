@@ -216,23 +216,25 @@ namespace FMScanner
 
                     #endregion
 
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    if (progress != null)
+                    {
+                        var progressReport = new ProgressReport
+                        {
+                            FMName = missions[i],
+                            FMNumber = i + 1,
+                            FMsTotal = missions.Count,
+                            Percent = (100 * (i + 1)) / missions.Count,
+                            Finished = i == missions.Count - 1
+                        };
+                        progress.Report(progressReport);
+                    }
+
                     scannedFMDataList.Add(ScanCurrentFM(rtfBox));
 
                     #region Report progress and handle cancellation
 
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    if (progress == null) continue;
-
-                    var progressReport = new ProgressReport
-                    {
-                        FMName = missions[i],
-                        FMNumber = i + 1,
-                        FMsTotal = missions.Count,
-                        Percent = (100 * (i + 1)) / missions.Count,
-                        Finished = i == missions.Count - 1
-                    };
-                    progress.Report(progressReport);
 
                     #endregion
                 }
