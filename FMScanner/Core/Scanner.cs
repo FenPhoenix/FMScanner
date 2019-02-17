@@ -192,6 +192,8 @@ namespace FMScanner
             // For performance, we only have one instance and we just change its content as needed.
             using (var rtfBox = new RichTextBox())
             {
+                ProgressReport progressReport = null;
+
                 for (var i = 0; i < missions.Count; i++)
                 {
                     #region Init
@@ -216,27 +218,33 @@ namespace FMScanner
 
                     #endregion
 
+                    #region Report progress and handle cancellation
+
                     cancellationToken.ThrowIfCancellationRequested();
 
                     if (progress != null)
                     {
-                        var progressReport = new ProgressReport
+                        progressReport = new ProgressReport
                         {
                             FMName = missions[i],
                             FMNumber = i + 1,
                             FMsTotal = missions.Count,
                             Percent = (100 * (i + 1)) / missions.Count,
-                            Finished = i == missions.Count - 1
+                            Finished = false
                         };
+
                         progress.Report(progressReport);
                     }
 
+                    #endregion
+
                     scannedFMDataList.Add(ScanCurrentFM(rtfBox));
 
-                    #region Report progress and handle cancellation
-
-
-                    #endregion
+                    if (progress != null && i == missions.Count - 1)
+                    {
+                        progressReport.Finished = true;
+                        progress.Report(progressReport);
+                    }
                 }
             }
 
