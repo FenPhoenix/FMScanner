@@ -1482,7 +1482,7 @@ namespace FMScanner
                                 var matches = GLMLTagRegex.Matches(last.Lines[i]);
                                 foreach (Match m in matches)
                                 {
-                                    last.Lines[i] = last.Lines[i].Replace(m.Value, "");
+                                    last.Lines[i] = last.Lines[i].Replace(m.Value, m.Value == "[GLNL]" ? "\r\n" : "");
                                 }
                             }
                         }
