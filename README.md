@@ -7,7 +7,7 @@ Detects the following:
 - Titles of campaign missions if it's a campaign
 - Author
 - Description (if specified in fm.ini)
-- Game (Thief 1 or Thief 2)
+- Game (Thief 1, Thief 2, or Thief: Deadly Shadows)
 - Languages (work in progress)
 - Version (if specified; work in progress)
 - Whether the mission requires NewDark
