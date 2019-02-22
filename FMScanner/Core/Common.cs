@@ -177,7 +177,7 @@ namespace FMScanner
             "d MMMM, yy",
             "dd MMMM yy",
             "dd MMMM, yy",
-            
+
             "d MMMM yyyy",
             "d MMMM, yyyy",
             "dd MMMM yyyy",
@@ -330,7 +330,11 @@ namespace FMScanner
         {
             new Regex(
                 //language=regexp
-                @"^This (level|(fan(-| |))?mission|FM)( in this (zip|archive( file)?))? is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
+                @"^This (level|(fan(-| |))?mission|FM) is( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
+                RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
+            new Regex(
+                //language=regexp
+                @"^The (levels?|(fan(-| |))?missions?|FMs?)( in this (zip|archive( file)?))? (is|are)( made)? (\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
             new Regex(
                 //language=regexp
