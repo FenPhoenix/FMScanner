@@ -1,6 +1,6 @@
 # FMScanner
 
-A fast, thorough, accurate scanner for Thief 1 and Thief 2 fan missions.
+A fast, thorough, accurate scanner for Thief 1, Thief 2, and Thief 3 fan missions.
 
 Detects the following:
 - Title (along with a list of alternate titles if more than one is detected and they don't all match)
