@@ -633,6 +633,23 @@ namespace FMScanner
             OverallTimer.Stop();
             Debug.WriteLine(@"This FM took:\r\n" + OverallTimer.Elapsed.ToString(@"hh\:mm\:ss\.fffffff"));
 
+            // Due to the Thief 3 detection being done in the same place as the custom resources check, it's
+            // theoretically possible to end up with some of these set. There's no way around it, so just unset
+            // them all here for consistency.
+            if (fmIsT3)
+            {
+                fmData.HasMap = null;
+                fmData.HasAutomap = null;
+                fmData.HasCustomCreatures = null;
+                fmData.HasCustomScripts = null;
+                fmData.HasCustomTextures = null;
+                fmData.HasCustomSounds = null;
+                fmData.HasCustomObjects = null;
+                fmData.HasCustomMotions = null;
+                fmData.HasCustomSubtitles = null;
+                fmData.HasMovies = null;
+            }
+
             return fmData;
         }
 
