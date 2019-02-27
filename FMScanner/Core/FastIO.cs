@@ -71,6 +71,27 @@ namespace FMScanner
             return FirstFileExists(FastIOSearchOption.AllDirectoriesSkipTop, path, searchPatterns);
         }
 
+        private static void ThrowException(string[] searchPatterns, int err, string path, string pattern, int loop)
+        {
+            var spString = "";
+            for (int i = 0; i < searchPatterns.Length; i++)
+            {
+                if (i > 0) spString += ",";
+                spString += searchPatterns[i];
+            }
+
+            var whichLoop = loop == 0 ? "First loop" : "Second loop";
+
+            var ex = new Win32Exception(err);
+            throw new Win32Exception(err,
+                whichLoop + "\r\n" +
+                "System error code: " + err + "\r\n" +
+                ex.Message + "\r\n" +
+                "path: '" + path + "'\r\n" +
+                "search patterns: " + spString + "\r\n" +
+                "current search pattern: '" + pattern + "'");
+        }
+
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         private static bool FirstFileExists(FastIOSearchOption searchOption, string path, params string[] searchPatterns)
         {
@@ -107,16 +128,12 @@ namespace FMScanner
                         var err = Marshal.GetLastWin32Error();
                         if (err == ERROR_FILE_NOT_FOUND) continue;
 
+                        FindClose(findHandle);
+
                         // Since the framework isn't here to save us, we should blanket-catch and throw on every
                         // possible error other than file-not-found (as that's an intended scenario, obviously).
                         // This isn't as nice as you'd get from a framework method call, but it gets the job done.
-                        FindClose(findHandle);
-                        var ex = new Win32Exception(err);
-                        throw new Win32Exception(err,
-                            "System error code: " + err + "\r\n" +
-                            ex.Message + "\r\n" +
-                            "path: '" + path + "'\r\n" +
-                            "searchPattern: '" + searchPatterns + "'");
+                        ThrowException(searchPatterns, err, path, p, 0);
                     }
                     do
                     {
@@ -140,12 +157,7 @@ namespace FMScanner
                 if (err != ERROR_FILE_NOT_FOUND)
                 {
                     FindClose(findHandle);
-                    var ex = new Win32Exception(err);
-                    throw new Win32Exception(err,
-                        "System error code: " + err + "\r\n" +
-                        ex.Message + "\r\n" +
-                        "path: '" + path + "'\r\n" +
-                        "searchPattern: '" + searchPatterns + "'");
+                    ThrowException(searchPatterns, err, path, @"\* [looking for all directories]", 1);
                 }
             }
             do
