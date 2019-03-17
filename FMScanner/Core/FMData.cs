@@ -17,6 +17,22 @@ namespace FMScanner
 {
     public sealed class ScanOptions
     {
+        public static ScanOptions AllFalse => new ScanOptions
+        {
+            ScanTitle = false,
+            ScanCampaignMissionNames = false,
+            ScanAuthor = false,
+            ScanVersion = false,
+            ScanLanguages = false,
+            ScanGameType = false,
+            ScanNewDarkRequired = false,
+            ScanNewDarkMinimumVersion = false,
+            ScanCustomResources = false,
+            ScanSize = false,
+            ScanReleaseDate = false,
+            ScanTags = false
+        };
+
         /// <summary>
         /// <see langword="true"/> to detect the mission's title.
         /// </summary>
