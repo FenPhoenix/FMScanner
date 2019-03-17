@@ -65,6 +65,14 @@ namespace FMScanner
         /// mission is a compressed archive or an uncompressed directory.
         /// </summary>
         public bool ScanSize { get; set; } = true;
+        /// <summary>
+        /// <see langword="true"/> to detect the mission's release date.
+        /// </summary>
+        public bool ScanReleaseDate { get; set; } = true;
+        /// <summary>
+        /// <see langword="true"/> to detect the mission's tags.
+        /// </summary>
+        public bool ScanTags { get; set; } = true;
     }
 
     public sealed class ProgressReport

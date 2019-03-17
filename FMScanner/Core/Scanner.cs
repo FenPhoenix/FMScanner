@@ -445,7 +445,8 @@ namespace FMScanner
 
                 #region Check info files
 
-                if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor || ScanOptions.ScanVersion)
+                if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor || ScanOptions.ScanVersion ||
+                    ScanOptions.ScanReleaseDate || ScanOptions.ScanTags)
                 {
                     var fmInfoXml = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMInfoXml));
                     if (fmInfoXml != null)
@@ -453,9 +454,8 @@ namespace FMScanner
                         var t = ReadFmInfoXml(fmInfoXml);
                         if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
                         if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
-                        fmData.Version = t.Version;
-
-                        if (t.ReleaseDate != null) fmData.LastUpdateDate = t.ReleaseDate;
+                        if (ScanOptions.ScanVersion) fmData.Version = t.Version;
+                        if (ScanOptions.ScanReleaseDate && t.ReleaseDate != null) fmData.LastUpdateDate = t.ReleaseDate;
                     }
                 }
                 {
@@ -466,10 +466,8 @@ namespace FMScanner
                         if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
                         if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
                         fmData.Description = t.Description;
-
-                        if (t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
-
-                        fmData.TagsString = t.Tags;
+                        if (ScanOptions.ScanReleaseDate && t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
+                        if (ScanOptions.ScanTags) fmData.TagsString = t.Tags;
                     }
                 }
 
@@ -503,7 +501,10 @@ namespace FMScanner
 
             #region Set release date
 
-            if (fmData.LastUpdateDate == null) fmData.LastUpdateDate = GetReleaseDate(fmIsT3, usedMisFiles);
+            if (ScanOptions.ScanReleaseDate && fmData.LastUpdateDate == null)
+            {
+                fmData.LastUpdateDate = GetReleaseDate(fmIsT3, usedMisFiles);
+            }
 
             #endregion
 
@@ -588,10 +589,7 @@ namespace FMScanner
 
             #region Version
 
-            if (ScanOptions.ScanVersion && fmData.Version.IsEmpty())
-            {
-                fmData.Version = GetVersion();
-            }
+            if (ScanOptions.ScanVersion && fmData.Version.IsEmpty()) fmData.Version = GetVersion();
 
             #endregion
 
@@ -613,18 +611,21 @@ namespace FMScanner
                 #endregion
             }
 
-            if (fmData.Type == FMTypes.Campaign) SetMiscTag(fmData, "campaign");
-
-            if (!string.IsNullOrEmpty(fmData.Author))
+            if (ScanOptions.ScanTags)
             {
-                int ai = fmData.Author.IndexOf(' ');
-                if (ai == -1) ai = fmData.Author.IndexOf('-');
-                if (ai == -1) ai = fmData.Author.Length - 1;
-                var anonAuthor = fmData.Author.Substring(0, ai);
-                if (anonAuthor.EqualsI("Anon") || anonAuthor.EqualsI("Withheld") ||
-                    anonAuthor.SimilarityTo("Anonymous", OrdinalIgnoreCase) > 0.75)
+                if (fmData.Type == FMTypes.Campaign) SetMiscTag(fmData, "campaign");
+
+                if (!string.IsNullOrEmpty(fmData.Author))
                 {
-                    SetMiscTag(fmData, "unknown author");
+                    int ai = fmData.Author.IndexOf(' ');
+                    if (ai == -1) ai = fmData.Author.IndexOf('-');
+                    if (ai == -1) ai = fmData.Author.Length - 1;
+                    var anonAuthor = fmData.Author.Substring(0, ai);
+                    if (anonAuthor.EqualsI("Anon") || anonAuthor.EqualsI("Withheld") ||
+                        anonAuthor.SimilarityTo("Anonymous", OrdinalIgnoreCase) > 0.75)
+                    {
+                        SetMiscTag(fmData, "unknown author");
+                    }
                 }
             }
 
@@ -1285,23 +1286,26 @@ namespace FMScanner
             #endregion
 
             // Return the raw string and let the caller decide what to do with it
-            ret.Tags = fmIni.Tags;
+            if (ScanOptions.ScanTags) ret.Tags = fmIni.Tags;
 
             if (ScanOptions.ScanTitle) ret.Title = fmIni.NiceName;
 
-            var rd = fmIni.ReleaseDate;
+            if (ScanOptions.ScanReleaseDate)
+            {
+                var rd = fmIni.ReleaseDate;
 
-            // The fm.ini Unix timestamp looks 32-bit, but FMSel's source code pegs it as int64. It must just be
-            // writing only as many digits as it needs. That's good, because 32-bit will run out in 2038. Anyway,
-            // we should parse it as long (NDL only does int, so it's in for a surprise in 20 years :P)
-            if (long.TryParse(rd, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long seconds))
-            {
-                var newDate = DateTimeOffset.FromUnixTimeSeconds(seconds).DateTime;
-                ret.LastUpdateDate = newDate;
-            }
-            else if (!string.IsNullOrEmpty(fmIni.ReleaseDate))
-            {
-                ret.LastUpdateDate = StringToDate(fmIni.ReleaseDate, out var dt) ? (DateTime?)dt : null;
+                // The fm.ini Unix timestamp looks 32-bit, but FMSel's source code pegs it as int64. It must just be
+                // writing only as many digits as it needs. That's good, because 32-bit will run out in 2038. Anyway,
+                // we should parse it as long (NDL only does int, so it's in for a surprise in 20 years :P)
+                if (long.TryParse(rd, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long seconds))
+                {
+                    var newDate = DateTimeOffset.FromUnixTimeSeconds(seconds).DateTime;
+                    ret.LastUpdateDate = newDate;
+                }
+                else if (!string.IsNullOrEmpty(fmIni.ReleaseDate))
+                {
+                    ret.LastUpdateDate = StringToDate(fmIni.ReleaseDate, out var dt) ? (DateTime?)dt : null;
+                }
             }
 
             ret.Description = fmIni.Descr;
