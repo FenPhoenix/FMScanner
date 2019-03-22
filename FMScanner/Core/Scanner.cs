@@ -226,7 +226,7 @@ namespace FMScanner
                     {
                         progressReport = new ProgressReport
                         {
-                            FMName = missions[i],
+                            FMName = FmIsZip ? missions[i].GetFileNameFast() : missions[i].GetDirNameFast(),
                             FMNumber = i + 1,
                             FMsTotal = missions.Count,
                             Percent = (100 * (i + 1)) / missions.Count,

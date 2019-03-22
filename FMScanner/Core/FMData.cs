@@ -17,21 +17,46 @@ namespace FMScanner
 {
     public sealed class ScanOptions
     {
-        public static ScanOptions AllFalse => new ScanOptions
+        // Dumb looking on this side, but extremely nice and convenient on the calling side.
+        // Pretty sure there must be a better way to be able to have two sets of defaults for one object...
+        /// <summary>
+        /// Returns a <see cref="ScanOptions"/> object where all fields are set to false except the ones you specify to be true.
+        /// </summary>
+        /// <param name="scanTitle"></param>
+        /// <param name="scanCampaignMissionNames"></param>
+        /// <param name="scanAuthor"></param>
+        /// <param name="scanVersion"></param>
+        /// <param name="scanLanguages"></param>
+        /// <param name="scanGameType"></param>
+        /// <param name="scanNewDarkRequired"></param>
+        /// <param name="scanNewDarkMinimumVersion"></param>
+        /// <param name="scanCustomResources"></param>
+        /// <param name="scanSize"></param>
+        /// <param name="scanReleaseDate"></param>
+        /// <param name="scanTags"></param>
+        /// <returns></returns>
+        public static ScanOptions FalseDefault(bool scanTitle = false, bool scanCampaignMissionNames = false,
+            bool scanAuthor = false, bool scanVersion = false, bool scanLanguages = false,
+            bool scanGameType = false, bool scanNewDarkRequired = false, bool scanNewDarkMinimumVersion = false,
+            bool scanCustomResources = false, bool scanSize = false, bool scanReleaseDate = false,
+            bool scanTags = false)
         {
-            ScanTitle = false,
-            ScanCampaignMissionNames = false,
-            ScanAuthor = false,
-            ScanVersion = false,
-            ScanLanguages = false,
-            ScanGameType = false,
-            ScanNewDarkRequired = false,
-            ScanNewDarkMinimumVersion = false,
-            ScanCustomResources = false,
-            ScanSize = false,
-            ScanReleaseDate = false,
-            ScanTags = false
-        };
+            return new ScanOptions
+            {
+                ScanTitle = scanTitle,
+                ScanCampaignMissionNames = scanCampaignMissionNames,
+                ScanAuthor = scanAuthor,
+                ScanVersion = scanVersion,
+                ScanLanguages = scanLanguages,
+                ScanGameType = scanGameType,
+                ScanNewDarkRequired = scanNewDarkRequired,
+                ScanNewDarkMinimumVersion = scanNewDarkMinimumVersion,
+                ScanCustomResources = scanCustomResources,
+                ScanSize = scanSize,
+                ScanReleaseDate = scanReleaseDate,
+                ScanTags = scanTags
+            };
+        }
 
         /// <summary>
         /// <see langword="true"/> to detect the mission's title.
