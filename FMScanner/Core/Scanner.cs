@@ -118,14 +118,14 @@ namespace FMScanner
         }
 
         // Debug - scan on UI thread so breaks will actually break where they're supposed to
-        #if DEBUG || ScanSynchronous
+        //#if DEBUG || ScanSynchronous
         public List<ScannedFMData>
         Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
                 IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
             return ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
         }
-        #endif
+        //#endif
 
         #endregion
 
