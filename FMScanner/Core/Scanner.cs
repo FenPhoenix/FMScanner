@@ -118,14 +118,14 @@ namespace FMScanner
         }
 
         // Debug - scan on UI thread so breaks will actually break where they're supposed to
-#if DEBUG || ScanSynchronous
+        #if DEBUG || ScanSynchronous
         public List<ScannedFMData>
-            Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
+        Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
                 IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
             return ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
         }
-#endif
+        #endif
 
         #endregion
 
@@ -226,7 +226,7 @@ namespace FMScanner
                     {
                         progressReport = new ProgressReport
                         {
-                            FMName = FmIsZip ? missions[i].GetFileNameFast() : missions[i].GetDirNameFast(),
+                            FMName = missions[i],
                             FMNumber = i + 1,
                             FMsTotal = missions.Count,
                             Percent = (100 * (i + 1)) / missions.Count,
