@@ -550,7 +550,7 @@ namespace FMScanner
 
             #region Author
 
-            if (ScanOptions.ScanAuthor)
+            if (ScanOptions.ScanAuthor || ScanOptions.ScanTags)
             {
                 if (fmData.Author.IsEmpty())
                 {
@@ -598,7 +598,7 @@ namespace FMScanner
             {
                 #region Languages
 
-                if (ScanOptions.ScanLanguages)
+                if (ScanOptions.ScanLanguages || ScanOptions.ScanTags)
                 {
                     var getLangs = GetLanguages(baseDirFiles, booksDirFiles, intrfaceDirFiles, stringsDirFiles);
                     fmData.Languages = getLangs.Langs;
