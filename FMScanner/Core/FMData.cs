@@ -151,7 +151,7 @@ namespace FMScanner
         public string Game { get; internal set; } = null;
         public string[] Languages { get; internal set; } = null;
         public string Version { get; internal set; } = null;
-        public bool? NewDarkRequired { get; internal set; }
+        public bool? NewDarkRequired { get; internal set; } = null;
         public string NewDarkMinRequiredVersion { get; internal set; } = null;
         /// <summary>
         /// Deprecated and will always be blank. Use <see cref="LastUpdateDate"/> instead.
@@ -176,16 +176,16 @@ namespace FMScanner
             }
         }
 
-        public bool? HasCustomScripts { get; internal set; }
-        public bool? HasCustomTextures { get; internal set; }
-        public bool? HasCustomSounds { get; internal set; }
-        public bool? HasCustomObjects { get; internal set; }
-        public bool? HasCustomCreatures { get; internal set; }
-        public bool? HasCustomMotions { get; internal set; }
-        public bool? HasAutomap { get; internal set; }
-        public bool? HasMovies { get; internal set; }
-        public bool? HasMap { get; internal set; }
-        public bool? HasCustomSubtitles { get; internal set; }
+        public bool? HasCustomScripts { get; internal set; } = null;
+        public bool? HasCustomTextures { get; internal set; } = null;
+        public bool? HasCustomSounds { get; internal set; } = null;
+        public bool? HasCustomObjects { get; internal set; } = null;
+        public bool? HasCustomCreatures { get; internal set; } = null;
+        public bool? HasCustomMotions { get; internal set; } = null;
+        public bool? HasAutomap { get; internal set; } = null;
+        public bool? HasMovies { get; internal set; } = null;
+        public bool? HasMap { get; internal set; } = null;
+        public bool? HasCustomSubtitles { get; internal set; } = null;
         public string Description { get; internal set; } = null;
         public string TagsString { get; internal set; } = null;
     }

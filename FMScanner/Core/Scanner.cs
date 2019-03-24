@@ -606,6 +606,7 @@ namespace FMScanner
                     {
                         SetLangTags(fmData, getLangs.UncertainLangs);
                     }
+                    if (!ScanOptions.ScanLanguages) fmData.Languages = null;
                 }
 
                 #endregion
@@ -627,6 +628,8 @@ namespace FMScanner
                         SetMiscTag(fmData, "unknown author");
                     }
                 }
+
+                if (!ScanOptions.ScanAuthor) fmData.Author = null;
             }
 
             if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
