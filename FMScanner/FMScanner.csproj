@@ -105,6 +105,7 @@
     <Compile Include="Core\Extensions.cs" />
     <Compile Include="Core\FastIO.cs" />
     <Compile Include="Core\Ini.cs" />
+    <Compile Include="Core\Logger.cs" />
     <Compile Include="FastZipReader\Deflate64Managed\Deflate64ManagedStream.cs" />
     <Compile Include="FastZipReader\Deflate64Managed\FileFormats.cs" />
     <Compile Include="FastZipReader\Deflate64Managed\HuffmanTree.cs" />

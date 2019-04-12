@@ -31,6 +31,7 @@ using static System.StringComparison;
 using static FMScanner.FMConstants;
 using static FMScanner.Methods;
 using static FMScanner.Regexes;
+using static FMScanner.Logger;
 
 namespace FMScanner
 {
@@ -67,6 +68,8 @@ namespace FMScanner
         /// later). Default: <see cref="Encoding.UTF8"/>
         /// </summary>
         public Encoding ZipEntryNameEncoding { get; set; } = Encoding.UTF8;
+
+        public string LogFile { get; set; } = "";
 
         #region Disposable
 
@@ -171,12 +174,14 @@ namespace FMScanner
 
             if (string.IsNullOrEmpty(tempPath))
             {
+                Log(LogFile, nameof(ScanMany) + ": Argument is null or empty: " + nameof(tempPath), methodName: false);
                 throw new ArgumentException("Argument is null or empty.", nameof(tempPath));
             }
 
             if (missions == null) throw new ArgumentNullException(nameof(missions));
             if (missions.Count == 0 || (missions.Count == 1 && string.IsNullOrEmpty(missions[0])))
             {
+                Log(LogFile, nameof(ScanMany) + ": No mission(s) specified. tempPath: " + tempPath, methodName: false);
                 throw new ArgumentException("No mission(s) specified.", nameof(missions));
             }
 
@@ -238,7 +243,9 @@ namespace FMScanner
 
                     #endregion
 
+                    Log(LogFile, "About to scan " + missions[i], methodName: false);
                     scannedFMDataList.Add(ScanCurrentFM(rtfBox));
+                    Log(LogFile, "Finished scanning " + missions[i], methodName: false);
 
                     if (progress != null && i == missions.Count - 1)
                     {
