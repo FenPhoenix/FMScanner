@@ -25,7 +25,14 @@ namespace FMScanner
             }
             finally
             {
-                Lock.ExitWriteLock();
+                try
+                {
+                    Lock.ExitWriteLock();
+                }
+                catch (Exception ex)
+                {
+                    Trace.WriteLine(ex);
+                }
             }
         }
 
