@@ -23,6 +23,13 @@ namespace FMScanner
         internal const int Max = 2107;
     }
 
+    internal static class ByteSize
+    {
+        internal static int KB = 1024;
+        internal static int MB = KB * 1024;
+        internal static int GB = MB * 1024;
+    }
+
     internal static class FMDirs
     {
         internal const string Books = "books";

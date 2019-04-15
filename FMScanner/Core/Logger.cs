@@ -12,19 +12,50 @@ namespace FMScanner
     {
         private static readonly ReaderWriterLockSlim Lock = new ReaderWriterLockSlim();
 
-        internal static void Log(string logFile,
-            string message, Exception ex = null, bool stackTrace = false, bool methodName = true,
-            [CallerMemberName] string callerMemberName= "")
+        internal static void ClearLogFile(string logFile)
         {
-            #if !logEnabled
-            return;
-            #endif
-
-            if (logFile.IsEmpty()) return;
-
             Lock.EnterWriteLock();
             try
             {
+                File.Delete(logFile);
+            }
+            catch (Exception ex)
+            {
+                Trace.WriteLine(ex);
+            }
+            finally
+            {
+                Lock.ExitWriteLock();
+            }
+        }
+
+        internal static void Log(string logFile,
+            string message, Exception ex = null, bool stackTrace = false, bool methodName = true,
+            [CallerMemberName] string callerMemberName = "")
+        {
+#if !logEnabled
+            return;
+#endif
+
+            if (logFile.IsEmpty()) return;
+
+            try
+            {
+                Lock.EnterReadLock();
+                if (new FileInfo(logFile).Length > ByteSize.MB * 50) ClearLogFile(logFile);
+            }
+            catch (Exception logEx)
+            {
+                Trace.WriteLine(logEx);
+            }
+            finally
+            {
+                Lock.ExitReadLock();
+            }
+
+            try
+            {
+                Lock.EnterWriteLock();
                 using (var sw = new StreamWriter(logFile, append: true))
                 {
                     var st = new StackTrace(1);
@@ -43,7 +74,14 @@ namespace FMScanner
             }
             finally
             {
-                Lock.ExitWriteLock();
+                try
+                {
+                    Lock.ExitWriteLock();
+                }
+                catch (Exception logEx)
+                {
+                    Trace.WriteLine(logEx);
+                }
             }
         }
     }
