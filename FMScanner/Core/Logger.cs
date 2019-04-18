@@ -21,7 +21,7 @@ namespace FMScanner
             }
             catch (Exception ex)
             {
-                Trace.WriteLine(ex);
+                Debug.WriteLine(ex);
             }
             finally
             {
@@ -31,7 +31,7 @@ namespace FMScanner
                 }
                 catch (Exception ex)
                 {
-                    Trace.WriteLine(ex);
+                    Debug.WriteLine(ex);
                 }
             }
         }
@@ -49,11 +49,11 @@ namespace FMScanner
             try
             {
                 Lock.EnterReadLock();
-                if (new FileInfo(logFile).Length > ByteSize.MB * 50) ClearLogFile(logFile);
+                if (File.Exists(logFile) && new FileInfo(logFile).Length > ByteSize.MB * 50) ClearLogFile(logFile);
             }
             catch (Exception logEx)
             {
-                Trace.WriteLine(logEx);
+                Debug.WriteLine(logEx);
             }
             finally
             {
@@ -77,7 +77,7 @@ namespace FMScanner
             }
             catch (Exception logEx)
             {
-                Trace.WriteLine(logEx);
+                Debug.WriteLine(logEx);
             }
             finally
             {
@@ -87,7 +87,7 @@ namespace FMScanner
                 }
                 catch (Exception logEx)
                 {
-                    Trace.WriteLine(logEx);
+                    Debug.WriteLine(logEx);
                 }
             }
         }
