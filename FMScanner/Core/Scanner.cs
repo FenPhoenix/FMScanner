@@ -170,6 +170,10 @@ namespace FMScanner
         ScanMany(List<string> missions, string tempPath, ScanOptions scanOptions,
             IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
+            // The try-catch blocks are to guarantee that the out-list will at least contain the same number of
+            // entries as the in-list; this allows the calling app to not have to do a search to link up the FMs
+            // and stuff
+
             #region Checks
 
             if (string.IsNullOrEmpty(tempPath))
@@ -203,6 +207,8 @@ namespace FMScanner
                 {
                     #region Init
 
+                    if (missions[i].IsEmpty()) scannedFMDataList.Add(null);
+
                     var fm = missions[i].Replace('/', '\\');
                     FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
 
@@ -211,7 +217,15 @@ namespace FMScanner
                     if (FmIsZip)
                     {
                         ArchivePath = fm;
-                        FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+                        try
+                        {
+                            FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(LogFile, "Path.Combine error, paths are probably invalid", ex);
+                            scannedFMDataList.Add(null);
+                        }
                     }
                     else
                     {
@@ -244,7 +258,18 @@ namespace FMScanner
                     #endregion
 
                     Log(LogFile, "About to scan " + missions[i], methodName: false);
-                    scannedFMDataList.Add(ScanCurrentFM(rtfBox));
+
+                    ScannedFMData scannedFM = null;
+                    try
+                    {
+                        scannedFM = ScanCurrentFM(rtfBox);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log(LogFile, "Exception in FM scan", ex);
+                    }
+                    scannedFMDataList.Add(scannedFM);
+
                     Log(LogFile, "Finished scanning " + missions[i], methodName: false);
 
                     if (progress != null && i == missions.Count - 1)
@@ -405,9 +430,9 @@ namespace FMScanner
 
             void SetOrAddTitle(string value)
             {
-                if (string.IsNullOrEmpty(value)) return;
-
                 value = CleanupTitle(value);
+
+                if (string.IsNullOrEmpty(value)) return;
 
                 if (string.IsNullOrEmpty(fmData.Title))
                 {
