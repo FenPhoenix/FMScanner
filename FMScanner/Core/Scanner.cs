@@ -368,15 +368,10 @@ namespace FMScanner
                 }
                 else
                 {
-                    FmDirFiles = new List<FileInfo>();
+                    FmDirFiles = new DirectoryInfo(FmWorkingPath).EnumerateFiles("*", SearchOption.AllDirectories).ToList();
 
                     long size = 0;
-                    foreach (var f in Directory.EnumerateFiles(FmWorkingPath, "*", SearchOption.AllDirectories))
-                    {
-                        var fileInfo = new FileInfo(f);
-                        FmDirFiles.Add(fileInfo);
-                        size += fileInfo.Length;
-                    }
+                    foreach (var fi in FmDirFiles) size += fi.Length;
 
                     fmData.Size = size;
                 }
@@ -704,7 +699,8 @@ namespace FMScanner
                     }
                     else
                     {
-                        misFileDate = new FileInfo(Path.Combine(FmWorkingPath, usedMisFiles[0].Name)).LastWriteTime;
+                        var fi = new FileInfo(Path.Combine(FmWorkingPath, usedMisFiles[0].Name));
+                        misFileDate = new DateTimeOffset(fi.LastWriteTime).DateTime;
                     }
                 }
 
@@ -1415,9 +1411,14 @@ namespace FMScanner
 
                 if (FmIsZip) readmeEntry = Archive.Entries[readmeFile.Index];
 
-                int readmeFileLen = FmIsZip
-                    ? (int)readmeEntry.Length
-                    : (int)new FileInfo(Path.Combine(FmWorkingPath, readmeFile.Name)).Length;
+                FileInfo readmeFI = FmDirFiles.Count > 0
+                    ? FmDirFiles.FirstOrDefault(x => x.Name.EqualsI(Path.Combine(FmWorkingPath, readmeFile.Name)))
+                    : null;
+
+                int readmeFileLen =
+                    FmIsZip ? (int)readmeEntry.Length :
+                    readmeFI != null ? (int)readmeFI.Length :
+                    (int)new FileInfo(Path.Combine(FmWorkingPath, readmeFile.Name)).Length;
 
                 var readmeFileOnDisk = "";
 
@@ -1435,9 +1436,9 @@ namespace FMScanner
                 else
                 {
                     readmeFileOnDisk = Path.Combine(FmWorkingPath, readmeFile.Name);
-                    var fi = new FileInfo(readmeFileOnDisk);
+                    var fi = readmeFI ?? new FileInfo(readmeFileOnDisk);
                     fileName = fi.Name;
-                    lastModifiedDate = fi.LastWriteTime;
+                    lastModifiedDate = new DateTimeOffset(fi.LastWriteTime).DateTime;
                     readmeSize = fi.Length;
                 }
 
@@ -2430,9 +2431,17 @@ namespace FMScanner
                 {
                     foreach (var gam in gamFiles)
                     {
-                        gamSizeList.Add((gam.Name, gam.Index, FmIsZip
-                            ? Archive.Entries[gam.Index].Length
-                            : new FileInfo(Path.Combine(FmWorkingPath, gam.Name)).Length));
+                        long length;
+                        if (FmIsZip)
+                        {
+                            length = Archive.Entries[gam.Index].Length;
+                        }
+                        else
+                        {
+                            var gamFI = FmDirFiles.FirstOrDefault(x => x.FullName.EqualsI(Path.Combine(FmWorkingPath, gam.Name)));
+                            length = gamFI?.Length ?? new FileInfo(Path.Combine(FmWorkingPath, gam.Name)).Length;
+                        }
+                        gamSizeList.Add((gam.Name, gam.Index, length));
                     }
 
                     var gamToUse = gamSizeList.OrderBy(x => x.Size).First();
@@ -2455,9 +2464,17 @@ namespace FMScanner
             {
                 foreach (var mis in usedMisFiles)
                 {
-                    misSizeList.Add((mis.Name, mis.Index, FmIsZip
-                        ? Archive.Entries[mis.Index].Length
-                        : new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length));
+                    long length;
+                    if (FmIsZip)
+                    {
+                        length = Archive.Entries[mis.Index].Length;
+                    }
+                    else
+                    {
+                        var misFI = FmDirFiles.FirstOrDefault(x => x.FullName.EqualsI(Path.Combine(FmWorkingPath, mis.Name)));
+                        length = misFI?.Length ?? new FileInfo(Path.Combine(FmWorkingPath, mis.Name)).Length;
+                    }
+                    misSizeList.Add((mis.Name, mis.Index, length));
                 }
 
                 var misToUse = misSizeList.OrderBy(x => x.Size).First();
