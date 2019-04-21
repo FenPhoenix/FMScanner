@@ -203,37 +203,48 @@ namespace FMScanner
             {
                 ProgressReport progressReport = null;
 
+
                 for (var i = 0; i < missions.Count; i++)
                 {
+                    bool nullAlreadyAdded = false;
+
                     #region Init
 
-                    if (missions[i].IsEmpty()) scannedFMDataList.Add(null);
-
-                    var fm = missions[i].Replace('/', '\\');
-                    FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
-
-                    Archive?.Dispose();
-
-                    if (FmIsZip)
+                    if (missions[i].IsEmpty())
                     {
-                        ArchivePath = fm;
-                        try
-                        {
-                            FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
-                        }
-                        catch (Exception ex)
-                        {
-                            Log(LogFile, "Path.Combine error, paths are probably invalid", ex);
-                            scannedFMDataList.Add(null);
-                        }
+                        missions[i] = "";
+                        scannedFMDataList.Add(null);
+                        nullAlreadyAdded = true;
                     }
                     else
                     {
-                        FmWorkingPath = fm;
-                    }
+                        var fm = missions[i].Replace('/', '\\');
+                        FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
 
-                    ReadmeFiles = new List<ReadmeInternal>();
-                    FmDirFiles = new List<FileInfo>();
+                        Archive?.Dispose();
+
+                        if (FmIsZip)
+                        {
+                            ArchivePath = fm;
+                            try
+                            {
+                                FmWorkingPath = Path.Combine(tempPath, GetFileNameWithoutExtension(ArchivePath).Trim());
+                            }
+                            catch (Exception ex)
+                            {
+                                Log(LogFile, "Path.Combine error, paths are probably invalid", ex);
+                                scannedFMDataList.Add(null);
+                                nullAlreadyAdded = true;
+                            }
+                        }
+                        else
+                        {
+                            FmWorkingPath = fm;
+                        }
+
+                        ReadmeFiles = new List<ReadmeInternal>();
+                        FmDirFiles = new List<FileInfo>();
+                    }
 
                     #endregion
 
@@ -259,16 +270,20 @@ namespace FMScanner
 
                     Log(LogFile, "About to scan " + missions[i], methodName: false);
 
-                    ScannedFMData scannedFM = null;
-                    try
+                    // If there was an error then we already added null to the list. DON'T add any extra items!
+                    if (!nullAlreadyAdded)
                     {
-                        scannedFM = ScanCurrentFM(rtfBox);
+                        ScannedFMData scannedFM = null;
+                        try
+                        {
+                            scannedFM = ScanCurrentFM(rtfBox);
+                        }
+                        catch (Exception ex)
+                        {
+                            Log(LogFile, "Exception in FM scan", ex);
+                        }
+                        scannedFMDataList.Add(scannedFM);
                     }
-                    catch (Exception ex)
-                    {
-                        Log(LogFile, "Exception in FM scan", ex);
-                    }
-                    scannedFMDataList.Add(scannedFM);
 
                     Log(LogFile, "Finished scanning " + missions[i], methodName: false);
 
