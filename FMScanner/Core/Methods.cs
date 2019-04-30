@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 using FMScanner.SimpleHelpers;
 using static FMScanner.Regexes;
 
@@ -24,6 +25,11 @@ namespace FMScanner
     {
         internal static bool StringToDate(string dateString, out DateTime dateTime)
         {
+            dateString = dateString.Replace(",", " ");
+            dateString = Regex.Replace(dateString, @"\s+", @" ");
+            dateString = Regex.Replace(dateString, @"\s+-\s+", "-");
+            dateString = Regex.Replace(dateString, @"\s+/\s+", "/");
+
             // Remove "st", "nd", "rd, "th" if present, as DateTime.TryParse() will choke on them
             var match = DaySuffixesRegex.Match(dateString);
             if (match.Success)
@@ -36,7 +42,7 @@ namespace FMScanner
             // We pass specific date formats to ensure that no field will be inferred: if there's no year, we
             // want to fail, and not assume the current year.
             var success = DateTime.TryParseExact(dateString, FMConstants.DateFormats,
-                DateTimeFormatInfo.InvariantInfo, DateTimeStyles.AllowWhiteSpaces, out var result);
+                DateTimeFormatInfo.InvariantInfo, DateTimeStyles.None, out var result);
             if (success)
             {
                 dateTime = result;
