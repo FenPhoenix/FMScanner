@@ -848,12 +848,19 @@ namespace FMScanner
              which dir to consider as the base) and clear-and-copy tempBaseDirFiles to baseDirFiles
             */
 
-            #region Add BaseDirFiles
 
+            #region Iterate archive filenames and split off into lists
+
+            var basePlusOneDirFiles = new List<NameAndIndex>();
+            
             bool t3Found = false;
+            
+            // Cache entries count for possible double-iteration
+            int archiveEntriesCount = FmIsZip ? Archive.Entries.Count : 0;
 
             // This is split out because of weird semantics with if(this && that) vs nested ifs (required in
             // order to have a var in the middle to avoid multiple LastIndexOf calls).
+            // TODO: This might be hardcoded to base dir? Check this!
             bool MapFileExists(string path)
             {
                 if (path.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
@@ -873,7 +880,14 @@ namespace FMScanner
 
             if (FmIsZip || ScanOptions.ScanSize)
             {
-                for (var i = 0; i < (FmIsZip ? Archive.Entries.Count : FmDirFiles.Count); i++)
+                // TODO:
+                // SS2: This list iteration actually takes < 2.45% of the time of this method. So we can easily
+                // afford to do a double-iteration in the extremely rare case of needing to set base+1 as base.
+                // That way, we can just bump everything down by one dir in the second iteration and we're good.
+                // TODO:
+                // If doing a second iteration, don't look for Thief 3. Any other non-SS2 thing can be skipped as
+                // well. We don't need to be encouraging or supporting sloppy archive directory structures here.
+                for (var i = 0; i < (FmIsZip ? archiveEntriesCount : FmDirFiles.Count); i++)
                 {
                     var fn = FmIsZip
                         ? Archive.Entries[i].FullName
