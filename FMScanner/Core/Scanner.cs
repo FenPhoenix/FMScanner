@@ -830,22 +830,6 @@ namespace FMScanner
             List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> booksDirFiles,
             List<NameAndIndex> t3FMExtrasDirFiles)
         {
-            /* TODO: SS2 game plan:
-            For SS2, some archives have what should be the "base dir" as a subdir one level deep.
-            Strategy for dealing with this while keeping performance up:
-            -Add ALL .mis files to list, not just base dir ones
-            -After the fact, go through MisFiles and do the following:
-             -If any base-dir (non-dir-sep-char-containing) files exist, remove all other files that do have dir
-              sep chars
-             -If any files with only ONE dir-sep in them exist AND no files WITHOUT dir sep char exist,
-              remove all others that have more than one
-             -Otherwise, reject archive (because any .mis files will be in higher dirs than base or base+1, which
-              means that whatever it is, it's not a valid FM)
-            -If .mis files are in base, proceed as normal
-            -If .mis files are in base+1, mark base+1 as "base" (code needs to be updated to allow telling it
-             which dir to consider as the base)
-            */
-
             #region Add BaseDirFiles
 
             bool t3Found = false;

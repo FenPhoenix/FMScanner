@@ -80,9 +80,6 @@ namespace FMScanner
 
         // fm.ini, a NewDark (or just FMSel?) file
         internal const string FMIni = "fm.ini";
-
-        // SS2 metadata file (title, author, etc.)
-        internal const string ModIni = "mod.ini";
     }
 
     // Used for stripping RTF files of embedded images before scanning (performance and memory optimization)
