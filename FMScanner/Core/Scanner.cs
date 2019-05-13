@@ -825,14 +825,58 @@ namespace FMScanner
             fmData.TagsString = tagsString;
         }
 
-        private (bool NoBaseDirFiles, bool Thief3Found, bool BasePlusOneFound)
-        IterateFiles(List<NameAndIndex> baseDirFiles,
-            List<NameAndIndex> stringsDirFiles,
+        private bool ReadAndCacheFMData(ScannedFMData fmd, List<NameAndIndex> baseDirFiles,
+            List<NameAndIndex> misFiles, List<NameAndIndex> usedMisFiles, List<NameAndIndex> stringsDirFiles,
             List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> booksDirFiles,
-            List<NameAndIndex> t3FMExtrasDirFiles, int archiveEntriesCount, ScannedFMData fmd)
+            List<NameAndIndex> t3FMExtrasDirFiles)
         {
+            /* TODO: SS2 game plan:
+            For SS2, some archives have what should be the "base dir" as a subdir one level deep.
+            Strategy for dealing with this while keeping performance up:
+            -Add ALL .mis files to list, not just base dir ones
+            -Add all files that are one level deep to a tempBaseDirFiles list (because one-dir-deep might end up
+             being set as the base dir
+            -After the fact, go through MisFiles and do the following:
+             -If any base-dir (non-dir-sep-char-containing) files exist, remove all other files that do have dir
+              sep chars
+             -If any files with only ONE dir-sep in them exist AND no files WITHOUT dir sep char exist,
+              remove all others that have more than one
+             -Otherwise, reject archive (because any .mis files will be in higher dirs than base or base+1, which
+              means that whatever it is, it's not a valid FM)
+            -If .mis files are in base, proceed as normal
+            -If .mis files are in base+1, mark base+1 as "base" (code needs to be updated to allow telling it
+             which dir to consider as the base) and clear-and-copy tempBaseDirFiles to baseDirFiles
+            */
+
+
+            #region Iterate archive filenames and split off into lists
+
+            var basePlusOneDirFiles = new List<NameAndIndex>();
+            
             bool t3Found = false;
-            bool basePlusOneFound = false;
+            
+            // Cache entries count for possible double-iteration
+            int archiveEntriesCount = FmIsZip ? Archive.Entries.Count : 0;
+
+            // This is split out because of weird semantics with if(this && that) vs nested ifs (required in
+            // order to have a var in the middle to avoid multiple LastIndexOf calls).
+            // TODO: This might be hardcoded to base dir? Check this!
+            bool MapFileExists(string path)
+            {
+                if (path.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                    path.CountChars(dsc) >= 2)
+                {
+                    var lsi = path.LastIndexOf(dsc);
+                    if (path.Length > lsi + 5 &&
+                        path.Substring(lsi + 1, 5).EqualsI("page0") &&
+                        path.LastIndexOf('.') > lsi)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            }
 
             if (FmIsZip || ScanOptions.ScanSize)
             {
@@ -843,8 +887,6 @@ namespace FMScanner
                 // TODO:
                 // If doing a second iteration, don't look for Thief 3. Any other non-SS2 thing can be skipped as
                 // well. We don't need to be encouraging or supporting sloppy archive directory structures here.
-                // TODO:
-                // If on second iteration, still store original-base files for pulling readmes from them
                 for (var i = 0; i < (FmIsZip ? archiveEntriesCount : FmDirFiles.Count); i++)
                 {
                     var fn = FmIsZip
@@ -895,14 +937,79 @@ namespace FMScanner
                         continue;
                     }
 
-                    // Do this at the same time for performance. We cut the time roughly in half by doing this.
-                    if (!t3Found && ScanOptions.ScanCustomResources) CheckForCustomResources(fn, fmd);
+                    // Inlined for performance. We cut the time roughly in half by doing this.
+                    if (!t3Found && ScanOptions.ScanCustomResources)
+                    {
+                        if (fmd.HasAutomap == null &&
+                            fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
+                            fn.CountChars(dsc) >= 2 &&
+                            fn.EndsWithI("ra.bin"))
+                        {
+                            fmd.HasAutomap = true;
+                            // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
+                            fmd.HasMap = true;
+                        }
+                        else if (fmd.HasMap == null && MapFileExists(fn))
+                        {
+                            fmd.HasMap = true;
+                        }
+                        else if (fmd.HasCustomMotions == null &&
+                                 fn.StartsWithI(FMDirs.MotionsS(dsc)) &&
+                                 MotionFileExtensions.Any(fn.EndsWithI))
+                        {
+                            fmd.HasCustomMotions = true;
+                        }
+                        else if (fmd.HasMovies == null &&
+                                 fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
+                                 fn.HasFileExtension())
+                        {
+                            fmd.HasMovies = true;
+                        }
+                        else if (fmd.HasCustomTextures == null &&
+                                 fn.StartsWithI(FMDirs.FamS(dsc)) &&
+                                 ImageFileExtensions.Any(fn.EndsWithI))
+                        {
+                            fmd.HasCustomTextures = true;
+                        }
+                        else if (fmd.HasCustomObjects == null &&
+                                 fn.StartsWithI(FMDirs.ObjS(dsc)) &&
+                                 fn.EndsWithI(".bin"))
+                        {
+                            fmd.HasCustomObjects = true;
+                        }
+                        else if (fmd.HasCustomCreatures == null &&
+                                 fn.StartsWithI(FMDirs.MeshS(dsc)) &&
+                                 fn.EndsWithI(".bin"))
+                        {
+                            fmd.HasCustomCreatures = true;
+                        }
+                        else if (fmd.HasCustomScripts == null &&
+                                 (!fn.Contains(dsc) &&
+                                  ScriptFileExtensions.Any(fn.EndsWithI)) ||
+                                 (fn.StartsWithI(FMDirs.ScriptsS(dsc)) &&
+                                  fn.HasFileExtension()))
+                        {
+                            fmd.HasCustomScripts = true;
+                        }
+                        else if (fmd.HasCustomSounds == null &&
+                                 fn.StartsWithI(FMDirs.SndS(dsc)) &&
+                                 fn.HasFileExtension())
+                        {
+                            fmd.HasCustomSounds = true;
+                        }
+                        else if (fmd.HasCustomSubtitles == null &&
+                                 fn.StartsWithI(FMDirs.SubtitlesS(dsc)) &&
+                                 fn.EndsWithI(".sub"))
+                        {
+                            fmd.HasCustomSubtitles = true;
+                        }
+                    }
                 }
 
                 // Thief 3 can have no files in its base dir, and we don't scan for custom resources for T3
                 if (!t3Found)
                 {
-                    if (baseDirFiles.Count == 0) return (true, false, false);
+                    if (baseDirFiles.Count == 0) return false;
 
                     if (ScanOptions.ScanCustomResources)
                     {
@@ -948,7 +1055,7 @@ namespace FMScanner
                 }
                 else
                 {
-                    if (baseDirFiles.Count == 0) return (true, false, false);
+                    if (baseDirFiles.Count == 0) return false;
 
                     foreach (var f in EnumFiles(FMDirs.Strings, "*", SearchOption.AllDirectories))
                     {
@@ -1031,128 +1138,6 @@ namespace FMScanner
                     }
                 }
             }
-
-            return (false, t3Found, basePlusOneFound);
-        }
-
-        // TODO: This might be hardcoded to base dir? Check this!
-        private bool MapFileExists(string path)
-        {
-            if (path.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                path.CountChars(dsc) >= 2)
-            {
-                var lsi = path.LastIndexOf(dsc);
-                if (path.Length > lsi + 5 &&
-                    path.Substring(lsi + 1, 5).EqualsI("page0") &&
-                    path.LastIndexOf('.') > lsi)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void CheckForCustomResources(string fn, ScannedFMData fmd)
-        {
-            if (fmd.HasAutomap == null &&
-                fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                fn.CountChars(dsc) >= 2 &&
-                fn.EndsWithI("ra.bin"))
-            {
-                fmd.HasAutomap = true;
-                // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
-                fmd.HasMap = true;
-            }
-            else if (fmd.HasMap == null && MapFileExists(fn))
-            {
-                fmd.HasMap = true;
-            }
-            else if (fmd.HasCustomMotions == null &&
-                     fn.StartsWithI(FMDirs.MotionsS(dsc)) &&
-                     MotionFileExtensions.Any(fn.EndsWithI))
-            {
-                fmd.HasCustomMotions = true;
-            }
-            else if (fmd.HasMovies == null &&
-                     fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
-                     fn.HasFileExtension())
-            {
-                fmd.HasMovies = true;
-            }
-            else if (fmd.HasCustomTextures == null &&
-                     fn.StartsWithI(FMDirs.FamS(dsc)) &&
-                     ImageFileExtensions.Any(fn.EndsWithI))
-            {
-                fmd.HasCustomTextures = true;
-            }
-            else if (fmd.HasCustomObjects == null &&
-                     fn.StartsWithI(FMDirs.ObjS(dsc)) &&
-                     fn.EndsWithI(".bin"))
-            {
-                fmd.HasCustomObjects = true;
-            }
-            else if (fmd.HasCustomCreatures == null &&
-                     fn.StartsWithI(FMDirs.MeshS(dsc)) &&
-                     fn.EndsWithI(".bin"))
-            {
-                fmd.HasCustomCreatures = true;
-            }
-            else if (fmd.HasCustomScripts == null &&
-                     (!fn.Contains(dsc) &&
-                      ScriptFileExtensions.Any(fn.EndsWithI)) ||
-                     (fn.StartsWithI(FMDirs.ScriptsS(dsc)) &&
-                      fn.HasFileExtension()))
-            {
-                fmd.HasCustomScripts = true;
-            }
-            else if (fmd.HasCustomSounds == null &&
-                     fn.StartsWithI(FMDirs.SndS(dsc)) &&
-                     fn.HasFileExtension())
-            {
-                fmd.HasCustomSounds = true;
-            }
-            else if (fmd.HasCustomSubtitles == null &&
-                     fn.StartsWithI(FMDirs.SubtitlesS(dsc)) &&
-                     fn.EndsWithI(".sub"))
-            {
-                fmd.HasCustomSubtitles = true;
-            }
-        }
-
-        private bool ReadAndCacheFMData(ScannedFMData fmd, List<NameAndIndex> baseDirFiles,
-            List<NameAndIndex> misFiles, List<NameAndIndex> usedMisFiles, List<NameAndIndex> stringsDirFiles,
-            List<NameAndIndex> intrfaceDirFiles, List<NameAndIndex> booksDirFiles,
-            List<NameAndIndex> t3FMExtrasDirFiles)
-        {
-            /* TODO: SS2 game plan:
-            For SS2, some archives have what should be the "base dir" as a subdir one level deep.
-            Strategy for dealing with this while keeping performance up:
-            -Add ALL .mis files to list, not just base dir ones
-            -Add all files that are one level deep to a tempBaseDirFiles list (because one-dir-deep might end up
-             being set as the base dir
-            -After the fact, go through MisFiles and do the following:
-             -If any base-dir (non-dir-sep-char-containing) files exist, remove all other files that do have dir
-              sep chars
-             -If any files with only ONE dir-sep in them exist AND no files WITHOUT dir sep char exist,
-              remove all others that have more than one
-             -Otherwise, reject archive (because any .mis files will be in higher dirs than base or base+1, which
-              means that whatever it is, it's not a valid FM)
-            -If .mis files are in base, proceed as normal
-            -If .mis files are in base+1, mark base+1 as "base" (code needs to be updated to allow telling it
-             which dir to consider as the base) and clear-and-copy tempBaseDirFiles to baseDirFiles
-            */
-
-            #region Iterate archive filenames and split off into lists
-
-            var basePlusOneDirFiles = new List<NameAndIndex>();
-
-            // Cache entries count for possible double-iteration
-            int archiveEntriesCount = FmIsZip ? Archive.Entries.Count : 0;
-
-            var (noBaseDirFiles, t3Found, basePlusOneFound) =
-                IterateFiles(baseDirFiles, stringsDirFiles, intrfaceDirFiles, booksDirFiles, t3FMExtrasDirFiles,
-                    archiveEntriesCount, fmd);
 
             // Cut it right here for Thief 3: we don't need anything else
             if (t3Found) return true;
