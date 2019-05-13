@@ -305,7 +305,7 @@ namespace FMScanner
                 fmd.HasCustomMotions = true;
             }
             else if (fmd.HasMovies == null &&
-                     fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
+                     (fn.StartsWithI(FMDirs.MoviesS(dsc)) || fn.StartsWithI(FMDirs.CutscenesS(dsc))) &&
                      fn.HasFileExtension())
             {
                 fmd.HasMovies = true;
@@ -337,7 +337,7 @@ namespace FMScanner
                 fmd.HasCustomScripts = true;
             }
             else if (fmd.HasCustomSounds == null &&
-                     fn.StartsWithI(FMDirs.SndS(dsc)) &&
+                     (fn.StartsWithI(FMDirs.SndS(dsc)) || fn.StartsWithI(FMDirs.Snd2S(dsc))) &&
                      fn.HasFileExtension())
             {
                 fmd.HasCustomSounds = true;
