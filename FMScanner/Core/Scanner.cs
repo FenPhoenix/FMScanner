@@ -834,8 +834,6 @@ namespace FMScanner
             For SS2, some archives have what should be the "base dir" as a subdir one level deep.
             Strategy for dealing with this while keeping performance up:
             -Add ALL .mis files to list, not just base dir ones
-            -Add all files that are one level deep to a tempBaseDirFiles list (because one-dir-deep might end up
-             being set as the base dir
             -After the fact, go through MisFiles and do the following:
              -If any base-dir (non-dir-sep-char-containing) files exist, remove all other files that do have dir
               sep chars
@@ -845,7 +843,7 @@ namespace FMScanner
               means that whatever it is, it's not a valid FM)
             -If .mis files are in base, proceed as normal
             -If .mis files are in base+1, mark base+1 as "base" (code needs to be updated to allow telling it
-             which dir to consider as the base) and clear-and-copy tempBaseDirFiles to baseDirFiles
+             which dir to consider as the base)
             */
 
             #region Add BaseDirFiles
