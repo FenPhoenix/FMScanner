@@ -16,11 +16,22 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Microsoft.Win32.SafeHandles;
 
 namespace FMScanner
 {
     internal static class FastIO
     {
+        // So we don't have to remember to call FindClose()
+        internal class SafeSearchHandle : SafeHandleZeroOrMinusOneIsInvalid
+        {
+            internal SafeSearchHandle() : base(true) { }
+            protected override bool ReleaseHandle() => FindClose(handle);
+
+            [DllImport("kernel32.dll", SetLastError = true)]
+            private static extern bool FindClose(IntPtr hFindFile);
+        }
+
         [SuppressMessage("ReSharper", "InconsistentNaming")]
         [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
         [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Local")]
@@ -42,13 +53,10 @@ namespace FMScanner
         }
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern IntPtr FindFirstFileW(string lpFileName, out WIN32_FIND_DATAW lpFindFileData);
+        private static extern SafeSearchHandle FindFirstFileW(string lpFileName, out WIN32_FIND_DATAW lpFindFileData);
 
         [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        private static extern bool FindNextFileW(IntPtr hFindFile, out WIN32_FIND_DATAW lpFindFileData);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool FindClose(IntPtr hFindFile);
+        private static extern bool FindNextFileW(SafeSearchHandle hFindFile, out WIN32_FIND_DATAW lpFindFileData);
 
         private enum FastIOSearchOption
         {
@@ -102,7 +110,6 @@ namespace FMScanner
                 throw new ArgumentException("The path '" + path + "' is invalid in some, or other, regard.");
             }
 
-            var INVALID_HANDLE_VALUE = new IntPtr(-1);
             const int fileAttributeDirectory = 0x10;
 
             const int ERROR_FILE_NOT_FOUND = 0x2;
@@ -112,7 +119,6 @@ namespace FMScanner
             //const int ERROR_REM_NOT_LIST = 0x33;
             //const int ERROR_BAD_NETPATH = 0x35;
 
-            IntPtr findHandle;
             WIN32_FIND_DATAW findData;
 
             // Search the base directory first, and only then search subdirectories.
@@ -122,58 +128,55 @@ namespace FMScanner
             {
                 foreach (var p in searchPatterns)
                 {
-                    findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + '\\' + p, out findData);
-                    if (findHandle == INVALID_HANDLE_VALUE)
+                    using (var findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + '\\' + p, out findData))
                     {
-                        var err = Marshal.GetLastWin32Error();
-                        if (err == ERROR_FILE_NOT_FOUND) continue;
-
-                        FindClose(findHandle);
-
-                        // Since the framework isn't here to save us, we should blanket-catch and throw on every
-                        // possible error other than file-not-found (as that's an intended scenario, obviously).
-                        // This isn't as nice as you'd get from a framework method call, but it gets the job done.
-                        ThrowException(searchPatterns, err, path, p, 0);
-                    }
-                    do
-                    {
-                        if ((findData.dwFileAttributes & fileAttributeDirectory) != fileAttributeDirectory &&
-                            findData.cFileName != "." && findData.cFileName != "..")
+                        if (findHandle.IsInvalid)
                         {
-                            FindClose(findHandle);
-                            return true;
+                            var err = Marshal.GetLastWin32Error();
+                            if (err == ERROR_FILE_NOT_FOUND) continue;
+
+                            // Since the framework isn't here to save us, we should blanket-catch and throw on every
+                            // possible error other than file-not-found (as that's an intended scenario, obviously).
+                            // This isn't as nice as you'd get from a framework method call, but it gets the job done.
+                            ThrowException(searchPatterns, err, path, p, 0);
                         }
-                    } while (FindNextFileW(findHandle, out findData));
-                    FindClose(findHandle);
+                        do
+                        {
+                            if ((findData.dwFileAttributes & fileAttributeDirectory) != fileAttributeDirectory &&
+                                findData.cFileName != "." && findData.cFileName != "..")
+                            {
+                                return true;
+                            }
+                        } while (FindNextFileW(findHandle, out findData));
 
-                    if (searchOption == FastIOSearchOption.TopDirectoryOnly) return false;
+                        if (searchOption == FastIOSearchOption.TopDirectoryOnly) return false;
+                    }
                 }
             }
 
-            findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + @"\*", out findData);
-            if (findHandle == INVALID_HANDLE_VALUE)
+            using (var findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + @"\*", out findData))
             {
-                var err = Marshal.GetLastWin32Error();
-                if (err != ERROR_FILE_NOT_FOUND)
+                if (findHandle.IsInvalid)
                 {
-                    FindClose(findHandle);
-                    ThrowException(searchPatterns, err, path, @"\* [looking for all directories]", 1);
+                    var err = Marshal.GetLastWin32Error();
+                    if (err != ERROR_FILE_NOT_FOUND)
+                    {
+                        ThrowException(searchPatterns, err, path, @"\* [looking for all directories]", 1);
+                    }
                 }
-            }
-            do
-            {
-                if ((findData.dwFileAttributes & fileAttributeDirectory) == fileAttributeDirectory &&
-                    findData.cFileName != "." && findData.cFileName != ".." &&
-                    FirstFileExists(FastIOSearchOption.AllDirectories, Path.Combine(path, findData.cFileName),
-                        searchPatterns))
+                do
                 {
-                    FindClose(findHandle);
-                    return true;
-                }
-            } while (FindNextFileW(findHandle, out findData));
-            FindClose(findHandle);
+                    if ((findData.dwFileAttributes & fileAttributeDirectory) == fileAttributeDirectory &&
+                        findData.cFileName != "." && findData.cFileName != ".." &&
+                        FirstFileExists(FastIOSearchOption.AllDirectories, Path.Combine(path, findData.cFileName),
+                            searchPatterns))
+                    {
+                        return true;
+                    }
+                } while (FindNextFileW(findHandle, out findData));
 
-            return false;
+                return false;
+            }
         }
     }
 }
