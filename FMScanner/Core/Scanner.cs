@@ -2500,7 +2500,7 @@ namespace FMScanner
             {
                 smallestUsedMisFile = usedMisFiles[0];
             }
-            else
+            else if (usedMisFiles.Count > 1)
             {
                 foreach (var mis in usedMisFiles)
                 {
@@ -2519,6 +2519,13 @@ namespace FMScanner
 
                 var misToUse = misSizeList.OrderBy(x => x.Size).First();
                 smallestUsedMisFile = new NameAndIndex { Name = misToUse.Name, Index = misToUse.Index };
+            }
+            else
+            {
+                // We know usedMisFiles can never be empty at this point because we early-return way before this
+                // if it is, but the code analysis doesn't know that, so we put this in to prevent a couple of
+                // null-reference warnings.
+                throw new Exception(nameof(usedMisFiles) + ".Count is 0");
             }
 
             #endregion
@@ -2551,7 +2558,7 @@ namespace FMScanner
                  ~7216                  - NewDark, could be either T1/G or T2    Commonness: ~14%
                  ~3092                  - NewDark, could be either T1/G or T2    Commonness: ~4%
                  Any other location*    - OldDark Thief2
-                 
+
             System Shock 2 .mis files can (but may not) have the SKYOBJVAR string. If they do, it'll be at 3168
             or 7292.
             System Shock 2 .mis files all have the MAPPARAM string. It will be at either 696 or 916. One or the
@@ -2711,7 +2718,7 @@ namespace FMScanner
                         var content = br.ReadBytes((int)length);
                         ret.Game = content.Contains(MisFileStrings.Thief2UniqueStringMis)
                             ? Games.TMA
-                            : Games.TDP;
+                                                    : Games.TDP;
                         break;
                     }
                 }
