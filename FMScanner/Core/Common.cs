@@ -133,7 +133,7 @@ namespace FMScanner
         };
 
         // Cheesy hack because it wasn't designed this way
-        internal static Dictionary<string, string> LanguagesC { get; } = new Dictionary<string, string>()
+        internal static Dictionary<string, string> LanguagesC { get; } = new Dictionary<string, string>
         {
             { "english", "English" },
             { "czech", "Czech" },
