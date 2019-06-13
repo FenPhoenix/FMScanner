@@ -2600,8 +2600,7 @@ namespace FMScanner
 
             using (var sr = FmIsZip
                 ? new BinaryReader(misFileZipEntry.Open(), Encoding.ASCII, false)
-                : new BinaryReader(new FileStream(misFileOnDisk, FileMode.Open, FileAccess.Read), Encoding.ASCII,
-                    false))
+                : new BinaryReader(new FileStream(misFileOnDisk, FileMode.Open, FileAccess.Read), Encoding.ASCII, false))
             {
                 for (int i = 0; i < locations.Length; i++)
                 {
@@ -2718,7 +2717,7 @@ namespace FMScanner
                         var content = br.ReadBytes((int)length);
                         ret.Game = content.Contains(MisFileStrings.Thief2UniqueStringMis)
                             ? Games.TMA
-                                                    : Games.TDP;
+                            : Games.TDP;
                         break;
                     }
                 }
