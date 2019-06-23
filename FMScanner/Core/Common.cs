@@ -25,9 +25,9 @@ namespace FMScanner
 
     internal static class ByteSize
     {
-        internal static int KB = 1024;
-        internal static int MB = KB * 1024;
-        internal static int GB = MB * 1024;
+        internal const int KB = 1024;
+        internal const int MB = KB * 1024;
+        internal const int GB = MB * 1024;
     }
 
     internal static class FMDirs

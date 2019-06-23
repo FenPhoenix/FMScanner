@@ -219,7 +219,7 @@ namespace FMScanner
                     else
                     {
                         var fm = missions[i].Replace('/', '\\');
-                        FmIsZip = fm.EndsWithI(".zip") || fm.EndsWithI(".7z");
+                        FmIsZip = fm.ExtIsZip() || fm.ExtIs7z();
 
                         Archive?.Dispose();
 
@@ -326,7 +326,7 @@ namespace FMScanner
             #region Check for and setup 7-Zip
 
             bool fmIsSevenZip = false;
-            if (FmIsZip && ArchivePath.EndsWithI(".7z"))
+            if (FmIsZip && ArchivePath.ExtIs7z())
             {
                 FmIsZip = false;
                 dsc = '\\';
@@ -356,7 +356,7 @@ namespace FMScanner
             {
                 Debug.WriteLine(@"----------" + ArchivePath);
 
-                if (ArchivePath.EndsWithI(".zip"))
+                if (ArchivePath.ExtIsZip())
                 {
                     try
                     {
@@ -866,11 +866,11 @@ namespace FMScanner
                     if (!t3Found &&
                         fn.StartsWithI(FMDirs.T3DetectS(dsc)) &&
                         fn.CountChars(dsc) == 3 &&
-                        fn.EndsWithI(".ibt") ||
-                        fn.EndsWithI(".cbt") ||
-                        fn.EndsWithI(".gmp") ||
-                        fn.EndsWithI(".ned") ||
-                        fn.EndsWithI(".unr"))
+                        fn.ExtIsIbt() ||
+                        fn.ExtIsCbt() ||
+                        fn.ExtIsGmp() ||
+                        fn.ExtIsNed() ||
+                        fn.ExtIsUnr())
                     {
                         fmd.Game = Games.TDS;
                         t3Found = true;
@@ -911,7 +911,7 @@ namespace FMScanner
                         if (fmd.HasAutomap == null &&
                             fn.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
                             fn.CountChars(dsc) >= 2 &&
-                            fn.EndsWithI("ra.bin"))
+                            fn.EndsWithRaDotBin())
                         {
                             fmd.HasAutomap = true;
                             // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
@@ -941,13 +941,13 @@ namespace FMScanner
                         }
                         else if (fmd.HasCustomObjects == null &&
                                  fn.StartsWithI(FMDirs.ObjS(dsc)) &&
-                                 fn.EndsWithI(".bin"))
+                                 fn.ExtIsBin())
                         {
                             fmd.HasCustomObjects = true;
                         }
                         else if (fmd.HasCustomCreatures == null &&
                                  fn.StartsWithI(FMDirs.MeshS(dsc)) &&
-                                 fn.EndsWithI(".bin"))
+                                 fn.ExtIsBin())
                         {
                             fmd.HasCustomCreatures = true;
                         }
@@ -967,7 +967,7 @@ namespace FMScanner
                         }
                         else if (fmd.HasCustomSubtitles == null &&
                                  fn.StartsWithI(FMDirs.SubtitlesS(dsc)) &&
-                                 fn.EndsWithI(".sub"))
+                                 fn.ExtIsSub())
                         {
                             fmd.HasCustomSubtitles = true;
                         }
@@ -1055,7 +1055,7 @@ namespace FMScanner
                             if (fmd.HasAutomap == null &&
                                 f.Name.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
                                 f.Name.CountChars(dsc) >= 2 &&
-                                f.Name.EndsWithI("ra.bin"))
+                                f.Name.EndsWithRaDotBin())
                             {
                                 fmd.HasAutomap = true;
                                 // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
@@ -1117,7 +1117,7 @@ namespace FMScanner
             for (var i = 0; i < baseDirFiles.Count; i++)
             {
                 var f = baseDirFiles[i];
-                if (f.Name.EndsWithI(".mis"))
+                if (f.Name.ExtIsMis())
                 {
                     misFiles.Add(new NameAndIndex { Name = GetFileName(f.Name), Index = f.Index });
                 }
@@ -1547,7 +1547,7 @@ namespace FMScanner
 
                         // Convert GLML files to plaintext by stripping the markup. Fortunately this is extremely
                         // easy as all tags are of the form [GLWHATEVER][/GLWHATEVER]. Very nice, very simple.
-                        if (last.FileName.EndsWithI(".glml"))
+                        if (last.FileName.ExtIsGlml())
                         {
                             for (var i = 0; i < last.Lines.Length; i++)
                             {
@@ -1856,7 +1856,8 @@ namespace FMScanner
                     if (i < lines.Length - 2)
                     {
                         var lineAfterNext = lines[i + 2].Trim();
-                        if ((lineAfterNext.EndsWithI(":") && lineAfterNext.Length <= 50) ||
+                        var lanLen = lineAfterNext.Length;
+                        if ((lanLen > 0 && lineAfterNext[lanLen - 1] == ':' && lineAfterNext.Length <= 50) ||
                             string.IsNullOrWhiteSpace(lineAfterNext))
                         {
                             return lines[i + 1].Trim();
@@ -2391,7 +2392,7 @@ namespace FMScanner
             for (var i = 0; i < baseDirFiles.Count; i++)
             {
                 var fn = baseDirFiles[i].Name;
-                if (!fn.EndsWithI(".zip") && !fn.EndsWithI(".7z") && !fn.EndsWithI(".rar"))
+                if (!fn.ExtIsZip() && !fn.ExtIs7z() && !fn.ExtIsRar())
                 {
                     continue;
                 }
@@ -2455,7 +2456,7 @@ namespace FMScanner
 
             #region Choose smallest .gam file
 
-            var gamFiles = baseDirFiles.Where(x => x.Name.EndsWithI(".gam")).ToArray();
+            var gamFiles = baseDirFiles.Where(x => x.Name.ExtIsGam()).ToArray();
             var gamFileExists = gamFiles.Length > 0;
 
             var gamSizeList = new List<(string Name, int Index, long Size)>();

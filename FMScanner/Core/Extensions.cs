@@ -138,6 +138,8 @@ namespace FMScanner
 
         #endregion
 
+        #region Contains
+
         internal static bool Contains(this string value, char character)
         {
             return value.IndexOf(character) >= 0;
@@ -167,6 +169,8 @@ namespace FMScanner
             return value.Contains(substring, StringComparer.OrdinalIgnoreCase);
         }
 
+        #endregion
+
         /// <summary>
         /// Determines whether this string and a specified <see langword="string"/> object have the same value.
         /// Uses <see cref="StringComparison.OrdinalIgnoreCase"/>.
@@ -178,6 +182,8 @@ namespace FMScanner
         {
             return first.Equals(second, OrdinalIgnoreCase);
         }
+
+        #region File extensions
 
         /// <summary>
         /// Determines whether this string ends with a file extension. Obviously only makes sense for strings
@@ -194,23 +200,243 @@ namespace FMScanner
 
         internal static bool IsValidReadme(this string readme, bool englishOnly = false)
         {
-            return (readme.EndsWithI(".txt") ||
-                    readme.EndsWithI(".rtf") ||
-                    readme.EndsWithI(".wri") ||
-                    readme.EndsWithI(".glml") ||
+            return (readme.ExtIsTxt() ||
+                    readme.ExtIsRtf() ||
+                    readme.ExtIsWri() ||
+                    readme.ExtIsGlml() ||
                     readme.ExtIsHtml()) &&
                    (!englishOnly || readme.IsEnglishReadme());
         }
 
-        /// <summary>
-        /// Returns true if value ends with ".html" or ".htm".
-        /// </summary>
-        /// <param name="value"></param>
-        /// <returns></returns>
+        #region Baked-in extension checks (generated)
+
+        internal static bool ExtIsTxt(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'T' || value[len - 3] == 't') &&
+                   (value[len - 2] == 'X' || value[len - 2] == 'x') &&
+                   (value[len - 1] == 'T' || value[len - 1] == 't');
+        }
+
+        internal static bool ExtIsRtf(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'R' || value[len - 3] == 'r') &&
+                   (value[len - 2] == 'T' || value[len - 2] == 't') &&
+                   (value[len - 1] == 'F' || value[len - 1] == 'f');
+        }
+
+        internal static bool ExtIsWri(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'W' || value[len - 3] == 'w') &&
+                   (value[len - 2] == 'R' || value[len - 2] == 'r') &&
+                   (value[len - 1] == 'I' || value[len - 1] == 'i');
+        }
+
         internal static bool ExtIsHtml(this string value)
         {
-            return value.EndsWithI(".html") || value.EndsWithI(".htm");
+            if (value == null) return false;
+
+            var len = value.Length;
+            return (len > 4 &&
+                    value[len - 4] == '.' &&
+                    (value[len - 3] == 'H' || value[len - 3] == 'h') &&
+                    (value[len - 2] == 'T' || value[len - 2] == 't') &&
+                    (value[len - 1] == 'M' || value[len - 1] == 'm')) ||
+                   (len > 5 &&
+                    value[len - 5] == '.' &&
+                    (value[len - 4] == 'H' || value[len - 4] == 'h') &&
+                    (value[len - 3] == 'T' || value[len - 3] == 't') &&
+                    (value[len - 2] == 'M' || value[len - 2] == 'm') &&
+                    (value[len - 1] == 'L' || value[len - 1] == 'l'));
         }
+
+        internal static bool ExtIsGlml(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 5 &&
+                   value[len - 5] == '.' &&
+                   (value[len - 4] == 'G' || value[len - 4] == 'g') &&
+                   (value[len - 3] == 'L' || value[len - 3] == 'l') &&
+                   (value[len - 2] == 'M' || value[len - 2] == 'm') &&
+                   (value[len - 1] == 'L' || value[len - 1] == 'l');
+        }
+
+        internal static bool ExtIsZip(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'Z' || value[len - 3] == 'z') &&
+                   (value[len - 2] == 'I' || value[len - 2] == 'i') &&
+                   (value[len - 1] == 'P' || value[len - 1] == 'p');
+        }
+
+        internal static bool ExtIs7z(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 3 &&
+                   value[len - 3] == '.' &&
+                   value[len - 2] == '7' &&
+                   (value[len - 1] == 'Z' || value[len - 1] == 'z');
+        }
+
+        internal static bool ExtIsRar(this string value)
+        {
+            if (value == null) return false;
+
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'R' || value[len - 3] == 'r') &&
+                   (value[len - 2] == 'A' || value[len - 2] == 'a') &&
+                   (value[len - 1] == 'R' || value[len - 1] == 'r');
+        }
+
+        internal static bool ExtIsIbt(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'I' || value[len - 3] == 'i') &&
+                   (value[len - 2] == 'B' || value[len - 2] == 'b') &&
+                   (value[len - 1] == 'T' || value[len - 1] == 't');
+        }
+
+        internal static bool ExtIsCbt(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'C' || value[len - 3] == 'c') &&
+                   (value[len - 2] == 'B' || value[len - 2] == 'b') &&
+                   (value[len - 1] == 'T' || value[len - 1] == 't');
+        }
+
+        internal static bool ExtIsGmp(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'G' || value[len - 3] == 'g') &&
+                   (value[len - 2] == 'M' || value[len - 2] == 'm') &&
+                   (value[len - 1] == 'P' || value[len - 1] == 'p');
+        }
+
+        internal static bool ExtIsNed(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'N' || value[len - 3] == 'n') &&
+                   (value[len - 2] == 'E' || value[len - 2] == 'e') &&
+                   (value[len - 1] == 'D' || value[len - 1] == 'd');
+        }
+
+        internal static bool ExtIsUnr(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'U' || value[len - 3] == 'u') &&
+                   (value[len - 2] == 'N' || value[len - 2] == 'n') &&
+                   (value[len - 1] == 'R' || value[len - 1] == 'r');
+        }
+
+        internal static bool EndsWithRaDotBin(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 6 &&
+                   (value[len - 6] == 'R' || value[len - 6] == 'r') &&
+                   (value[len - 5] == 'A' || value[len - 5] == 'a') &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'B' || value[len - 3] == 'b') &&
+                   (value[len - 2] == 'I' || value[len - 2] == 'i') &&
+                   (value[len - 1] == 'N' || value[len - 1] == 'n');
+        }
+
+        internal static bool ExtIsBin(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'B' || value[len - 3] == 'b') &&
+                   (value[len - 2] == 'I' || value[len - 2] == 'i') &&
+                   (value[len - 1] == 'N' || value[len - 1] == 'n');
+        }
+
+        internal static bool ExtIsSub(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'S' || value[len - 3] == 's') &&
+                   (value[len - 2] == 'U' || value[len - 2] == 'u') &&
+                   (value[len - 1] == 'B' || value[len - 1] == 'b');
+        }
+
+        internal static bool ExtIsMis(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'M' || value[len - 3] == 'm') &&
+                   (value[len - 2] == 'I' || value[len - 2] == 'i') &&
+                   (value[len - 1] == 'S' || value[len - 1] == 's');
+        }
+
+        internal static bool ExtIsGam(this string value)
+        {
+            if (value == null) return false;
+    
+            var len = value.Length;
+            return len > 4 &&
+                   value[len - 4] == '.' &&
+                   (value[len - 3] == 'G' || value[len - 3] == 'g') &&
+                   (value[len - 2] == 'A' || value[len - 2] == 'a') &&
+                   (value[len - 1] == 'M' || value[len - 1] == 'm');
+        }
+
+        #endregion
+
+        #endregion
 
         #region StartsWith and EndsWith
 
