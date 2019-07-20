@@ -323,6 +323,8 @@ namespace FMScanner
                 return null;
             }
 
+            long? sevenZipSize = null;
+
             #region Check for and setup 7-Zip
 
             bool fmIsSevenZip = false;
@@ -337,6 +339,7 @@ namespace FMScanner
                 {
                     using (var sze = new SevenZipExtractor(ArchivePath) { PreserveDirectoryStructure = true })
                     {
+                        sevenZipSize = sze.PackedSize;
                         sze.ExtractArchive(FmWorkingPath);
                     }
                 }
@@ -410,10 +413,16 @@ namespace FMScanner
                 {
                     FmDirFiles = new DirectoryInfo(FmWorkingPath).EnumerateFiles("*", SearchOption.AllDirectories).ToList();
 
-                    long size = 0;
-                    foreach (var fi in FmDirFiles) size += fi.Length;
-
-                    fmData.Size = size;
+                    if (fmIsSevenZip)
+                    {
+                        fmData.Size = sevenZipSize;
+                    }
+                    else
+                    {
+                        long size = 0;
+                        foreach (var fi in FmDirFiles) size += fi.Length;
+                        fmData.Size = size;
+                    }
                 }
             }
 
