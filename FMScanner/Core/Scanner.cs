@@ -203,7 +203,6 @@ namespace FMScanner
             {
                 ProgressReport progressReport = null;
 
-
                 for (var i = 0; i < missions.Count; i++)
                 {
                     bool nullAlreadyAdded = false;
@@ -470,9 +469,9 @@ namespace FMScanner
 
             if (!fmIsT3)
             {
-                // Do this as early as possible so we can reject SS2 FMs early. We need to special-case SS2 FMs because
-                // they're similar enough to T1/T2 FMs that they may very well be mistaken for them, rather than being
-                // outright rejected as would any other archive.
+                // Do this as early as possible so we can reject SS2 FMs early. We need to special-case SS2 FMs
+                // because they're similar enough to T1/T2 FMs that they may very well be mistaken for them,
+                // rather than being outright rejected as would any other archive.
 
                 #region NewDark/GameType checks
 
@@ -983,7 +982,7 @@ namespace FMScanner
                     }
                 }
 
-                // Thief 3 can have no files in its base dir, and we don't scan for custom resources for T3
+                // Thief 3 FMs can have empty base dirs, and we don't scan for custom resources for T3
                 if (!t3Found)
                 {
                     if (baseDirFiles.Count == 0) return false;
@@ -1283,10 +1282,10 @@ namespace FMScanner
 
             #region Descr
 
-            // Descr can be multiline. You're supposed to use \n for linebreaks. Most of the time people do
-            // that. That's always nice when people do that. It's so much nicer than when they break an ini
-            // value into multiple actual lines for some reason. God help us if any more keys get added to
-            // the spec and some wise guy puts one of those keys after a multiline Descr.
+            // Descr can be multiline. You're supposed to use \n for linebreaks. Most of the time people do that.
+            // That's always nice when people do that. It's so much nicer than when they break an ini value into
+            // multiple actual lines for some reason. God help us if any more keys get added to the spec and some
+            // wise guy puts one of those keys after a multiline Descr.
 
             if (!string.IsNullOrEmpty(fmIni.Descr))
             {
@@ -1306,8 +1305,8 @@ namespace FMScanner
 
                 fmIni.Descr = fmIni.Descr.RemoveUnpairedLeadingOrTrailingQuotes();
 
-                // Normalize to just LF for now. Otherwise it just doesn't work right for reasons confusing
-                // and senseless. It can easily be converted later.
+                // Normalize to just LF for now. Otherwise it just doesn't work right for reasons confusing and
+                // senseless. It can easily be converted later.
                 fmIni.Descr = fmIni.Descr.Replace("\r\n", "\n");
                 if (string.IsNullOrWhiteSpace(fmIni.Descr)) fmIni.Descr = null;
             }
@@ -1349,13 +1348,20 @@ namespace FMScanner
             {
                 var rd = fmIni.ReleaseDate;
 
-                // The fm.ini Unix timestamp looks 32-bit, but FMSel's source code pegs it as int64. It must just be
-                // writing only as many digits as it needs. That's good, because 32-bit will run out in 2038. Anyway,
-                // we should parse it as long (NDL only does int, so it's in for a surprise in 20 years :P)
+                // The fm.ini Unix timestamp looks 32-bit, but FMSel's source code pegs it as int64. It must just
+                // be writing only as many digits as it needs. That's good, because 32-bit will run out in 2038.
+                // Anyway, we should parse it as long (NDL only does int, so it's in for a surprise in 20 years :P)
                 if (long.TryParse(rd, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out long seconds))
                 {
-                    var newDate = DateTimeOffset.FromUnixTimeSeconds(seconds).DateTime;
-                    ret.LastUpdateDate = newDate;
+                    try
+                    {
+                        var newDate = DateTimeOffset.FromUnixTimeSeconds(seconds).DateTime;
+                        ret.LastUpdateDate = newDate;
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        // Invalid date, leave blank
+                    }
                 }
                 else if (!string.IsNullOrEmpty(fmIni.ReleaseDate))
                 {
@@ -2771,8 +2777,7 @@ namespace FMScanner
         {
             try
             {
-                foreach (var d in Directory.EnumerateDirectories(fmWorkingPath, "*",
-                    SearchOption.TopDirectoryOnly))
+                foreach (var d in Directory.EnumerateDirectories(fmWorkingPath, "*", SearchOption.TopDirectoryOnly))
                 {
                     Directory.Delete(d, true);
                 }
