@@ -123,8 +123,8 @@ namespace FMScanner
         }
 
         // Debug - scan on UI thread so breaks will actually break where they're supposed to
-        //#if DEBUG || ScanSynchronous
-        // TODO: This shouldn't really be public, should it...? Am I using this for the test frontend?
+        // (test frontend use only)
+        #if DEBUG || ScanSynchronous
         [PublicAPI]
         public List<ScannedFMData>
         Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
@@ -132,7 +132,7 @@ namespace FMScanner
         {
             return ScanMany(missions, tempPath, scanOptions, progress, cancellationToken);
         }
-        //#endif
+        #endif
 
         #endregion
 
