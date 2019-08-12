@@ -12,9 +12,11 @@ If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
 namespace FMScanner
 {
+    [PublicAPI]
     public sealed class ScanOptions
     {
         // Dumb looking on this side, but extremely nice and convenient on the calling side.
@@ -116,6 +118,7 @@ namespace FMScanner
         public bool ScanTags { get; set; } = true;
     }
 
+    [PublicAPI]
     public sealed class ProgressReport
     {
         public string FMName;
@@ -125,6 +128,7 @@ namespace FMScanner
         public bool Finished;
     }
 
+    [PublicAPI]
     public static class Games
     {
         public static string TDP { get; } = "tdp";
@@ -133,30 +137,32 @@ namespace FMScanner
         public static string Unsupported { get; } = "unsupported";
     }
 
+    [PublicAPI]
     public static class FMTypes
     {
         public static string FanMission { get; } = "fanmission";
         public static string Campaign { get; } = "campaign";
     }
 
+    [PublicAPI]
     public sealed class ScannedFMData
     {
-        public string ArchiveName { get; internal set; } = null;
-        public long? Size { get; internal set; } = null;
-        public string Title { get; internal set; } = null;
+        public string ArchiveName { get; internal set; }
+        public long? Size { get; internal set; }
+        public string Title { get; internal set; }
         public List<string> AlternateTitles { get; internal set; } = new List<string>();
-        public string Author { get; internal set; } = null;
-        public string Type { get; internal set; } = null;
-        public string[] IncludedMissions { get; internal set; } = null;
-        public string Game { get; internal set; } = null;
-        public string[] Languages { get; internal set; } = null;
-        public string Version { get; internal set; } = null;
-        public bool? NewDarkRequired { get; internal set; } = null;
-        public string NewDarkMinRequiredVersion { get; internal set; } = null;
+        public string Author { get; internal set; }
+        public string Type { get; internal set; }
+        public string[] IncludedMissions { get; internal set; }
+        public string Game { get; internal set; }
+        public string[] Languages { get; internal set; }
+        public string Version { get; internal set; }
+        public bool? NewDarkRequired { get; internal set; }
+        public string NewDarkMinRequiredVersion { get; internal set; }
         /// <summary>
         /// Deprecated and will always be blank. Use <see cref="LastUpdateDate"/> instead.
         /// </summary>
-        public DateTime? OriginalReleaseDate { get; internal set; } = null;
+        public DateTime? OriginalReleaseDate { get; internal set; }
 
         private DateTime? _lastUpdateDate;
         public DateTime? LastUpdateDate
@@ -176,17 +182,17 @@ namespace FMScanner
             }
         }
 
-        public bool? HasCustomScripts { get; internal set; } = null;
-        public bool? HasCustomTextures { get; internal set; } = null;
-        public bool? HasCustomSounds { get; internal set; } = null;
-        public bool? HasCustomObjects { get; internal set; } = null;
-        public bool? HasCustomCreatures { get; internal set; } = null;
-        public bool? HasCustomMotions { get; internal set; } = null;
-        public bool? HasAutomap { get; internal set; } = null;
-        public bool? HasMovies { get; internal set; } = null;
-        public bool? HasMap { get; internal set; } = null;
-        public bool? HasCustomSubtitles { get; internal set; } = null;
-        public string Description { get; internal set; } = null;
-        public string TagsString { get; internal set; } = null;
+        public bool? HasCustomScripts { get; internal set; }
+        public bool? HasCustomTextures { get; internal set; }
+        public bool? HasCustomSounds { get; internal set; }
+        public bool? HasCustomObjects { get; internal set; }
+        public bool? HasCustomCreatures { get; internal set; }
+        public bool? HasCustomMotions { get; internal set; }
+        public bool? HasAutomap { get; internal set; }
+        public bool? HasMovies { get; internal set; }
+        public bool? HasMap { get; internal set; }
+        public bool? HasCustomSubtitles { get; internal set; }
+        public string Description { get; internal set; }
+        public string TagsString { get; internal set; }
     }
 }

@@ -210,7 +210,8 @@ namespace FMScanner
 
         #region Baked-in extension checks (generated)
 
-        internal static bool ExtIsTxt(this string value)
+        // TODO: These may actually be slower... just so I remember in case I wanna change them back
+        private static bool ExtIsTxt(this string value)
         {
             if (value == null) return false;
 
@@ -222,7 +223,7 @@ namespace FMScanner
                    (value[len - 1] == 'T' || value[len - 1] == 't');
         }
 
-        internal static bool ExtIsRtf(this string value)
+        private static bool ExtIsRtf(this string value)
         {
             if (value == null) return false;
 
@@ -234,7 +235,7 @@ namespace FMScanner
                    (value[len - 1] == 'F' || value[len - 1] == 'f');
         }
 
-        internal static bool ExtIsWri(this string value)
+        private static bool ExtIsWri(this string value)
         {
             if (value == null) return false;
 
@@ -646,35 +647,6 @@ namespace FMScanner
             return i > -1 && i > fileName.LastIndexOf('\\') && i > fileName.LastIndexOf('/')
                 ? fileName.Substring(0, i)
                 : fileName;
-        }
-
-        internal static string GetFileNameFast(this string path)
-        {
-            if (path == null) return null;
-
-            int i1 = path.LastIndexOf('\\');
-            int i2 = path.LastIndexOf('/');
-
-            if (i1 == -1 & i2 == -1) return path;
-
-            return path.Substring(Math.Max(i1, i2) + 1);
-        }
-
-        internal static string GetDirNameFast(this string path)
-        {
-            if (path == null) return null;
-
-            while (path[path.Length - 1] == '\\' || path[path.Length - 1] == '/')
-            {
-                path = path.TrimEnd('\\').TrimEnd('/');
-            }
-
-            int i1 = path.LastIndexOf('\\');
-            int i2 = path.LastIndexOf('/');
-
-            if (i1 == -1 & i2 == -1) return path;
-
-            return path.Substring(Math.Max(i1, i2) + 1);
         }
 
         #endregion

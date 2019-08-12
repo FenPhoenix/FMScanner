@@ -14,15 +14,11 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Text.RegularExpressions;
+using JetBrains.Annotations;
 
 namespace FMScanner
 {
-    internal static class ValidZipYears
-    {
-        internal const int Min = 1980;
-        internal const int Max = 2107;
-    }
-
+    [PublicAPI]
     internal static class ByteSize
     {
         internal const int KB = 1024;
@@ -115,7 +111,8 @@ namespace FMScanner
         // .osm for the classic scripts; .nut for Squirrel scripts for NewDark >= 1.25
         internal static string[] ScriptFileExtensions { get; } = { ".osm", ".nut" };
 
-        internal static string[] LanguageDirs { get; } = { FMDirs.Books, FMDirs.Intrface, FMDirs.Strings };
+        // NOTE: I think this was for GetLanguages() for the planned accuracy update?
+        //internal static string[] LanguageDirs { get; } = { FMDirs.Books, FMDirs.Intrface, FMDirs.Strings };
 
         internal static string[] Languages { get; } =
         {
@@ -221,68 +218,66 @@ namespace FMScanner
 
     internal static class MisFileStrings
     {
-        internal static char[] SkyObjVar = { 'S', 'K', 'Y', 'O', 'B', 'J', 'V', 'A', 'R' };
-        internal static char[] ObjMap = { 'O', 'B', 'J', '_', 'M', 'A', 'P' };
-        //internal static byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("vnull");
-        //internal static byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("vnull");
-        internal static byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("RopeyArrow");
-        internal static byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("RopeyArrow");
+        internal static readonly char[] SkyObjVar = { 'S', 'K', 'Y', 'O', 'B', 'J', 'V', 'A', 'R' };
+        internal static readonly char[] ObjMap = { 'O', 'B', 'J', '_', 'M', 'A', 'P' };
+        internal static readonly byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("RopeyArrow");
+        internal static readonly byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("RopeyArrow");
 
         // We don't support System Shock 2, but we use this to detect and report if the FM is for SS2
-        internal static char[] MapParam = { 'M', 'A', 'P', 'P', 'A', 'R', 'A', 'M' };
+        internal static readonly char[] MapParam = { 'M', 'A', 'P', 'P', 'A', 'R', 'A', 'M' };
     }
 
-    [SuppressMessage("ReSharper", "UnusedAutoPropertyAccessor.Global")]
+    [PublicAPI] // Not public, but whatever
     internal sealed class FMIniData
     {
-        public string NiceName { get; set; }
-        public string ReleaseDate { get; set; }
-        public string InfoFile { get; set; }
-        public string Tags { get; set; }
-        public string Descr { get; set; }
+        internal string NiceName { get; set; }
+        internal string ReleaseDate { get; set; }
+        internal string InfoFile { get; set; }
+        internal string Tags { get; set; }
+        internal string Descr { get; set; }
     }
 
     // Putting regexes in here is a perf optimization: static (initialized only once) and Compiled increases
     // their performance by a huge amount. And as we know, regexes need all the performance help they can get.
     internal static class Regexes
     {
-        internal static Regex GLMLTagRegex =
+        internal static readonly Regex GLMLTagRegex =
             new Regex(@"\[/?GL[A-Z]+\]", RegexOptions.Compiled);
 
-        internal static Regex OpenParenSpacesRegex =
+        internal static readonly Regex OpenParenSpacesRegex =
             new Regex(@"\(\s+", RegexOptions.Compiled);
 
-        internal static Regex CloseParenSpacesRegex =
+        internal static readonly Regex CloseParenSpacesRegex =
             new Regex(@"\s+\)", RegexOptions.Compiled);
 
-        internal static Regex DaySuffixesRegex =
+        internal static readonly Regex DaySuffixesRegex =
             new Regex(@"\d(?<Suffix>(st|nd|rd|th)).+",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
-        internal static Regex VersionExclude1Regex =
+        internal static readonly Regex VersionExclude1Regex =
             new Regex(@"\d\.\d+\+", RegexOptions.Compiled);
 
-        internal static Regex TitleAnyConsecutiveLettersRegex =
+        internal static readonly Regex TitleAnyConsecutiveLettersRegex =
             new Regex(@"\w\w", RegexOptions.Compiled);
 
         // TODO: [a-z] is only ASCII letters, so it won't catch lowercase other stuff I guess
-        internal static Regex TitleContainsLowerCaseCharsRegex =
+        internal static readonly Regex TitleContainsLowerCaseCharsRegex =
             new Regex(@"[a-z]", RegexOptions.Compiled);
 
-        internal static Regex AuthorEmailRegex =
+        internal static readonly Regex AuthorEmailRegex =
             new Regex(@"\(?\S+@\S+\.\S{2,5}\)?", RegexOptions.Compiled);
 
         // This doesn't need to be a regex really, but it takes like 5.4 microseconds per FM, so, yeah
-        internal static Regex NewGameStrTitleRegex =
+        internal static readonly Regex NewGameStrTitleRegex =
             new Regex(@"^skip_training\:\s*""(?<Title>.+)""", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         // TODO: This one looks iffy though
-        internal static Regex VersionFirstNumberRegex =
+        internal static readonly Regex VersionFirstNumberRegex =
             new Regex(@"[0123456789\.]+", RegexOptions.Compiled);
 
         // Much, much faster to iterate through possible regex matches, common ones first
         // TODO: These are still kinda slow comparatively. Profile to see if any are bottlenecks
-        internal static Regex[] NewDarkVersionRegexes { get; } =
+        internal static readonly Regex[] NewDarkVersionRegexes =
         {
             new Regex(@"NewDark (?<Version>\d\.\d+)",
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture),
@@ -309,7 +304,7 @@ namespace FMScanner
             // @"((?<Name>(""*New *Dark""*( Version| Patch)*|Dark *Engine|(?<!(Love |Being |Penitent |Counter-|Requiem for a |Space ))Thief|(?<!Being )Thief *2|Thief *II|The Metal Age)) *V?(\.| )*(?<Version>\d\.\d+)|\D(?<Version>\d\.\d+) +(version of |(?!\r\n).?)New *Dark(?! *\d\.\d+)|Thief Gold( Patch)* (?<Version>(?!1\.33|1\.37)\d\.\d+))",
         };
 
-        internal static Regex[] AuthorRegexes { get; } =
+        internal static readonly Regex[] AuthorRegexes =
         {
             new Regex(
                 @"(FM|mission|campaign|series) for Thief( Gold|: The Dark Project|\s*2(: The Metal Age)?)\s+by\s*(?<Author>.+)",
@@ -333,7 +328,7 @@ namespace FMScanner
 
         // Unicode 00A9 = copyright symbol
 
-        internal static Regex[] AuthorMissionCopyrightRegexes { get; } =
+        internal static readonly Regex[] AuthorMissionCopyrightRegexes =
         {
             new Regex(
                 //language=regexp
@@ -352,19 +347,19 @@ namespace FMScanner
         // This one is only to be used if we know the above line says "Copyright" or something, because it has
         // an @ as an option for a copyright symbol (used by some Theker missions) and we want to be sure it
         // means what we think it means.
-        internal static Regex AuthorGeneralCopyrightIncludeAtSymbolRegex { get; } =
+        internal static readonly Regex AuthorGeneralCopyrightIncludeAtSymbolRegex =
             new Regex(
                 //language=regexp
                 @"^(Copyright )?(\(c\)|\u00A9|@) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
-        internal static Regex AuthorGeneralCopyrightRegex { get; } =
+        internal static readonly Regex AuthorGeneralCopyrightRegex =
             new Regex(
                 //language=regexp
                 @"^(Copyright )?(\(c\)|\u00A9) ?" + CopyrightSecondPart,
                 RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.ExplicitCapture);
 
-        internal static Regex CopyrightAuthorYearRegex = new Regex(@" \d+.*$", RegexOptions.Compiled);
+        internal static readonly Regex CopyrightAuthorYearRegex = new Regex(@" \d+.*$", RegexOptions.Compiled);
     }
 
     /// <summary>

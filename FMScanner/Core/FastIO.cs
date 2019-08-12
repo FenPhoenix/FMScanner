@@ -16,6 +16,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using Microsoft.Win32.SafeHandles;
 
 namespace FMScanner
@@ -23,6 +24,7 @@ namespace FMScanner
     internal static class FastIO
     {
         // So we don't have to remember to call FindClose()
+        [UsedImplicitly]
         internal class SafeSearchHandle : SafeHandleZeroOrMinusOneIsInvalid
         {
             internal SafeSearchHandle() : base(true) { }

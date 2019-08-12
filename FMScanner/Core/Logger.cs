@@ -12,7 +12,7 @@ namespace FMScanner
     {
         private static readonly ReaderWriterLockSlim Lock = new ReaderWriterLockSlim();
 
-        internal static void ClearLogFile(string logFile)
+        private static void ClearLogFile(string logFile)
         {
             Lock.EnterWriteLock();
             try

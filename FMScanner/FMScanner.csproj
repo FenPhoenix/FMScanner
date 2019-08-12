@@ -121,6 +121,9 @@
     <PackageReference Include="7z.Libs">
       <Version>19.0.1</Version>
     </PackageReference>
+    <PackageReference Include="JetBrains.Annotations">
+      <Version>2019.1.3</Version>
+    </PackageReference>
     <PackageReference Include="Squid-Box.SevenZipSharp">
       <Version>1.2.184</Version>
     </PackageReference>
@@ -129,4 +132,10 @@
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>rem Dumb hack to get rid of the JetBrains.Annotations.dll because ludicrously
+rem xcopy requires you to make an entire file just to list excludes, rather than
+rem specifying them on the command line like someone who is not clinically insane
+del /F "%25destDir%25JetBrains.Annotations.dll"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

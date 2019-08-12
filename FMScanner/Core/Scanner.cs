@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml;
 using FMScanner.FastZipReader;
+using JetBrains.Annotations;
 using SevenZip;
 using static System.IO.Path;
 using static System.StringComparison;
@@ -40,7 +41,6 @@ namespace FMScanner
     internal sealed class ReadmeInternal
     {
         internal string FileName { get; set; }
-        internal int ArchiveIndex { get; set; } = -1;
         internal string[] Lines { get; set; }
         internal string Text { get; set; }
         internal DateTime LastModifiedDate { get; set; }
@@ -67,8 +67,10 @@ namespace FMScanner
         /// consistency (like when you're grabbing file names and then looking them back up within the archive
         /// later). Default: <see cref="Encoding.UTF8"/>
         /// </summary>
+        [PublicAPI]
         public Encoding ZipEntryNameEncoding { get; set; } = Encoding.UTF8;
 
+        [PublicAPI]
         public string LogFile { get; set; } = "";
 
         #region Disposable
@@ -122,11 +124,13 @@ namespace FMScanner
 
         // Debug - scan on UI thread so breaks will actually break where they're supposed to
         //#if DEBUG || ScanSynchronous
+        // TODO: This shouldn't really be public, should it...? Am I using this for the test frontend?
+        [PublicAPI]
         public List<ScannedFMData>
         Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
                 IProgress<ProgressReport> progress, CancellationToken cancellationToken)
         {
-            return ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None);
+            return ScanMany(missions, tempPath, scanOptions, progress, cancellationToken);
         }
         //#endif
 
@@ -134,6 +138,7 @@ namespace FMScanner
 
         #region Scan asynchronous
 
+        [PublicAPI]
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath)
         {
@@ -141,6 +146,7 @@ namespace FMScanner
                 ScanMany(missions, tempPath, this.ScanOptions, null, CancellationToken.None));
         }
 
+        [PublicAPI]
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions)
         {
@@ -148,6 +154,7 @@ namespace FMScanner
                 ScanMany(missions, tempPath, scanOptions, null, CancellationToken.None));
         }
 
+        [PublicAPI]
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath, IProgress<ProgressReport> progress,
             CancellationToken cancellationToken)
@@ -156,6 +163,7 @@ namespace FMScanner
                 ScanMany(missions, tempPath, this.ScanOptions, progress, cancellationToken));
         }
 
+        [PublicAPI]
         public async Task<List<ScannedFMData>>
         ScanAsync(List<string> missions, string tempPath, ScanOptions scanOptions,
             IProgress<ProgressReport> progress, CancellationToken cancellationToken)
@@ -1502,7 +1510,6 @@ namespace FMScanner
                 ReadmeFiles.Add(new ReadmeInternal
                 {
                     FileName = fileName,
-                    ArchiveIndex = readmeFile.Index,
                     LastModifiedDate = lastModifiedDate
                 });
 
