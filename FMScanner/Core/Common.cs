@@ -37,6 +37,7 @@ namespace FMScanner
         internal const string Obj = "obj";
         internal const string Scripts = "scripts";
         internal const string Snd = "snd";
+        internal const string Snd2 = "snd2"; // SS2 only
         internal const string Strings = "strings";
         internal const string Subtitles = "subtitles";
 
@@ -59,6 +60,7 @@ namespace FMScanner
         internal static string ObjS(char dsc) => dsc == '/' ? "obj/" : @"obj\";
         internal static string ScriptsS(char dsc) => dsc == '/' ? "scripts/" : @"scripts\";
         internal static string SndS(char dsc) => dsc == '/' ? "snd/" : @"snd\";
+        internal static string Snd2S(char dsc) => dsc == '/' ? "snd2/" : @"snd2\"; // SS2 only
         internal static string StringsS(char dsc) => dsc == '/' ? "strings/" : @"strings\";
         internal static string SubtitlesS(char dsc) => dsc == '/' ? "subtitles/" : @"subtitles\";
 
@@ -76,6 +78,9 @@ namespace FMScanner
 
         // fm.ini, a NewDark (or just FMSel?) file
         internal const string FMIni = "fm.ini";
+
+        // System Shock 2 file
+        internal const string ModIni = "mod.ini";
     }
 
     // Used for stripping RTF files of embedded images before scanning (performance and memory optimization)

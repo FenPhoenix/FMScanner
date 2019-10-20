@@ -134,6 +134,7 @@ namespace FMScanner
         public static string TDP { get; } = "tdp";
         public static string TMA { get; } = "tma";
         public static string TDS { get; } = "tds";
+        public static string SS2 { get; } = "ss2";
         public static string Unsupported { get; } = "unsupported";
     }
 

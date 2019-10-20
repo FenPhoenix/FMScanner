@@ -124,7 +124,7 @@ namespace FMScanner
 
         // Debug - scan on UI thread so breaks will actually break where they're supposed to
         // (test frontend use only)
-        #if DEBUG || ScanSynchronous
+#if DEBUG || ScanSynchronous
         [PublicAPI]
         public List<ScannedFMData>
         Scan(List<string> missions, string tempPath, ScanOptions scanOptions,
@@ -132,7 +132,7 @@ namespace FMScanner
         {
             return ScanMany(missions, tempPath, scanOptions, progress, cancellationToken);
         }
-        #endif
+#endif
 
         #endregion
 
@@ -457,7 +457,7 @@ namespace FMScanner
 
             #endregion
 
-            var fmIsT3 = fmData.Game == Games.TDS;
+            bool fmIsT3 = fmData.Game == Games.TDS;
 
             void SetOrAddTitle(string value)
             {
@@ -474,6 +474,8 @@ namespace FMScanner
                     fmData.AlternateTitles.Add(value);
                 }
             }
+
+            bool fmIsSS2 = false;
 
             if (!fmIsT3)
             {
@@ -494,12 +496,17 @@ namespace FMScanner
                     }
                 }
 
+                fmIsSS2 = fmData.Game == Games.SS2;
+
                 #endregion
 
                 // If we're Thief 3, we just skip figuring this out - I don't know how to detect if a T3 mission
                 // is a campaign, and I'm not even sure any T3 campaigns have been released (not counting ones
                 // that are just a series of separate FMs, of course).
-                fmData.Type = usedMisFiles.Count > 1 ? FMTypes.Campaign : FMTypes.FanMission;
+                // TODO: @SS2: Force SS2 to single mission for now
+                // Until I can figure out how to detect which .mis files are used without there being an actual
+                // list...
+                fmData.Type = fmIsSS2 || usedMisFiles.Count <= 1 ? FMTypes.FanMission : FMTypes.Campaign;
 
                 #region Check info files
 
@@ -526,6 +533,16 @@ namespace FMScanner
                         fmData.Description = t.Description;
                         if (ScanOptions.ScanReleaseDate && t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
                         if (ScanOptions.ScanTags) fmData.TagsString = t.Tags;
+                    }
+                }
+                {
+                    // SS2 file
+                    var modIni = baseDirFiles.FirstOrDefault(x => x.Name.EqualsI(FMFiles.ModIni));
+                    if (modIni != null)
+                    {
+                        var t = ReadModIni(modIni);
+                        if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
+                        if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
                     }
                 }
 
@@ -568,7 +585,8 @@ namespace FMScanner
 
             #region Title and IncludedMissions
 
-            if (!fmIsT3)
+            // SS2 doesn't have a missions list or a titles list file
+            if (!fmIsT3 && !fmIsSS2)
             {
                 if (ScanOptions.ScanTitle || ScanOptions.ScanCampaignMissionNames)
                 {
@@ -869,6 +887,7 @@ namespace FMScanner
                 return false;
             }
 
+            // TODO: @SS2: Adapt the custom resource checks to SS2 - can we detect map/automap? etc.
             if (FmIsZip || ScanOptions.ScanSize)
             {
                 for (var i = 0; i < (FmIsZip ? Archive.Entries.Count : FmDirFiles.Count); i++)
@@ -976,7 +995,7 @@ namespace FMScanner
                             fmd.HasCustomScripts = true;
                         }
                         else if (fmd.HasCustomSounds == null &&
-                                 fn.StartsWithI(FMDirs.SndS(dsc)) &&
+                                 (fn.StartsWithI(FMDirs.SndS(dsc)) || fn.StartsWithI(FMDirs.Snd2S(dsc))) &&
                                  fn.HasFileExtension())
                         {
                             fmd.HasCustomSounds = true;
@@ -1113,8 +1132,10 @@ namespace FMScanner
                              FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Scripts), "*"));
 
                         fmd.HasCustomSounds =
-                            baseDirFolders.ContainsI(FMDirs.Snd) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*");
+                            (baseDirFolders.ContainsI(FMDirs.Snd) &&
+                             FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd), "*")) ||
+                             (baseDirFolders.ContainsI(FMDirs.Snd2) &&
+                              FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Snd2), "*"));
 
                         fmd.HasCustomSubtitles =
                             baseDirFolders.ContainsI(FMDirs.Subtitles) &&
@@ -1387,6 +1408,67 @@ namespace FMScanner
                 - Although fm.ini wasn't used before NewDark, its presence doesn't necessarily mean the mission
                   is NewDark-only. Sturmdrang Peak has it but doesn't require NewDark, for instance.
             */
+
+            return ret;
+        }
+
+        private (string Title, string Author)
+        ReadModIni(NameAndIndex file)
+        {
+            var ret = (Title: (string)null, Author: (string)null);
+
+            string[] lines;
+
+            if (FmIsZip)
+            {
+                var e = Archive.Entries[file.Index];
+                using (var es = e.Open()) lines = ReadAllLinesE(es, e.Length);
+            }
+            else
+            {
+                lines = ReadAllLinesE(Path.Combine(FmWorkingPath, file.Name));
+            }
+
+            if (lines == null || lines.Length == 0) return ret;
+
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var lineT = lines[i].Trim();
+                if (lineT.EqualsI("[modName]"))
+                {
+                    while (i < lines.Length - 1)
+                    {
+                        var lt = lines[i + 1].Trim();
+                        if (!string.IsNullOrEmpty(lt) && lt[0] == '[' && lt[lt.Length - 1] == ']')
+                        {
+                            break;
+                        }
+                        else if (!string.IsNullOrEmpty(lt) && lt[0] != ';')
+                        {
+                            ret.Title = lt;
+                            break;
+                        }
+                        i++;
+                    }
+                }
+                else if (lineT.EqualsI("[authors]"))
+                {
+                    while (i < lines.Length - 1)
+                    {
+                        var lt = lines[i + 1].Trim();
+                        if (!string.IsNullOrEmpty(lt) && lt[0] == '[' && lt[lt.Length - 1] == ']')
+                        {
+                            break;
+                        }
+                        else if (!string.IsNullOrEmpty(lt) && lt[0] != ';')
+                        {
+                            ret.Author = lt;
+                            break;
+                        }
+                        i++;
+                    }
+                }
+            }
 
             return ret;
         }
@@ -2641,9 +2723,11 @@ namespace FMScanner
                     if ((FmIsZip && i < 4 && zipBuf.Contains(MisFileStrings.MapParam)) ||
                         (!FmIsZip && i < 2 && dirBuf.Contains(MisFileStrings.MapParam)))
                     {
-                        return (null, Games.Unsupported);
+                        // TODO: @SS2: AngelLoader doesn't need to know if NewDark is required, but put that in eventually
+                        return (null, Games.SS2);
                     }
 
+                    // TODO: @SS2: Do I need to put any logic in here now?
                     if (locations[i] == ss2MapParamLoc1 || locations[i] == ss2MapParamLoc2)
                     {
                         continue;
