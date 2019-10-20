@@ -901,11 +901,11 @@ namespace FMScanner
                     if (!t3Found &&
                         fn.StartsWithI(FMDirs.T3DetectS(dsc)) &&
                         fn.CountChars(dsc) == 3 &&
-                        fn.ExtIsIbt() ||
+                        (fn.ExtIsIbt() ||
                         fn.ExtIsCbt() ||
                         fn.ExtIsGmp() ||
                         fn.ExtIsNed() ||
-                        fn.ExtIsUnr())
+                        fn.ExtIsUnr()))
                     {
                         fmd.Game = Games.TDS;
                         t3Found = true;
