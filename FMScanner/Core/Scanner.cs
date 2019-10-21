@@ -479,9 +479,8 @@ namespace FMScanner
 
             if (!fmIsT3)
             {
-                // Do this as early as possible so we can reject SS2 FMs early. We need to special-case SS2 FMs
-                // because they're similar enough to T1/T2 FMs that they may very well be mistaken for them,
-                // rather than being outright rejected as would any other archive.
+                // We check game type as early as possible because we used to want to reject SS2 FMs early for
+                // speed. We support SS2 now, but this works fine and dandy where it is so not messing with it.
 
                 #region NewDark/GameType checks
 
@@ -540,6 +539,7 @@ namespace FMScanner
                 if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor)
                 {
                     // SS2 file
+                    // TODO: If we wanted to be sticklers, we could skip this for non-SS2 FMs
                     var modIni = baseDirFiles.FirstOrDefault(x => x.Name.EqualsI(FMFiles.ModIni));
                     if (modIni != null)
                     {
@@ -890,7 +890,6 @@ namespace FMScanner
                 return false;
             }
 
-            // TODO: @SS2: Adapt the custom resource checks to SS2 - can we detect map/automap? etc.
             if (FmIsZip || ScanOptions.ScanSize)
             {
                 for (var i = 0; i < (FmIsZip ? Archive.Entries.Count : FmDirFiles.Count); i++)
@@ -2672,8 +2671,8 @@ namespace FMScanner
             System Shock 2 .mis files can (but may not) have the SKYOBJVAR string. If they do, it'll be at 3168
             or 7292.
             System Shock 2 .mis files all have the MAPPARAM string. It will be at either 696 or 916. One or the
-            other may correspond to NewDark but I dunno cause I haven't looked into it that far cause this scanner
-            isn't meant to support SS2 properly. We just need to know enough to reject SS2 FMs.
+            other may correspond to NewDark but I dunno cause I haven't looked into it that far yet.
+            (we don't detect OldDark/NewDark for SS2 yet)
 
              * We skip this check because only a handful of OldDark Thief 2 missions have SKYOBJVAR in a wacky
                location, and it's faster and more reliable to simply carry on with the secondary check than to
@@ -2732,7 +2731,6 @@ namespace FMScanner
                         return (null, Games.SS2);
                     }
 
-                    // TODO: @SS2: Do I need to put any logic in here now?
                     if (locations[i] == ss2MapParamLoc1 || locations[i] == ss2MapParamLoc2)
                     {
                         continue;
