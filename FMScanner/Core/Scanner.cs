@@ -513,7 +513,7 @@ namespace FMScanner
                 if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor || ScanOptions.ScanVersion ||
                     ScanOptions.ScanReleaseDate || ScanOptions.ScanTags)
                 {
-                    var fmInfoXml = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMInfoXml));
+                    var fmInfoXml = baseDirFiles.FirstOrDefault(x => x.Name.EqualsI(FMFiles.FMInfoXml));
                     if (fmInfoXml != null)
                     {
                         var t = ReadFmInfoXml(fmInfoXml);
@@ -523,18 +523,21 @@ namespace FMScanner
                         if (ScanOptions.ScanReleaseDate && t.ReleaseDate != null) fmData.LastUpdateDate = t.ReleaseDate;
                     }
                 }
+                // I think we need to always scan fm.ini even if we're not returning any of its fields, because
+                // of tags, I think for some reason we're needing to read tags always?
                 {
-                    var fmIni = baseDirFiles.FirstOrDefault(x => x.Name.ContainsI(FMFiles.FMIni));
+                    var fmIni = baseDirFiles.FirstOrDefault(x => x.Name.EqualsI(FMFiles.FMIni));
                     if (fmIni != null)
                     {
                         var t = ReadFmIni(fmIni);
                         if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
-                        if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
+                        if (ScanOptions.ScanAuthor && !t.Author.IsEmpty()) fmData.Author = t.Author;
                         fmData.Description = t.Description;
                         if (ScanOptions.ScanReleaseDate && t.LastUpdateDate != null) fmData.LastUpdateDate = t.LastUpdateDate;
                         if (ScanOptions.ScanTags) fmData.TagsString = t.Tags;
                     }
                 }
+                if (ScanOptions.ScanTitle || ScanOptions.ScanAuthor)
                 {
                     // SS2 file
                     var modIni = baseDirFiles.FirstOrDefault(x => x.Name.EqualsI(FMFiles.ModIni));
@@ -542,7 +545,7 @@ namespace FMScanner
                     {
                         var t = ReadModIni(modIni);
                         if (ScanOptions.ScanTitle) SetOrAddTitle(t.Title);
-                        if (ScanOptions.ScanAuthor) fmData.Author = t.Author;
+                        if (ScanOptions.ScanAuthor && !t.Author.IsEmpty()) fmData.Author = t.Author;
                     }
                 }
 
