@@ -966,7 +966,7 @@ namespace FMScanner
                             fmd.HasCustomMotions = true;
                         }
                         else if (fmd.HasMovies == null &&
-                                 fn.StartsWithI(FMDirs.MoviesS(dsc)) &&
+                                 (fn.StartsWithI(FMDirs.MoviesS(dsc)) || fn.StartsWithI(FMDirs.CutscenesS(dsc))) &&
                                  fn.HasFileExtension())
                         {
                             fmd.HasMovies = true;
@@ -1113,8 +1113,10 @@ namespace FMScanner
                                 MotionFilePatterns);
 
                         fmd.HasMovies =
-                            baseDirFolders.ContainsI(FMDirs.Movies) &&
-                            FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*");
+                            (baseDirFolders.ContainsI(FMDirs.Movies) &&
+                             FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Movies), "*")) ||
+                            (baseDirFolders.ContainsI(FMDirs.Cutscenes) &&
+                             FastIO.FilesExistSearchAll(Path.Combine(FmWorkingPath, FMDirs.Cutscenes), "*"));
 
                         fmd.HasCustomTextures =
                             baseDirFolders.ContainsI(FMDirs.Fam) &&

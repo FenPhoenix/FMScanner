@@ -34,6 +34,7 @@ namespace FMScanner
         internal const string Mesh = "mesh";
         internal const string Motions = "motions";
         internal const string Movies = "movies";
+        internal const string Cutscenes = "cutscenes"; // SS2 only
         internal const string Obj = "obj";
         internal const string Scripts = "scripts";
         internal const string Snd = "snd";
@@ -57,6 +58,7 @@ namespace FMScanner
         internal static string MeshS(char dsc) => dsc == '/' ? "mesh/" : @"mesh\";
         internal static string MotionsS(char dsc) => dsc == '/' ? "motions/" : @"motions\";
         internal static string MoviesS(char dsc) => dsc == '/' ? "movies/" : @"movies\";
+        internal static string CutscenesS(char dsc) => dsc == '/' ? "cutscenes/" : @"cutscenes\"; // SS2 only
         internal static string ObjS(char dsc) => dsc == '/' ? "obj/" : @"obj\";
         internal static string ScriptsS(char dsc) => dsc == '/' ? "scripts/" : @"scripts\";
         internal static string SndS(char dsc) => dsc == '/' ? "snd/" : @"snd\";
@@ -228,7 +230,7 @@ namespace FMScanner
         internal static readonly byte[] Thief2UniqueStringMis = Encoding.ASCII.GetBytes("RopeyArrow");
         internal static readonly byte[] Thief2UniqueStringGam = Encoding.ASCII.GetBytes("RopeyArrow");
 
-        // We don't support System Shock 2, but we use this to detect and report if the FM is for SS2
+        // SS2-only detection string
         internal static readonly char[] MapParam = { 'M', 'A', 'P', 'P', 'A', 'R', 'A', 'M' };
     }
 
