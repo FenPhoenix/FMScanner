@@ -26,6 +26,12 @@ namespace FMScanner
         internal const int GB = MB * 1024;
     }
 
+    internal static class Constants
+    {
+        internal const char uldq = '\u201C'; // Unicode left double-quote
+        internal const char urdq = '\u201D'; // Unicode right double-quote
+    }
+
     internal static class FMDirs
     {
         internal const string Books = "books";

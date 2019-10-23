@@ -316,7 +316,7 @@ namespace FMScanner
         internal static bool ExtIsIbt(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -328,7 +328,7 @@ namespace FMScanner
         internal static bool ExtIsCbt(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -340,7 +340,7 @@ namespace FMScanner
         internal static bool ExtIsGmp(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -352,7 +352,7 @@ namespace FMScanner
         internal static bool ExtIsNed(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -364,7 +364,7 @@ namespace FMScanner
         internal static bool ExtIsUnr(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -376,7 +376,7 @@ namespace FMScanner
         internal static bool EndsWithRaDotBin(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 6 &&
                    (value[len - 6] == 'R' || value[len - 6] == 'r') &&
@@ -390,7 +390,7 @@ namespace FMScanner
         internal static bool ExtIsBin(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -402,7 +402,7 @@ namespace FMScanner
         internal static bool ExtIsSub(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -414,7 +414,7 @@ namespace FMScanner
         internal static bool ExtIsMis(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -426,7 +426,7 @@ namespace FMScanner
         internal static bool ExtIsGam(this string value)
         {
             if (value == null) return false;
-    
+
             var len = value.Length;
             return len > 4 &&
                    value[len - 4] == '.' &&
@@ -618,6 +618,7 @@ namespace FMScanner
             return value;
         }
 
+        // Doesn't handle unicode left and right double quotes, but meh...
         internal static string RemoveUnpairedLeadingOrTrailingQuotes(this string value)
         {
             if (value.CountChars('\"') != 1) return value;

@@ -29,10 +29,11 @@ using JetBrains.Annotations;
 using SevenZip;
 using static System.IO.Path;
 using static System.StringComparison;
+using static FMScanner.Constants;
 using static FMScanner.FMConstants;
+using static FMScanner.Logger;
 using static FMScanner.Methods;
 using static FMScanner.Regexes;
-using static FMScanner.Logger;
 
 namespace FMScanner
 {
@@ -611,10 +612,14 @@ namespace FMScanner
             if (ScanOptions.ScanTitle)
             {
                 SetOrAddTitle(
-                    GetValueFromReadme(SpecialLogic.Title, null, "Title of the Mission", "Title of the mission",
+                    GetValueFromReadme(SpecialLogic.Title, titles: null, "Title of the Mission", "Title of the mission",
                         "Title", "Mission Title", "Mission title", "Mission Name", "Mission name", "Level Name",
                         "Level name", "Mission:", "Mission ", "Campaign Title", "Campaign title",
-                        "The name of Mission:"));
+                        "The name of Mission:",
+                        // TODO: @TEMP_HACK: This works for the one mission that has it in this casing
+                        // Rewrite this code in here so we can have more detailed detection options than just
+                        // these silly strings and the default case check
+                        "Fan Mission/Map Name"));
 
                 if (!fmIsT3) SetOrAddTitle(GetTitleFromNewGameStrFile(intrfaceDirFiles));
 
@@ -648,7 +653,9 @@ namespace FMScanner
                             "Author", "Authors", "Autor",
                             "Created by", "Devised by", "Designed by", "Author=", "Made by",
                             "FM Author", "Mission Author", "Mission author", "Mission Creator", "Mission creator",
-                            "The author:", "author:");
+                            "The author:", "author:",
+                            // TODO: @TEMP_HACK: See above
+                            "Fan Mission/Map Author");
 
                     fmData.Author = CleanupValue(author);
                 }
@@ -1334,6 +1341,11 @@ namespace FMScanner
                     fmIni.Descr.CountChars('\"') == 2)
                 {
                     fmIni.Descr = fmIni.Descr.Trim('\"');
+                }
+                if (fmIni.Descr[0] == uldq && fmIni.Descr[fmIni.Descr.Length - 1] == urdq &&
+                    fmIni.Descr.CountChars(uldq) + fmIni.Descr.CountChars(urdq) == 2)
+                {
+                    fmIni.Descr = fmIni.Descr.Trim(uldq, urdq);
                 }
 
                 fmIni.Descr = fmIni.Descr.RemoveUnpairedLeadingOrTrailingQuotes();
@@ -2075,6 +2087,11 @@ namespace FMScanner
 
             // Remove surrounding quotes
             if (ret[0] == '\"' && ret[ret.Length - 1] == '\"') ret = ret.Trim('\"');
+            if ((ret[0] == uldq || ret[0] == urdq) &&
+                (ret[ret.Length - 1] == uldq || ret[ret.Length - 1] == urdq))
+            {
+                ret = ret.Trim(uldq, urdq);
+            }
 
             ret = ret.RemoveUnpairedLeadingOrTrailingQuotes();
 
