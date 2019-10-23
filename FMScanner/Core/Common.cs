@@ -115,19 +115,19 @@ namespace FMScanner
         // dds: 11,647
         // png: 11,290
         // bmp: 657
-        internal static string[] ImageFileExtensions { get; } = { ".gif", ".pcx", ".tga", ".dds", ".png", ".bmp" };
-        internal static string[] ImageFilePatterns { get; } = { "*.gif", "*.pcx", "*.tga", "*.dds", "*.png", "*.bmp" };
+        internal static readonly string[] ImageFileExtensions = { ".gif", ".pcx", ".tga", ".dds", ".png", ".bmp" };
+        internal static readonly string[] ImageFilePatterns = { "*.gif", "*.pcx", "*.tga", "*.dds", "*.png", "*.bmp" };
 
-        internal static string[] MotionFilePatterns { get; } = { "*.mc", "*.mi" };
-        internal static string[] MotionFileExtensions { get; } = { ".mc", ".mi" };
+        internal static readonly string[] MotionFilePatterns = { "*.mc", "*.mi" };
+        internal static readonly string[] MotionFileExtensions = { ".mc", ".mi" };
 
         // .osm for the classic scripts; .nut for Squirrel scripts for NewDark >= 1.25
-        internal static string[] ScriptFileExtensions { get; } = { ".osm", ".nut" };
+        internal static readonly string[] ScriptFileExtensions = { ".osm", ".nut" };
 
         // NOTE: I think this was for GetLanguages() for the planned accuracy update?
         //internal static string[] LanguageDirs { get; } = { FMDirs.Books, FMDirs.Intrface, FMDirs.Strings };
 
-        internal static string[] Languages { get; } =
+        internal static readonly string[] Languages =
         {
             "english",
             "czech",
@@ -143,7 +143,7 @@ namespace FMScanner
         };
 
         // Cheesy hack because it wasn't designed this way
-        internal static Dictionary<string, string> LanguagesC { get; } = new Dictionary<string, string>
+        internal static readonly Dictionary<string, string> LanguagesC = new Dictionary<string, string>
         {
             { "english", "English" },
             { "czech", "Czech" },
@@ -158,7 +158,7 @@ namespace FMScanner
             { "spanish", "Spanish" }
         };
 
-        internal static string[] DateFormats { get; } =
+        internal static readonly string[] DateFormats =
         {
             "MMM d yy",
             "MMM d, yy",

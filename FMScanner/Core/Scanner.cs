@@ -317,19 +317,13 @@ namespace FMScanner
             // one on the string when we remove this from the start of it
             if (FmWorkingPath[FmWorkingPath.Length - 1] != dsc) FmWorkingPath += dsc;
 
-            ScannedFMData UnsupportedZip()
+            static ScannedFMData UnsupportedZip(string archivePath) => new ScannedFMData
             {
-                return new ScannedFMData
-                {
-                    ArchiveName = GetFileName(ArchivePath),
-                    Game = Games.Unsupported
-                };
-            }
+                ArchiveName = GetFileName(archivePath),
+                Game = Games.Unsupported
+            };
 
-            ScannedFMData UnsupportedDir()
-            {
-                return null;
-            }
+            static ScannedFMData UnsupportedDir() => null;
 
             long? sevenZipSize = null;
 
@@ -345,17 +339,15 @@ namespace FMScanner
 
                 try
                 {
-                    using (var sze = new SevenZipExtractor(ArchivePath) { PreserveDirectoryStructure = true })
-                    {
-                        sevenZipSize = sze.PackedSize;
-                        sze.ExtractArchive(FmWorkingPath);
-                    }
+                    using var sze = new SevenZipExtractor(ArchivePath) { PreserveDirectoryStructure = true };
+                    sevenZipSize = sze.PackedSize;
+                    sze.ExtractArchive(FmWorkingPath);
                 }
                 catch (Exception)
                 {
                     // Third party thing, doesn't tell you what exceptions it can throw, whatever
                     DeleteFmWorkingPath(FmWorkingPath);
-                    return UnsupportedZip();
+                    return UnsupportedZip(ArchivePath);
                 }
             }
 
@@ -376,17 +368,17 @@ namespace FMScanner
 
                         // Archive.Entries is lazy-loaded, so this will also trigger any exceptions that may be
                         // thrown while loading them. If this passes, we're definitely good.
-                        if (Archive.Entries.Count == 0) return UnsupportedZip();
+                        if (Archive.Entries.Count == 0) return UnsupportedZip(ArchivePath);
                     }
                     catch (Exception)
                     {
                         // Invalid zip file, whatever, move on
-                        return UnsupportedZip();
+                        return UnsupportedZip(ArchivePath);
                     }
                 }
                 else
                 {
-                    return UnsupportedZip();
+                    return UnsupportedZip(ArchivePath);
                 }
             }
             else
@@ -453,7 +445,7 @@ namespace FMScanner
             if (!success)
             {
                 if (fmIsSevenZip) DeleteFmWorkingPath(FmWorkingPath);
-                return FmIsZip || fmIsSevenZip ? UnsupportedZip() : UnsupportedDir();
+                return FmIsZip || fmIsSevenZip ? UnsupportedZip(ArchivePath) : UnsupportedDir();
             }
 
             #endregion
@@ -880,12 +872,12 @@ namespace FMScanner
 
             // This is split out because of weird semantics with if(this && that) vs nested ifs (required in
             // order to have a var in the middle to avoid multiple LastIndexOf calls).
-            bool MapFileExists(string path)
+            static bool MapFileExists(string path, char _dsc)
             {
-                if (path.StartsWithI(FMDirs.IntrfaceS(dsc)) &&
-                    path.CountChars(dsc) >= 2)
+                if (path.StartsWithI(FMDirs.IntrfaceS(_dsc)) &&
+                    path.CountChars(_dsc) >= 2)
                 {
-                    var lsi = path.LastIndexOf(dsc);
+                    var lsi = path.LastIndexOf(_dsc);
                     if (path.Length > lsi + 5 &&
                         path.Substring(lsi + 1, 5).EqualsI("page0") &&
                         path.LastIndexOf('.') > lsi)
@@ -961,7 +953,7 @@ namespace FMScanner
                             // Definitely a clever deduction, definitely not a sneaky hack for GatB-T2
                             fmd.HasMap = true;
                         }
-                        else if (fmd.HasMap == null && MapFileExists(fn))
+                        else if (fmd.HasMap == null && MapFileExists(fn, dsc))
                         {
                             fmd.HasMap = true;
                         }
@@ -1107,7 +1099,7 @@ namespace FMScanner
                                 break;
                             }
 
-                            if (fmd.HasMap == null && MapFileExists(f.Name)) fmd.HasMap = true;
+                            if (fmd.HasMap == null && MapFileExists(f.Name, dsc)) fmd.HasMap = true;
                         }
 
                         if (fmd.HasMap == null) fmd.HasMap = false;
@@ -1198,10 +1190,8 @@ namespace FMScanner
                 if (FmIsZip)
                 {
                     var e = Archive.Entries[missFlag.Index];
-                    using (var es = e.Open())
-                    {
-                        mfLines = ReadAllLinesE(es, e.Length);
-                    }
+                    using var es = e.Open();
+                    mfLines = ReadAllLinesE(es, e.Length);
                 }
                 else
                 {
@@ -1251,10 +1241,8 @@ namespace FMScanner
             if (FmIsZip)
             {
                 var e = Archive.Entries[file.Index];
-                using (var es = e.Open())
-                {
-                    fmInfoXml.Load(es);
-                }
+                using var es = e.Open();
+                fmInfoXml.Load(es);
             }
             else
             {
@@ -1307,7 +1295,8 @@ namespace FMScanner
             if (FmIsZip)
             {
                 var e = Archive.Entries[file.Index];
-                using (var es = e.Open()) iniLines = ReadAllLinesE(es, e.Length);
+                using var es = e.Open();
+                iniLines = ReadAllLinesE(es, e.Length);
             }
             else
             {
@@ -1438,7 +1427,8 @@ namespace FMScanner
             if (FmIsZip)
             {
                 var e = Archive.Entries[file.Index];
-                using (var es = e.Open()) lines = ReadAllLinesE(es, e.Length);
+                using var es = e.Open();
+                lines = ReadAllLinesE(es, e.Length);
             }
             else
             {
@@ -1549,12 +1539,10 @@ namespace FMScanner
                 if (stack == 0) byteList.Add((byte)b);
             }
 
-            using (var trimmedMemStream = new MemoryStream(byteList.ToArray()))
-            {
-                rtfBox.LoadFile(trimmedMemStream, RichTextBoxStreamType.RichText);
-                stream.Position = 0;
-                return true;
-            }
+            using var trimmedMemStream = new MemoryStream(byteList.ToArray());
+            rtfBox.LoadFile(trimmedMemStream, RichTextBoxStreamType.RichText);
+            stream.Position = 0;
+            return true;
         }
 
         private void ReadAndCacheReadmeFiles(List<NameAndIndex> readmeDirFiles, RichTextBox rtfBox)
@@ -1645,10 +1633,8 @@ namespace FMScanner
                         }
                         else
                         {
-                            using (var fs = new FileStream(readmeFileOnDisk, FileMode.Open, FileAccess.Read))
-                            {
-                                success = GetRtfFileLinesAndText(fs, readmeFileLen, rtfBox);
-                            }
+                            using var fs = new FileStream(readmeFileOnDisk, FileMode.Open, FileAccess.Read);
+                            success = GetRtfFileLinesAndText(fs, readmeFileLen, rtfBox);
                         }
 
                         if (success)
@@ -1722,10 +1708,8 @@ namespace FMScanner
                 if (FmIsZip)
                 {
                     var e = Archive.Entries[titlesFile.Index];
-                    using (var es = e.Open())
-                    {
-                        titlesStrLines = ReadAllLinesE(es, e.Length);
-                    }
+                    using var es = e.Open();
+                    titlesStrLines = ReadAllLinesE(es, e.Length);
                 }
                 else
                 {
@@ -1777,7 +1761,7 @@ namespace FMScanner
                 TitleFromNumbered: (string)null,
                 CampaignMissionNames: (string[])null);
 
-            string ExtractFromQuotedSection(string line)
+            static string ExtractFromQuotedSection(string line)
             {
                 int i;
                 return line.Substring(i = line.IndexOf('\"') + 1, line.IndexOf('\"', i) - i);
@@ -2145,7 +2129,8 @@ namespace FMScanner
             if (FmIsZip)
             {
                 var e = Archive.Entries[newGameStrFile.Index];
-                using (var es = e.Open()) lines = ReadAllLinesE(es, e.Length);
+                using var es = e.Open();
+                lines = ReadAllLinesE(es, e.Length);
             }
             else
             {
@@ -2338,7 +2323,7 @@ namespace FMScanner
 
         private string GetAuthorFromCopyrightMessage()
         {
-            string AuthorCopyrightRegexesMatch(string line)
+            static string AuthorCopyrightRegexesMatch(string line)
             {
                 for (var i = 0; i < AuthorMissionCopyrightRegexes.Length; i++)
                 {
@@ -2488,8 +2473,12 @@ namespace FMScanner
 
             for (var dirIndex = 0; dirIndex < 3; dirIndex++)
             {
-                var dirFiles =
-                    dirIndex == 0 ? booksDirFiles : dirIndex == 1 ? intrfaceDirFiles : stringsDirFiles;
+                var dirFiles = dirIndex switch
+                {
+                    0 => booksDirFiles,
+                    1 => intrfaceDirFiles,
+                    _ => stringsDirFiles
+                };
 
                 for (var langIndex = 0; langIndex < Languages.Length; langIndex++)
                 {
@@ -2791,62 +2780,58 @@ namespace FMScanner
             {
                 // For zips, since we can't seek within the stream, the fastest way to find our string is just to
                 // brute-force straight through.
-                using (var zipEntryStream = gamFileExists ? gamFileZipEntry.Open() : misFileZipEntry.Open())
+                using var zipEntryStream = gamFileExists ? gamFileZipEntry.Open() : misFileZipEntry.Open();
+                var identString = gamFileExists
+                    ? MisFileStrings.Thief2UniqueStringGam
+                    : MisFileStrings.Thief2UniqueStringMis;
+
+                // To catch matches on a boundary between chunks, leave extra space at the start of each
+                // chunk for the last boundaryLen bytes of the previous chunk to go into, thus achieving a
+                // kind of quick-n-dirty "step back and re-read" type thing. Dunno man, it works.
+                var boundaryLen = identString.Length;
+                const int bufSize = 81_920;
+                var chunk = new byte[boundaryLen + bufSize];
+
+                while (zipEntryStream.Read(chunk, boundaryLen, bufSize) != 0)
                 {
-                    var identString = gamFileExists
-                        ? MisFileStrings.Thief2UniqueStringGam
-                        : MisFileStrings.Thief2UniqueStringMis;
-
-                    // To catch matches on a boundary between chunks, leave extra space at the start of each
-                    // chunk for the last boundaryLen bytes of the previous chunk to go into, thus achieving a
-                    // kind of quick-n-dirty "step back and re-read" type thing. Dunno man, it works.
-                    var boundaryLen = identString.Length;
-                    const int bufSize = 81_920;
-                    var chunk = new byte[boundaryLen + bufSize];
-
-                    while (zipEntryStream.Read(chunk, boundaryLen, bufSize) != 0)
+                    if (chunk.Contains(identString))
                     {
-                        if (chunk.Contains(identString))
-                        {
-                            ret.Game = Games.TMA;
-                            break;
-                        }
-
-                        // Copy the last boundaryLen bytes from chunk and put them at the beginning
-                        for (int si = 0, ei = bufSize; si < boundaryLen; si++, ei++) chunk[si] = chunk[ei];
+                        ret.Game = Games.TMA;
+                        break;
                     }
 
-                    if (string.IsNullOrEmpty(ret.Game)) ret.Game = Games.TDP;
+                    // Copy the last boundaryLen bytes from chunk and put them at the beginning
+                    for (int si = 0, ei = bufSize; si < boundaryLen; si++, ei++) chunk[si] = chunk[ei];
                 }
+
+                if (string.IsNullOrEmpty(ret.Game)) ret.Game = Games.TDP;
             }
             else
             {
                 // For uncompressed files on disk, we mercifully can just look at the TOC and then seek to the
                 // OBJ_MAP chunk and search it for the string. Phew.
-                using (var br = new BinaryReader(File.Open(misFileOnDisk, FileMode.Open, FileAccess.Read),
-                    Encoding.ASCII, leaveOpen: false))
+                using var br = new BinaryReader(File.Open(misFileOnDisk, FileMode.Open, FileAccess.Read),
+                    Encoding.ASCII, leaveOpen: false);
+                uint tocOffset = br.ReadUInt32();
+
+                br.BaseStream.Position = tocOffset;
+
+                var invCount = br.ReadUInt32();
+                for (int i = 0; i < invCount; i++)
                 {
-                    uint tocOffset = br.ReadUInt32();
+                    var header = br.ReadChars(12);
+                    var offset = br.ReadUInt32();
+                    var length = br.ReadUInt32();
 
-                    br.BaseStream.Position = tocOffset;
+                    if (!header.Contains(MisFileStrings.ObjMap)) continue;
 
-                    var invCount = br.ReadUInt32();
-                    for (int i = 0; i < invCount; i++)
-                    {
-                        var header = br.ReadChars(12);
-                        var offset = br.ReadUInt32();
-                        var length = br.ReadUInt32();
+                    br.BaseStream.Position = offset;
 
-                        if (!header.Contains(MisFileStrings.ObjMap)) continue;
-
-                        br.BaseStream.Position = offset;
-
-                        var content = br.ReadBytes((int)length);
-                        ret.Game = content.Contains(MisFileStrings.Thief2UniqueStringMis)
-                            ? Games.TMA
-                            : Games.TDP;
-                        break;
-                    }
+                    var content = br.ReadBytes((int)length);
+                    ret.Game = content.Contains(MisFileStrings.Thief2UniqueStringMis)
+                        ? Games.TMA
+                        : Games.TDP;
+                    break;
                 }
             }
 

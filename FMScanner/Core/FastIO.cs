@@ -130,29 +130,28 @@ namespace FMScanner
             {
                 foreach (var p in searchPatterns)
                 {
-                    using (var findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + '\\' + p, out findData))
+                    using var findHandle = FindFirstFileW(@"\\?\" + path.TrimEnd('\\') + '\\' + p, out findData);
+
+                    if (findHandle.IsInvalid)
                     {
-                        if (findHandle.IsInvalid)
-                        {
-                            var err = Marshal.GetLastWin32Error();
-                            if (err == ERROR_FILE_NOT_FOUND) continue;
+                        var err = Marshal.GetLastWin32Error();
+                        if (err == ERROR_FILE_NOT_FOUND) continue;
 
-                            // Since the framework isn't here to save us, we should blanket-catch and throw on every
-                            // possible error other than file-not-found (as that's an intended scenario, obviously).
-                            // This isn't as nice as you'd get from a framework method call, but it gets the job done.
-                            ThrowException(searchPatterns, err, path, p, 0);
-                        }
-                        do
-                        {
-                            if ((findData.dwFileAttributes & fileAttributeDirectory) != fileAttributeDirectory &&
-                                findData.cFileName != "." && findData.cFileName != "..")
-                            {
-                                return true;
-                            }
-                        } while (FindNextFileW(findHandle, out findData));
-
-                        if (searchOption == FastIOSearchOption.TopDirectoryOnly) return false;
+                        // Since the framework isn't here to save us, we should blanket-catch and throw on every
+                        // possible error other than file-not-found (as that's an intended scenario, obviously).
+                        // This isn't as nice as you'd get from a framework method call, but it gets the job done.
+                        ThrowException(searchPatterns, err, path, p, 0);
                     }
+                    do
+                    {
+                        if ((findData.dwFileAttributes & fileAttributeDirectory) != fileAttributeDirectory &&
+                            findData.cFileName != "." && findData.cFileName != "..")
+                        {
+                            return true;
+                        }
+                    } while (FindNextFileW(findHandle, out findData));
+
+                    if (searchOption == FastIOSearchOption.TopDirectoryOnly) return false;
                 }
             }
 
