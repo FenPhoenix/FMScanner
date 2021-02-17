@@ -1,3 +1,5 @@
+### NOTE: This version is old and outdated. There may be bugs, incomplete features, inaccuracies, etc. The latest version is part of AngelLoader: https://github.com/FenPhoenix/AngelLoader/tree/master/FMScanner
+
 # FMScanner
 
 A fast, thorough, accurate scanner for Thief 1, Thief 2, and Thief 3 fan missions.
